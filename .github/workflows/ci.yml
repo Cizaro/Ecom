@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # full history for the secret scan
 
@@ -28,7 +28,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -55,6 +55,12 @@ jobs:
       - name: Start services
         run: |
           cp .env.example .env
+          # The end-to-end tests run the production build, which refuses to start
+          # with the example placeholder secrets. Generate throwaway ones.
+          sed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 48 | tr -d '
+=+/')|" .env
+          sed -i "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$(openssl rand -base64 48 | tr -d '
+=+/')|" .env
           docker compose up -d --wait
 
       - name: Apply migrations
