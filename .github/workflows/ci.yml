@@ -80,7 +80,13 @@ jobs:
         run: pnpm build
 
       - name: Install browser for end-to-end tests
-        run: pnpm exec playwright install --with-deps chromium
+        # Downloads from outside GitHub; fail fast and retry once instead of
+        # hanging until the job limit.
+        timeout-minutes: 8
+        run: |
+          timeout 210 pnpm exec playwright install --with-deps chromium ||
+            { echo "First attempt failed or stalled; retrying"; sleep 10;
+              timeout 210 pnpm exec playwright install --with-deps chromium; }
 
       - name: End-to-end tests
         run: pnpm test:e2e
