@@ -8,11 +8,11 @@
   },
   "scripts": {
     "generate": "prisma generate",
-    "migrate:dev": "prisma migrate dev",
-    "migrate:deploy": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev && tsx scripts/sync-app-role.ts",
+    "migrate:deploy": "prisma migrate deploy && tsx scripts/sync-app-role.ts",
     "migrate:status": "prisma migrate status",
-    "seed": "tsx prisma/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate:drift": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/pg": "8.23.1",
     "prisma": "7.10.1",
-    "tsx": "4.23.15"
+    "tsx": "4.23.15",
+    "@ecom/config": "workspace:*"
   }
 }

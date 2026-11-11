@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const PLACEHOLDER_PREFIX = "CHANGE_ME";
 
+const postgresUrl = z.string().regex(/^postgres(ql)?:\/\//, "must be a PostgreSQL connection URL");
+
 const secret = z.string().min(32, "must be at least 32 characters");
 
 /**
@@ -13,7 +15,10 @@ const envSchema = z.object({
   APP_URL: z.url(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
-  DATABASE_URL: z.string().regex(/^postgres(ql)?:\/\//, "must be a PostgreSQL connection URL"),
+  /** Runtime connection (role app_user, subject to Row-Level Security). */
+  DATABASE_URL: postgresUrl,
+  /** Owner connection: migrations, seeding, authentication, platform administration. */
+  DATABASE_ADMIN_URL: postgresUrl,
   REDIS_URL: z.string().regex(/^rediss?:\/\//, "must be a Redis connection URL"),
 
   AUTH_SECRET: secret,

@@ -12,10 +12,10 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-    seed: "tsx prisma/seed.ts",
+    seed: "tsx ../../scripts/seed.ts",
   },
   datasource: {
     // `prisma generate` does not connect, so a missing URL must not fail installs.
-    url: process.env.DATABASE_URL ?? "postgresql://unset:unset@localhost:5432/unset",
+    url: process.env.DATABASE_ADMIN_URL ?? "postgresql://unset:unset@localhost:5432/unset",
   },
 });

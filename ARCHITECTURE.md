@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-11-11 (Milestone 1.1). Sections describe the planned architecture; so far only the scaffold exists: processes, health and readiness endpoints, env validation, logging, one queue.
+Last updated: 2026-11-11 (Milestone 1.2). Sections describe the planned architecture; built so far: the scaffold (1.1) and the tenancy and identity schema with Row-Level Security, permission catalogue and seed (1.2).
 
 Update this file whenever the architecture changes.
 
@@ -100,7 +100,9 @@ sequenceDiagram
 
 1. **Guard.** Every handler resolves a `RequestContext` and checks a named permission (for example `orders.refund`). No handler reaches a service without one.
 2. **Tenant-scoped data access.** Services receive a database client bound to the context's tenant. It adds `tenantId` to every read and write. The unscoped client is only available to platform-admin code and migrations, and its use is lint-restricted.
-3. **Row-Level Security.** Every tenant-owned table has an RLS policy comparing `tenant_id` to a transaction-local setting. The application connects as a role that cannot bypass RLS.
+3. **Row-Level Security.** Every tenant-owned table has an RLS policy comparing `tenant_id` to a transaction-local setting. The application connects as `app_user`, a role that owns no tables, cannot bypass RLS, and cannot read password hashes. *(Built in Milestone 1.2.)*
+
+There are two database connections. `DATABASE_URL` (role `app_user`) serves requests and sees nothing outside `withTenant(...)`. `DATABASE_ADMIN_URL` (schema owner) bypasses RLS and is reserved for migrations, seeding, authentication, platform administration and cross-tenant worker jobs. Layers 1 and 2 (guard and tenant-scoped client) are built in Milestones 1.3 and 1.4; today `withTenant` in `packages/db` is the primitive they will wrap.
 
 Storefront requests resolve the tenant from the host name (custom domain or subdomain). Admin requests resolve it from the user's active membership.
 

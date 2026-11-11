@@ -55,6 +55,7 @@ export default tseslint.config(
     files: [
       "packages/config/**",
       "packages/db/prisma.config.ts",
+      "packages/db/scripts/**",
       "apps/web/next.config.ts",
       "playwright.config.ts",
       "scripts/**",

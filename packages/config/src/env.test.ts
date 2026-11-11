@@ -4,7 +4,8 @@ import { EnvValidationError, parseEnv } from "./env";
 const valid = {
   NODE_ENV: "development",
   APP_URL: "http://localhost:3000",
-  DATABASE_URL: "postgresql://app:pw@localhost:5432/ecommerce",
+  DATABASE_URL: "postgresql://app_user:pw@localhost:5432/ecommerce",
+  DATABASE_ADMIN_URL: "postgresql://app:pw@localhost:5432/ecommerce",
   REDIS_URL: "redis://localhost:6379",
   AUTH_SECRET: "a".repeat(32),
   ENCRYPTION_KEY: "b".repeat(32),

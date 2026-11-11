@@ -172,6 +172,9 @@ importers:
       '@ecom/core':
         specifier: workspace:*
         version: link:packages/core
+      '@ecom/db':
+        specifier: workspace:*
+        version: link:packages/db
       '@eslint/js':
         specifier: 9.39.5
         version: 9.39.5
@@ -297,6 +300,9 @@ importers:
         specifier: 8.23.1
         version: 8.23.1
     devDependencies:
+      '@ecom/config':
+        specifier: workspace:*
+        version: link:../config
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1

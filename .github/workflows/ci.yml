@@ -60,6 +60,12 @@ jobs:
       - name: Apply migrations
         run: pnpm db:migrate
 
+      - name: Schema matches migrations
+        run: pnpm db:drift
+
+      - name: Seed
+        run: pnpm db:seed
+
       - name: Environment health check
         run: pnpm healthcheck
 

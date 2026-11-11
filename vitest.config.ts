@@ -20,6 +20,8 @@ export default defineConfig({
           exclude: ["**/node_modules/**"],
           setupFiles: ["./packages/testing/src/load-env.ts"],
           testTimeout: 20_000,
+          // Integration tests share one database, so files run one at a time.
+          fileParallelism: false,
         },
       },
     ],

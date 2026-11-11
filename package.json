@@ -21,8 +21,9 @@
     "db:generate": "pnpm --filter @ecom/db generate",
     "db:migrate": "pnpm --filter @ecom/db migrate:deploy",
     "db:migrate:dev": "pnpm --filter @ecom/db migrate:dev",
-    "db:seed": "pnpm --filter @ecom/db seed",
-    "postinstall": "pnpm db:generate"
+    "db:seed": "tsx scripts/seed.ts",
+    "postinstall": "pnpm db:generate",
+    "db:drift": "pnpm --filter @ecom/db migrate:drift"
   },
   "devDependencies": {
     "@ecom/config": "workspace:*",
@@ -38,6 +39,7 @@
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.2",
-    "vitest": "5.1.0"
+    "vitest": "5.1.0",
+    "@ecom/db": "workspace:*"
   }
 }

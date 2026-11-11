@@ -58,6 +58,27 @@ Database, Redis and storage values in `.env.example` match `docker-compose.yml` 
 ### D17. Single `.env` at the repository root (2026-11-11)
 Web, worker, Prisma, tests and the health check all load the root `.env`. Only `packages/config` reads `process.env` in application code; a lint rule enforces this.
 
+### D18. Two database roles; the runtime role cannot bypass Row-Level Security (2026-11-11)
+`DATABASE_URL` connects as `app_user`, which owns nothing, has no BYPASSRLS, and has explicit per-table grants. `DATABASE_ADMIN_URL` connects as the schema owner and is reserved for migrations, seeding, authentication, platform administration and cross-tenant worker jobs. The migration creates `app_user` without a password; `pnpm db:migrate` then sets its password from `DATABASE_URL`, so no credential is ever in a migration.
+
+### D19. Tenant context is two transaction-local settings (2026-11-11)
+`withTenant` opens a transaction and sets `app.tenant_id` and `app.user_id`; policies read them through `app.current_tenant_id()` and `app.current_user_id()`. Unset means no rows. Transaction-local settings cannot leak across pooled connections.
+
+### D20. The runtime role cannot read password hashes or the platform-admin flag (2026-11-11)
+Column-level grants on `users` exclude `password_hash` and `is_platform_admin`, and the runtime role may only update its own `name`. Sign-in (Milestone 1.3) therefore uses the admin connection, inside the identity module only.
+
+### D21. Platform administrator is a user flag, not a membership (2026-11-11)
+A `platform_admin` system role row exists so its permission set is visible and seeded like the others, but it is granted by `users.is_platform_admin`, never by a tenant membership.
+
+### D22. Tables are plural snake_case; every table needs a policy or an exemption (2026-11-11)
+Prisma models map to plural snake_case tables and snake_case columns. Security SQL (RLS policies, grants, triggers, partial indexes, check constraints) is hand-written in the same migration that creates a table. An integration test fails if any table has neither RLS enabled nor an entry in `GLOBAL_TABLES` (packages/db/src/tables.ts). CI also checks that the schema and the migrations have not drifted apart.
+
+### D23. Applied migrations are never edited (2026-11-11)
+Fixes go in a new migration, even for a migration written minutes earlier (see `20261111130000_append_only_error`). Local databases are not reset to paper over a change.
+
+### D24. Default role permissions (2026-11-11)
+Defined in packages/core/src/identity/permissions.ts. Notable defaults, all changeable later through custom roles: staff management, customer deletion, ad launch, giveaway draws, AI configuration and social account connection are owner-only; refunds and customer export are owner and manager; customer-service agents cannot refund; content editors cannot approve or publish. **Owner: please review these defaults.**
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
