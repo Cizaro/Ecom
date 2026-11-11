@@ -1,0 +1,4 @@
+# Findings reviewed and accepted. One fingerprint per line: commit:file:rule:line
+#
+# Public test key from RFC 6238 appendix B, used by the TOTP unit test. Not a credential.
+0a59c94b8a1ffbf8186119ec40a99552399420b5:packages/testing/src/totp.test.ts:generic-api-key:6
