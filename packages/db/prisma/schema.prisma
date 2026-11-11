@@ -1,0 +1,11 @@
+// Source of truth for the database schema. Design reference: docs/DATA_MODEL.md.
+// Models are added per milestone, starting with tenancy and users in Milestone 1.2.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

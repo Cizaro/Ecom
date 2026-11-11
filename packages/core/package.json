@@ -1,0 +1,19 @@
+{
+  "name": "@ecom/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1166.0",
+    "@ecom/config": "workspace:*",
+    "@ecom/db": "workspace:*",
+    "ioredis": "6.0.0",
+    "pino": "10.4.0"
+  }
+}

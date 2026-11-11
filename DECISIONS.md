@@ -40,6 +40,24 @@ The same schemas validate requests, type the client, generate OpenAPI and valida
 ### D12. Documentation layout (2026-11-11)
 Root: README, PROJECT_STATUS, NEXT_STEPS, DECISIONS, ARCHITECTURE, PROJECT_PLAN. `docs/`: DATA_MODEL, API_SPECIFICATION, SECURITY_THREAT_MODEL, COMPLIANCE. Diagrams in Mermaid.
 
+### D13. RustFS for local S3-compatible storage (2026-11-11)
+The MinIO images named in the plan can no longer be pulled from Docker Hub or Quay. RustFS is used locally instead; a one-shot AWS CLI container creates the bucket. The application only speaks the S3 API, so production can use any S3-compatible service.
+
+### D14. Tool versions chosen at scaffold (2026-11-11)
+- TypeScript 6.0, not 7.0: typescript-eslint 8.72 supports TypeScript below 6.1 only. Move to 7 when the linter supports it.
+- ESLint 9, not 10: chosen for plugin compatibility; revisit with the next dependency update.
+- Node.js 26 (installed by the owner). Prisma 7.10 warns that it is not a listed supported version but works; Node 24 is the fallback.
+- Workspace packages are consumed as TypeScript source (no per-package build step); the worker runs through tsx.
+
+### D15. Environment health check is `pnpm healthcheck` (2026-11-11)
+`pnpm doctor` is a built-in pnpm command, so the project's check has a different name.
+
+### D16. `.env.example` carries working local-only defaults (2026-11-11)
+Database, Redis and storage values in `.env.example` match `docker-compose.yml` so a clean checkout works after copying the file. They are bound to localhost and are not secrets. Real secrets stay as `CHANGE_ME` placeholders, and the app refuses to start in production while one remains.
+
+### D17. Single `.env` at the repository root (2026-11-11)
+Web, worker, Prisma, tests and the health check all load the root `.env`. Only `packages/config` reads `process.env` in application code; a lint rule enforces this.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
@@ -72,6 +90,6 @@ Until answered, the assumption shown is used and kept configurable. Items marked
 | Q24 | Maximum giveaway entries per customer? | 10 | 8.1 |
 | Q25 | Customer notifications? | Order confirmation, shipped, delivered, refund, account, giveaway receipt and result, by email | 3.6 |
 | Q26 | Minimum features for first launch? | Phases 1 to 3 | Prioritization |
-| Q27 | Where will the Git remote live (for example a private GitHub repository)? | None yet; local only | **Working from the home computer** |
+| Q27 | Where will the Git remote live? | **Answered 2026-11-11:** https://github.com/Cizaro/Ecom | |
 | Q28 | Has paid-draw legality been confirmed for the target countries, and will the payment provider allow it? | Not confirmed | Real entry payments in Phase 8 |
 | Q29 | Hosting preference? | Any Docker-capable host | Phase 10 |

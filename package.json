@@ -1,0 +1,43 @@
+{
+  "name": "ecom",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @ecom/web --filter @ecom/worker dev",
+    "build": "pnpm --filter @ecom/web build",
+    "start": "pnpm --parallel --filter @ecom/web --filter @ecom/worker start",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r typecheck",
+    "test": "vitest run --project unit",
+    "test:int": "vitest run --project integration",
+    "test:e2e": "playwright test",
+    "healthcheck": "tsx scripts/healthcheck.ts",
+    "db:generate": "pnpm --filter @ecom/db generate",
+    "db:migrate": "pnpm --filter @ecom/db migrate:deploy",
+    "db:migrate:dev": "pnpm --filter @ecom/db migrate:dev",
+    "db:seed": "pnpm --filter @ecom/db seed",
+    "postinstall": "pnpm db:generate"
+  },
+  "devDependencies": {
+    "@ecom/config": "workspace:*",
+    "@ecom/core": "workspace:*",
+    "@eslint/js": "9.39.5",
+    "@next/eslint-plugin-next": "16.4.6",
+    "@playwright/test": "1.65.0",
+    "@types/node": "26.6.6",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "5.1.0"
+  }
+}

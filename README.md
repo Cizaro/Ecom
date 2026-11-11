@@ -2,7 +2,7 @@
 
 Storefront, admin, AI assistant, social inbox, marketing and giveaway platform for a fashion-accessories store (women's bags, men's wallets, watches, jewelry, accessories), designed to become a multi-tenant SaaS.
 
-**Status: Phase 0 (planning) complete. No application code exists yet.**
+**Status: Phase 1 in progress. The project scaffold runs; no business features exist yet.** See [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Start here
 
@@ -19,8 +19,8 @@ Storefront, admin, AI assistant, social inbox, marketing and giveaway platform f
 
 ## Resuming on another computer
 
-1. Install Git, Node.js (current LTS) and Docker Desktop.
-2. Get the repository onto the machine (see "Moving the repository" in [PROJECT_STATUS.md](PROJECT_STATUS.md); no remote is configured yet).
+1. Install Git, Node.js 26, pnpm and Docker Desktop.
+2. Clone https://github.com/Cizaro/Ecom.
 3. Copy `.env.example` to `.env` and fill in values. Never commit `.env`.
 4. Follow the commands in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 

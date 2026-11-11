@@ -4,14 +4,24 @@ Last updated: 2026-11-11
 
 ## Current phase
 
-**Phase 0 (discovery and planning): complete, awaiting owner review.** Next: Phase 1, Milestone 1.1 (scaffold).
+**Phase 1 (foundation). Milestone 1.1 (scaffold) complete.** Next: Milestone 1.2 (tenancy, users, roles and audit schema).
 
 ## Completed
 
-- Repository assessment (no existing ecommerce code; greenfield).
-- Planning documents: PROJECT_PLAN.md, ARCHITECTURE.md, DECISIONS.md, docs/DATA_MODEL.md, docs/API_SPECIFICATION.md, docs/SECURITY_THREAT_MODEL.md, docs/COMPLIANCE.md.
-- `.env.example` (placeholders only), `.gitignore`, README.
-- Git repository initialized with the first commit.
+- **Phase 0:** assessment and planning documents.
+- **Milestone 1.1, scaffold:**
+  - pnpm workspace: `apps/web`, `apps/worker`, `packages/core`, `packages/db`, `packages/config`, `packages/ui`, `packages/testing`.
+  - TypeScript strict, ESLint, Prettier.
+  - Next.js app with placeholder storefront (`/`) and admin (`/admin`) pages, `/api/health`, `/api/ready`, baseline security headers.
+  - Worker process (BullMQ) with one `maintenance` queue and a heartbeat job.
+  - Environment validation (`packages/config`), structured logger with redaction, readiness checks for database, Redis and storage (`packages/core`).
+  - Prisma set up with an empty baseline migration and a seed stub.
+  - `docker-compose.yml`: PostgreSQL, Redis, RustFS (S3-compatible storage), Mailpit.
+  - `pnpm healthcheck` environment check.
+  - Vitest (unit and integration projects) and Playwright (desktop and mobile).
+  - GitHub Actions CI workflow (written; see "Not yet verified").
+
+**What exists is plumbing only.** There are no database tables, no sign-in, no products and no business features. The storefront and admin pages are placeholders.
 
 ## In progress
 
@@ -19,94 +29,142 @@ Nothing.
 
 ## Not started
 
-All application code. Every feature in Phases 1 to 10 (see PROJECT_PLAN.md section 4). No integration (payments, email, AI, Meta, Instagram, Facebook, TikTok, shipping) has been implemented or tested.
+Milestones 1.2 onward (PROJECT_PLAN.md section 4). No integration (payments, email, AI, Meta, Instagram, Facebook, TikTok, shipping) has been implemented or tested.
+
+## Not yet verified
+
+- The CI workflow has not been observed running on GitHub. Check the Actions tab after the first push; the secret-scan and dependency-audit steps in particular have only been reasoned about, not run in CI.
+- A clean clone on a second computer has not been tried.
 
 ## Known bugs
 
-None (no code yet).
+None.
 
-## Known issues with the environment
+## Known issues
 
-- First computer (Windows 11): Node.js, pnpm, Docker, PostgreSQL and Redis are not installed. Only Git is available.
-- No Git remote is configured. The repository exists only on the first computer until one is added.
+- **Prisma and Node 26:** Prisma 7.10 prints "Prisma only supports Node.js versions 20.19+, 22.12+, 24.0+" during install. Generate, migrate and queries all work on Node 26.13 here. If Prisma misbehaves later, switching to Node 24 is the fallback.
+- **Dependency audit:** `pnpm audit` reports 1 moderate advisory in a transitive dependency. CI fails only on high or above. Revisit at the next dependency update.
+- **pnpm `minimumReleaseAgeExclude`:** pnpm added a list of very recently published packages (AWS SDK, BullMQ) to `pnpm-workspace.yaml` so they could be installed. The list can be removed once those versions are older.
+- **`msgpackr-extract` build script is denied** (optional native speed-up for BullMQ; not needed).
+- **Docker in a fresh terminal:** after installing Docker Desktop, open a new terminal so `docker` is on the PATH. Docker Desktop must be running before `docker compose up`.
 
 ## Open technical decisions
 
-See the "Open decisions for the owner" table in DECISIONS.md. The ones that block specific work: payment provider (Q4), AI provider (Q15), social accounts (Q10 to Q13), Git remote (Q27), giveaway legality and provider approval (Q28).
+See "Open decisions for the owner" in DECISIONS.md. Blocking specific work: payment provider (Q4), AI provider (Q15), social accounts (Q10 to Q13), giveaway legality and provider approval (Q28).
 
 ## Required software
 
-| Tool | Version | Status on first computer |
+| Tool | Version used | Notes |
 | --- | --- | --- |
-| Git | 2.40 or later | Installed (2.51) |
-| Node.js | Current LTS (exact version pinned in `.nvmrc` at Milestone 1.1) | Not installed |
-| pnpm | Pinned via `packageManager` in `package.json` at Milestone 1.1 | Not installed |
-| Docker Desktop | Recent | Not installed |
+| Git | 2.51 | |
+| Node.js | 26.13.0 | Pinned in `.nvmrc`; any 26.x works |
+| pnpm | 12.18.0 | Pinned in `package.json`; install with `npm install -g pnpm` |
+| Docker Desktop | Engine 29.9, Compose 5.7 | Per-user install with WSL 2 on Windows |
 
-PostgreSQL, Redis, MinIO (storage) and Mailpit (email capture) will run in Docker; no separate installs.
+Main library versions (exact pins are in the `package.json` files): Next.js 16.4, React 19.3, TypeScript 6.0, Tailwind CSS 4.3, Prisma 7.10, BullMQ 6.7, Zod 4.6, Vitest 5.1, Playwright 1.65, ESLint 9.39.
 
 ## Required environment variables
 
-Full list with placeholders: `.env.example`. None are needed yet. Phase 1 needs: `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `ENCRYPTION_KEY`, `APP_URL`.
+Read by code today (validated in `packages/config/src/env.ts`): `NODE_ENV`, `APP_URL`, `LOG_LEVEL`, `DATABASE_URL`, `REDIS_URL`, `AUTH_SECRET`, `ENCRYPTION_KEY`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL`.
+
+`.env.example` works as-is for local development. Generate your own `AUTH_SECRET` and `ENCRYPTION_KEY` (command is in the file). `.env` is never committed, so each computer has its own.
 
 ## Required external accounts and API keys
 
-None needed yet. Upcoming, by phase: see PROJECT_PLAN.md section 5.
+None yet. Upcoming, by phase: PROJECT_PLAN.md section 5.
 
 ## Commands
 
-**Today (documentation only):**
+**First time on a computer** (after installing the software above and starting Docker Desktop):
 
 ```bash
-git log --oneline
+git clone https://github.com/Cizaro/Ecom.git
 ```
 
 ```bash
-git status
-```
-
-**Moving the repository to another computer.** Create an empty private repository on a Git host, then on the first computer:
-
-```bash
-git remote add origin <repository-url>
+cp .env.example .env
 ```
 
 ```bash
-git push -u origin main
+pnpm install
 ```
-
-On the other computer:
 
 ```bash
-git clone <repository-url>
+docker compose up -d --wait
 ```
 
-**After Milestone 1.1 exists** (not available yet; listed so the target is clear):
+```bash
+pnpm db:migrate
+```
+
+```bash
+pnpm healthcheck
+```
+
+**Every time you resume:**
+
+```bash
+git pull
+```
+
+```bash
+pnpm install
+```
+
+```bash
+docker compose up -d --wait
+```
+
+```bash
+pnpm db:migrate
+```
+
+**Day to day:**
 
 | Purpose | Command |
 | --- | --- |
-| Install dependencies | `pnpm install` |
-| Start local services | `docker compose up -d` |
-| Check the environment | `pnpm doctor` |
-| Apply migrations | `pnpm db:migrate` |
-| Seed data | `pnpm db:seed` |
-| Start web and worker | `pnpm dev` |
+| Check the environment | `pnpm healthcheck` |
+| Start web (http://localhost:3000) and worker | `pnpm dev` |
 | Lint | `pnpm lint` |
+| Format | `pnpm format` |
 | Type check | `pnpm typecheck` |
-| Unit and integration tests | `pnpm test` |
-| End-to-end tests | `pnpm test:e2e` |
+| Unit tests | `pnpm test` |
+| Integration tests (need services running) | `pnpm test:int` |
 | Production build | `pnpm build` |
+| End-to-end tests (need build and services) | `pnpm test:e2e` |
+| Install the browser for end-to-end tests (once per computer) | `pnpm exec playwright install chromium` |
+| Create a migration after a schema change | `pnpm db:migrate:dev` |
+| Seed data | `pnpm db:seed` |
+| Stop services | `docker compose down` |
+| Stop services and delete local data | `docker compose down -v` |
 
-## Checks run this session
+Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025.
 
-Lint, type check, tests and build: not applicable, there is no code. Verified by hand: `.env.example` contains placeholders only; no secrets in the repository.
+## Checks run this session (Milestone 1.1, on the first computer)
+
+| Check | Result |
+| --- | --- |
+| `pnpm healthcheck` | Pass, 10 of 10 |
+| `pnpm lint` | Pass |
+| `pnpm format:check` | Pass |
+| `pnpm typecheck` | Pass |
+| `pnpm test` | Pass, 10 tests |
+| `pnpm test:int` | Pass, 2 tests |
+| `pnpm build` | Pass |
+| `pnpm test:e2e` | Pass, 10 tests (5 on desktop, 5 on mobile viewport) |
+| Worker start | Starts and connects to Redis |
+| `pnpm audit --audit-level high` | Pass (1 moderate advisory, see known issues) |
+| CI on GitHub | Not yet observed |
 
 ## Recommended next task
 
-Owner: review the plan, install Node.js and Docker Desktop, create a private remote and push. Then start Milestone 1.1 as described in NEXT_STEPS.md.
+Milestone 1.2: tenancy, users, roles, permissions and audit-log schema, with Row-Level Security policies, append-only triggers, migrations and seed data. Details in NEXT_STEPS.md.
 
 ## Session log
 
-| Date | Summary | Commit |
-| --- | --- | --- |
-| 2026-11-11 | Phase 0: assessment and planning documents | See `git log` (first commit) |
+| Date | Summary |
+| --- | --- |
+| 2026-11-11 | Phase 0: assessment and planning documents |
+| 2026-11-11 | Milestone 1.1: scaffold, local services, checks, CI workflow; remote added |
+
+Commit hashes: `git log --oneline`.

@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-11-11 (Phase 0, planned architecture; nothing is built yet)
+Last updated: 2026-11-11 (Milestone 1.1). Sections describe the planned architecture; so far only the scaffold exists: processes, health and readiness endpoints, env validation, logging, one queue.
 
 Update this file whenever the architecture changes.
 
@@ -45,7 +45,7 @@ packages/
   ui/             Design system components
   testing/        Factories, test database helpers, mock providers
 docs/             Data model, API, security, compliance
-scripts/          doctor (environment health check), backup, restore
+scripts/          healthcheck (environment health check), backup, restore
 ```
 
 ## 3. Domain modules
@@ -223,7 +223,7 @@ Configuration comes only from environment variables, validated at startup. Featu
 - **Errors.** One error type hierarchy mapped to a consistent API error body (see API specification).
 - **Logging.** JSON logs with request ID, tenant ID and user ID. Secrets and personal data are redacted.
 - **Audit.** `AuditLog` records who did what to which record, with before and after for sensitive changes.
-- **Health.** `/api/health` (process up) and `/api/ready` (database, Redis and storage reachable). `pnpm doctor` checks a development machine.
+- **Health.** `/api/health` (process up) and `/api/ready` (database, Redis and storage reachable). `pnpm healthcheck` checks a development machine.
 - **Security headers.** Content Security Policy, HSTS, frame and referrer policies set in middleware.
 - **Money.** Integer minor units plus ISO currency code. No floating-point arithmetic on money.
 - **Time.** Stored in UTC; displayed in the store's time zone.

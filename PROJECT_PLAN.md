@@ -43,7 +43,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for structure and [DECISIONS.md](DECISION
 | UI | Tailwind CSS, shadcn/ui on Radix primitives |
 | Database | PostgreSQL, Prisma ORM, Row-Level Security for tenant isolation |
 | Jobs | BullMQ on Redis, separate worker process |
-| File storage | S3-compatible (MinIO locally) |
+| File storage | S3-compatible (RustFS locally) |
 | Auth | Better Auth (email/password, OAuth, TOTP MFA); sessions in Postgres |
 | Validation | Zod schemas shared by API, forms and AI output validation |
 | Payments | `PaymentProvider` interface; mock adapter first, Stripe adapter second |
@@ -126,7 +126,7 @@ Tenant isolation is built in Phase 1 and holds from the first table, so Phase 9 
 
 ## 5. Dependency list
 
-**To install on each development machine:** Git, Node.js (current LTS), pnpm, Docker Desktop (runs PostgreSQL, Redis, MinIO, Mailpit locally).
+**To install on each development machine:** Git, Node.js (current LTS), pnpm, Docker Desktop (runs PostgreSQL, Redis, RustFS, Mailpit locally).
 
 **External accounts, by the phase that first needs them:**
 
