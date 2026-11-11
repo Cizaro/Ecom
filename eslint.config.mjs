@@ -58,6 +58,7 @@ export default tseslint.config(
       "packages/db/scripts/**",
       "apps/web/next.config.ts",
       "playwright.config.ts",
+      "e2e/**",
       "scripts/**",
     ],
     rules: { "no-restricted-properties": "off" },

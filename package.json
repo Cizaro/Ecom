@@ -23,7 +23,8 @@
     "db:migrate:dev": "pnpm --filter @ecom/db migrate:dev",
     "db:seed": "tsx scripts/seed.ts",
     "postinstall": "pnpm db:generate",
-    "db:drift": "pnpm --filter @ecom/db migrate:drift"
+    "db:drift": "pnpm --filter @ecom/db migrate:drift",
+    "admin:create": "tsx scripts/create-admin.ts"
   },
   "devDependencies": {
     "@ecom/config": "workspace:*",

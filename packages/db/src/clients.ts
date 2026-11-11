@@ -6,7 +6,7 @@ import { PrismaClient } from "./generated/prisma/client";
  *
  * App client (DATABASE_URL, role app_user): what request handling uses. It is
  * subject to Row-Level Security, so outside `withTenant` it sees no tenant data
- * at all, and it cannot read password hashes or platform-admin flags.
+ * at all, and it cannot read credentials, sessions or platform-admin flags.
  *
  * Admin client (DATABASE_ADMIN_URL, the schema owner): bypasses Row-Level
  * Security. Reserved for migrations, seeding, authentication, platform
@@ -17,8 +17,8 @@ import { PrismaClient } from "./generated/prisma/client";
 function createAppClient(databaseUrl: string) {
   return new PrismaClient({
     adapter: new PrismaPg({ connectionString: databaseUrl, connectionTimeoutMillis: 3_000 }),
-    // These columns are not granted to app_user; selecting them would fail.
-    omit: { user: { passwordHash: true, isPlatformAdmin: true } },
+    // This column is not granted to app_user; selecting it would fail.
+    omit: { user: { isPlatformAdmin: true } },
   });
 }
 

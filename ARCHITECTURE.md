@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-11-11 (Milestone 1.2). Sections describe the planned architecture; built so far: the scaffold (1.1) and the tenancy and identity schema with Row-Level Security, permission catalogue and seed (1.2).
+Last updated: 2026-11-11 (Milestone 1.3). Sections describe the planned architecture; built so far: the scaffold (1.1) and the tenancy and identity schema with Row-Level Security, permission catalogue and seed (1.2), and staff authentication (1.3).
 
 Update this file whenever the architecture changes.
 
@@ -107,6 +107,30 @@ There are two database connections. `DATABASE_URL` (role `app_user`) serves requ
 Storefront requests resolve the tenant from the host name (custom domain or subdomain). Admin requests resolve it from the user's active membership.
 
 An automated test suite creates two tenants and asserts, for every service and every API route, that tenant A's user cannot read or change tenant B's data. A new route without an isolation test fails CI.
+
+### Authentication (built in Milestone 1.3)
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as Server action
+    participant S as AuthService (core)
+    participant L as Better Auth
+    participant R as Redis
+    participant DB as PostgreSQL (admin connection)
+    B->>A: Sign-in form (same-origin only)
+    A->>S: signIn(email, password, headers, ip)
+    S->>R: Locked out?
+    S->>L: Verify password (Argon2id)
+    L->>DB: accounts, sessions
+    S->>DB: audit_logs
+    S-->>A: signed_in | two_factor_required | invalid | locked
+    A-->>B: Set HTTP-only cookie, redirect
+```
+
+- Only `AuthService` talks to the authentication library, and only server actions talk to `AuthService`. There is no public authentication API route and no sign-up.
+- Every protected page calls `requireSession()`; each request re-checks the session and the user's status in the database, so sign-out, password reset and disabling a user take effect immediately.
+- Authentication is the one part of request handling that uses the admin database connection, because the runtime role cannot read credentials or sessions.
 
 ## 5. Roles and permissions
 

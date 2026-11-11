@@ -84,6 +84,9 @@ describe("seedDemoData", () => {
     expect(tenant.memberships[0]!.role.key).toBe("store_owner");
     expect(tenant.memberships[0]!.user.email).toBe(DEMO_OWNER_EMAIL);
     // Nobody can sign in as the demo owner until a password is set.
-    expect(tenant.memberships[0]!.user.passwordHash).toBeNull();
+    const credentials = await admin.account.count({
+      where: { userId: tenant.memberships[0]!.user.id },
+    });
+    expect(credentials).toBe(0);
   });
 });

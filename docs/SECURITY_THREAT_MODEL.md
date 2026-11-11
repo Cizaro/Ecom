@@ -1,6 +1,6 @@
 # Security Threat Model and Checklist
 
-Last updated: 2026-11-11 (Phase 0). Reviewed again at the end of each phase and fully in Phase 10.
+Last updated: 2026-11-11 (Milestone 1.3). Reviewed again at the end of each phase and fully in Phase 10.
 
 ## 1. Assets
 
@@ -40,7 +40,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | T1 | Cross-tenant read or write (IDOR, missing filter) | Tenant from session or host only; tenant-scoped client; RLS; 404 for foreign records | Two-tenant isolation suite over every service and route |
 | T2 | Privilege escalation within a tenant | Permission per route and service method; role changes need `staff.manage` and are audited; no role can grant above itself | Role and permission boundary tests |
-| T3 | Account takeover | Argon2id password hashing; login rate limits and lockout; MFA for admin roles; session rotation; secure cookies; reset tokens single-use and short-lived | Auth tests |
+| T3 | Account takeover | **Built (1.3):** Argon2id hashing; lockout after 5 failures per account or 30 per address in 15 minutes; optional two-factor with backup codes; HTTP-only same-site cookies, HTTPS-only when `APP_URL` is HTTPS; sessions checked against the database on every request; reset links single-use, 30 minutes, and ending all sessions; identical responses for unknown accounts; no sign-up and no public auth API. **Not yet:** two-factor enforcement by role (1.4); notification email on password or two-factor change. | Unit, integration and end-to-end auth tests |
 | T4 | Forged or replayed webhooks | Signature over raw body; timestamp tolerance; event ID de-duplication | Webhook forgery tests |
 | T5 | Payment tampering (client changes amount, marks order paid) | Totals computed on the server; order paid only from verified webhook; idempotency keys | Checkout integration tests |
 | T6 | Unauthorized refund | `orders.refund` permission; refund never exceeds captured minus refunded; audit entry | Refund authorization and calculation tests |
@@ -80,6 +80,11 @@ Applied to every milestone before it is called done.
 - [ ] Dependency audit and secret scan pass.
 
 ## 6. Residual risks accepted for now
+
+- Session tokens are stored unhashed by the authentication library. The table is closed to the runtime database role; exposure requires owner-level database access or a leaked backup. Backups must be encrypted and access-controlled.
+- A two-factor code can be replayed within its 30-second window.
+- The client address used for rate limits and the audit log is taken from `X-Forwarded-For`; production must run behind a proxy that sets it. Per-account lockout does not depend on it.
+- Per-account lockout lets an attacker lock a known staff email out for 15 minutes at a time. Accepted in exchange for brute-force protection; password reset still works during a lockout.
 
 - No web application firewall or bot management until traffic justifies it.
 - Device fingerprinting for giveaway fraud is limited to basic signals to respect privacy rules.

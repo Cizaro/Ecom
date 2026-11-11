@@ -87,23 +87,106 @@ enum UserStatus {
 }
 
 model User {
-  id              String     @id @default(uuid(7)) @db.Uuid
+  id               String     @id @default(uuid(7)) @db.Uuid
   /// Always stored lowercase (enforced by a check constraint).
-  email           String     @unique
-  name            String?
+  email            String     @unique
+  name             String     @default("")
+  emailVerified    Boolean    @default(false) @map("email_verified")
+  image            String?
+  /// Maintained by the authentication library's two-factor plugin.
+  twoFactorEnabled Boolean    @default(false) @map("mfa_enabled")
   /// Not readable by the runtime database role.
-  passwordHash    String?    @map("password_hash")
-  mfaEnabled      Boolean    @default(false) @map("mfa_enabled")
-  /// Not readable by the runtime database role.
-  isPlatformAdmin Boolean    @default(false) @map("is_platform_admin")
-  status          UserStatus @default(active)
-  deletedAt       DateTime?  @map("deleted_at") @db.Timestamptz(3)
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  isPlatformAdmin  Boolean    @default(false) @map("is_platform_admin")
+  status           UserStatus @default(active)
+  deletedAt        DateTime?  @map("deleted_at") @db.Timestamptz(3)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   memberships UserTenantMembership[]
+  sessions    Session[]
+  accounts    Account[]
+  twoFactors  TwoFactor[]
 
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Authentication tables. Their shape is dictated by the Better Auth library
+// (model and field names must match what it expects). None of them is
+// accessible to the runtime database role: Row-Level Security is enabled with
+// no policies and no grants, so only the admin connection can touch them.
+// ---------------------------------------------------------------------------
+
+model Session {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  /// Bearer credential. Stored as issued by the library (not hashed).
+  token     String   @unique
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+/// One row per sign-in method. Email-and-password sign-in is providerId
+/// "credential", with the Argon2id password hash in `password`.
+model Account {
+  id                    String    @id @default(uuid(7)) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  password              String?
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(3)
+  scope                 String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+/// Short-lived tokens such as password-reset links.
+model Verification {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@index([expiresAt])
+  @@map("verifications")
+}
+
+/// Two-factor secrets and backup codes, encrypted by the library.
+model TwoFactor {
+  id                      String    @id @default(uuid(7)) @db.Uuid
+  userId                  String    @map("user_id") @db.Uuid
+  secret                  String
+  backupCodes             String    @map("backup_codes")
+  verified                Boolean   @default(true)
+  failedVerificationCount Int       @default(0) @map("failed_verification_count")
+  lockedUntil             DateTime? @map("locked_until") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("two_factors")
 }
 
 model Role {

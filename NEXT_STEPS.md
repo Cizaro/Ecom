@@ -4,44 +4,44 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 
 ## Owner actions (do not block development)
 
-1. Check the **Actions** tab of https://github.com/Cizaro/Ecom and confirm the latest CI run is green.
+1. **Try signing in.** Create yourself a user with `pnpm admin:create --email you@example.com --name "Your Name" --tenant demo`, run `pnpm dev`, open http://localhost:3000/admin. Password-reset emails arrive at http://localhost:8025.
 2. The GitHub repository is currently **public**. Make it private in the repository settings if that is not intended.
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 5. On the home computer: install Node.js 26, pnpm and Docker Desktop, then follow "First time on a computer" in PROJECT_STATUS.md.
 
-## Next development task: Milestone 1.3, authentication
+## Next development task: Milestone 1.4, permissions and tenant-scoped access
 
-Scope, and nothing more:
+This is the milestone that makes roles mean something. Scope, and nothing more:
 
-1. **Confirm the library.** Check Better Auth's current documentation for: Prisma 7 and Node 26 support, storing sessions in our Postgres, TOTP MFA, and whether its tables can live beside ours with our naming and Row-Level Security rules. If it does not fit, fall back to Auth.js or a small in-house implementation, and record the outcome in DECISIONS.md (updates D7).
-2. **Staff sign-in:** email and password, Argon2id hashing, secure HTTP-only same-site session cookies, session rotation on sign-in, sign-out, sign-out everywhere.
-3. **Password reset:** single-use, short-lived tokens; emails go through an `EmailProvider` interface with a console adapter and an SMTP adapter pointed at Mailpit locally.
-4. **MFA (TOTP)** with recovery codes, required for owner and manager roles when enabled by the tenant.
-5. **Abuse controls:** rate limits and temporary lockout on sign-in and reset (Redis-backed).
-6. **Database access:** authentication reads and writes `users` through the admin connection, confined to the identity module (decision D20). New tables (sessions, verification tokens, MFA secrets) get RLS or a `GLOBAL_TABLES` entry with a reason.
-7. **Pages:** sign-in, forgot password, reset password, MFA challenge, under the admin area; `/admin` redirects to sign-in when there is no session.
-8. **A way to create the first owner:** `pnpm admin:create` (email, tenant; prompts for the password, never takes it as an argument). This is the "admin-user creation" deliverable.
-9. **Audit log entries** for sign-in, failed sign-in, sign-out, password change, MFA changes.
-10. **Tests:** hashing and token unit tests; integration tests for the flows and lockout; end-to-end sign-in, sign-out, reset (reading the email from Mailpit) on desktop and mobile; checks that session cookies have the right flags and that no secret is logged.
+1. **Request context.** One function that turns a request into `{ userId, tenantId, storeId?, roleKey, permissions, requestId }`, or refuses. The active tenant comes from the user's memberships (a tenant switcher when there is more than one), stored on the session, never from client input.
+2. **Permission guard.** `requirePermission("orders.refund")` for pages, server actions and API routes. Platform administrators are handled explicitly. A lint rule or test that fails when an admin route or action has no guard.
+3. **Tenant-scoped data client.** Domain services receive a database handle already bound to the context's tenant (wrapping `withTenant`), so service code cannot forget it. Restrict the admin client to the identity and platform modules by lint rule.
+4. **Audit helper.** One `audit(context, action, entity, before, after)` used by every sensitive action, replacing the ad-hoc writes in the auth service.
+5. **Two-factor enforcement.** Tenant setting "require two-factor for owners and managers"; users in those roles without it are sent to set it up.
+6. **Host-to-tenant resolution for the storefront** (store domains table and a safe lookup that works before a tenant context exists).
+7. **Separate test database** for integration and end-to-end tests, so they stop writing to the development database.
+8. **Isolation test harness.** Two tenants, one user per role. For every admin route and action: wrong tenant gets not-found, missing permission gets forbidden, no session gets redirected. New routes without an entry fail CI.
+9. **API foundation:** `/api/v1` route helper with the error format, request IDs and validation from docs/API_SPECIFICATION.md, plus one real endpoint (`GET /api/v1/admin/me`) to prove it.
 
-Done when: a seeded or newly created owner can sign in and out through the browser, all checks pass, and status files are updated.
+Done when: a marketer and a store owner signed in to the same tenant see different things on a demonstration page, a user from another tenant sees nothing, all checks pass, and status files are updated.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 1.4 Permission guard, request context, tenant-scoped client, isolation test harness | Includes a separate test database and host-to-tenant resolution |
-| 3 | 1.5 Design system, app shells, Content Security Policy | Placeholder theme if brand assets are not ready |
-| 4 | 2.1 to 2.6 Catalog and storefront | |
-| 5 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
-| 6 | Launch hardening pulled forward from Phase 10 | Backups, monitoring |
+| 2 | 1.5 Design system, app shells, Content Security Policy | Includes QR code for two-factor setup and keeping form values after an error. Placeholder theme if brand assets are not ready. |
+| 3 | 2.1 to 2.6 Catalog and storefront | First visible store content |
+| 4 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
+| 5 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
 
-- Separate test database for integration tests (with Milestone 1.4).
+- Staff invitation and management screens (with settings, Milestone 3.7 at the latest).
+- Scheduled cleanup of expired sessions and verification tokens (worker job).
+- Email notification when a password is changed or two-factor is switched off.
 - Pin Docker image versions (currently `latest` for RustFS, Mailpit and the AWS CLI helper).
 - Add a Dockerfile for web and worker (with launch hardening).
 - Set `NEXT_TELEMETRY_DISABLED=1` for builds if the owner wants Next.js anonymous telemetry off.
@@ -51,4 +51,4 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 - Meta developer app, business verification and app review (Phase 6).
 - TikTok developer app and audit (Phase 6).
 - Payment provider account approval, including the giveaway question (docs/COMPLIANCE.md section 1).
-- Domain purchase and transactional email domain setup.
+- Domain purchase and transactional email domain setup (a real email provider is needed before launch).

@@ -23,3 +23,11 @@ minimumReleaseAgeExclude:
   - "@aws-sdk/token-providers@3.1166.0"
   - "@smithy/core@3.40.0"
   - bullmq@6.7.4
+  - "@better-auth/core@1.7.20"
+  - "@better-auth/drizzle-adapter@1.7.20"
+  - "@better-auth/kysely-adapter@1.7.20"
+  - "@better-auth/memory-adapter@1.7.20"
+  - "@better-auth/mongo-adapter@1.7.20"
+  - "@better-auth/prisma-adapter@1.7.20"
+  - "@better-auth/telemetry@1.7.20"
+  - better-auth@1.7.20

@@ -39,7 +39,7 @@ async function createFixture(label: string): Promise<Fixture> {
     data: { tenantId: tenant.id, name: `Store ${label}`, slug: "main" },
   });
   const user = await admin.user.create({
-    data: { email: `user-${label}-${run}@example.test`, name: label, passwordHash: "not-a-hash" },
+    data: { email: `user-${label}-${run}@example.test`, name: label },
   });
   const customRole = await admin.role.create({
     data: { tenantId: tenant.id, key: "custom", name: `Custom ${label}` },
@@ -207,13 +207,9 @@ describe("users", () => {
     expect(users.map((u) => u.id)).toEqual([a.userId]);
   });
 
-  it("never exposes password hashes or the platform-admin flag", async () => {
+  it("never exposes the platform-admin flag", async () => {
     const [user] = await asTenant(a, (tx) => tx.user.findMany());
-    expect(user).not.toHaveProperty("passwordHash");
     expect(user).not.toHaveProperty("isPlatformAdmin");
-    await expect(
-      asTenant(a, (tx) => tx.$queryRaw`SELECT password_hash FROM users`),
-    ).rejects.toThrow();
     await expect(
       asTenant(a, (tx) => tx.$queryRaw`SELECT is_platform_admin FROM users`),
     ).rejects.toThrow();
@@ -237,6 +233,27 @@ describe("users", () => {
       tx.user.updateMany({ where: { id: a.userId }, data: { name: "hacked" } }),
     );
     expect(result.count).toBe(0);
+  });
+});
+
+describe("authentication tables", () => {
+  it.each(["sessions", "accounts", "verifications", "two_factors"])(
+    "%s cannot be read or written by the runtime role",
+    async (table) => {
+      await expect(
+        asTenant(a, (tx) => tx.$queryRawUnsafe(`SELECT 1 FROM ${table} LIMIT 1`)),
+      ).rejects.toThrow(/permission denied/);
+      await expect(
+        asTenant(a, (tx) => tx.$executeRawUnsafe(`DELETE FROM ${table}`)),
+      ).rejects.toThrow(/permission denied/);
+    },
+  );
+
+  it("live in the public schema, not the helper schema", async () => {
+    const rows = await admin.$queryRaw<{ schemaname: string; tablename: string }[]>`
+      SELECT schemaname::text, tablename::text FROM pg_tables
+      WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'public')`;
+    expect(rows).toEqual([]);
   });
 });
 

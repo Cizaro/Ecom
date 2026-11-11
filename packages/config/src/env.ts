@@ -4,6 +4,12 @@ const PLACEHOLDER_PREFIX = "CHANGE_ME";
 
 const postgresUrl = z.string().regex(/^postgres(ql)?:\/\//, "must be a PostgreSQL connection URL");
 
+/** Treats an empty value (`SMTP_USER=`) as not set. */
+const optionalText = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().optional(),
+);
+
 const secret = z.string().min(32, "must be at least 32 characters");
 
 /**
@@ -30,6 +36,17 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: z.string().min(1),
   S3_PUBLIC_URL: z.url(),
+
+  /** `console` only records that an email would be sent; `smtp` delivers it. */
+  EMAIL_PROVIDER: z.enum(["console", "smtp"]).default("console"),
+  EMAIL_FROM: z.string().min(3).default("store@example.com"),
+  SMTP_HOST: optionalText,
+  SMTP_PORT: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : Number(value)),
+    z.number().int().min(1).max(65535).optional(),
+  ),
+  SMTP_USER: optionalText,
+  SMTP_PASSWORD: optionalText,
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -59,6 +76,9 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   }
 
   const env = result.data;
+  if (env.EMAIL_PROVIDER === "smtp" && (!env.SMTP_HOST || !env.SMTP_PORT)) {
+    throw new EnvValidationError(["SMTP_HOST and SMTP_PORT: required when EMAIL_PROVIDER is smtp"]);
+  }
   if (env.NODE_ENV === "production") {
     const placeholders = PRODUCTION_SECRETS.filter((key) =>
       env[key].startsWith(PLACEHOLDER_PREFIX),

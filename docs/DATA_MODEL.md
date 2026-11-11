@@ -1,8 +1,8 @@
 # Data Model
 
-Last updated: 2026-11-11 (Milestone 1.2). `packages/db/prisma/schema.prisma` and the migrations are the source of truth. Sections 1 and 7 below are implemented; the rest is still design.
+Last updated: 2026-11-11 (Milestone 1.3). `packages/db/prisma/schema.prisma` and the migrations are the source of truth. Sections 1 and 7 below are implemented; the rest is still design.
 
-**Implemented so far:** `tenants`, `stores`, `users`, `roles`, `permissions`, `role_permissions`, `user_tenant_memberships`, `audit_logs`, `consent_records`, `notification_preferences`, `feature_flags`, `idempotency_keys`, `outbox_events`, `jobs`.
+**Implemented so far:** `tenants`, `stores`, `users`, `roles`, `permissions`, `role_permissions`, `user_tenant_memberships`, `audit_logs`, `consent_records`, `notification_preferences`, `feature_flags`, `idempotency_keys`, `outbox_events`, `jobs`, and the authentication tables `sessions`, `accounts`, `verifications`, `two_factors`.
 
 ## Conventions
 
@@ -57,6 +57,9 @@ erDiagram
 | permissions | All (global catalogue) | None |
 | feature_flags | Global defaults and own tenant's | Own tenant's |
 | audit_logs | Own tenant | Insert for own tenant only |
+| sessions, accounts, verifications, two_factors | None | None |
+
+The four authentication tables follow the shape the Better Auth library requires. `accounts.password` holds the Argon2id hash for email-and-password sign-in (provider `credential`); `users` no longer has a password column. `two_factors` holds the encrypted authenticator secret and backup codes. `users` gained `email_verified` and `image`, and `name` is now required (empty by default). Helper functions used by the policies live in the `app_private` schema.
 
 Platform administrator is the `is_platform_admin` flag on a user, not a membership. The plan reference on `Tenant` (`plan_id`) arrives in Phase 9.
 

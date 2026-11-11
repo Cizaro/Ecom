@@ -48,6 +48,20 @@ describe("parseEnv", () => {
     }
   });
 
+  it("requires SMTP settings only when the smtp provider is selected", () => {
+    expect(parseEnv({ ...valid, SMTP_HOST: "", SMTP_PORT: "" }).EMAIL_PROVIDER).toBe("console");
+    expect(() => parseEnv({ ...valid, EMAIL_PROVIDER: "smtp" })).toThrow(/SMTP_HOST/);
+    const env = parseEnv({
+      ...valid,
+      EMAIL_PROVIDER: "smtp",
+      SMTP_HOST: "localhost",
+      SMTP_PORT: "1025",
+      SMTP_USER: "",
+    });
+    expect(env.SMTP_PORT).toBe(1025);
+    expect(env.SMTP_USER).toBeUndefined();
+  });
+
   it("allows example placeholders in development", () => {
     const placeholder = "CHANGE_ME_GENERATE_32_RANDOM_BYTES";
     expect(() => parseEnv({ ...valid, AUTH_SECRET: placeholder })).not.toThrow();

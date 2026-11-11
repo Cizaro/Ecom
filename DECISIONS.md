@@ -79,6 +79,22 @@ Fixes go in a new migration, even for a migration written minutes earlier (see `
 ### D24. Default role permissions (2026-11-11)
 Defined in packages/core/src/identity/permissions.ts. Notable defaults, all changeable later through custom roles: staff management, customer deletion, ad launch, giveaway draws, AI configuration and social account connection are owner-only; refunds and customer export are owner and manager; customer-service agents cannot refund; content editors cannot approve or publish. **Owner: please review these defaults.**
 
+### D25. Better Auth confirmed for authentication (2026-11-11, closes D7)
+Better Auth 1.7 supports Prisma 7 and Next.js 16 and lets us keep our own table names and UUID keys, so the decision in D7 stands. How it is used:
+- Wrapped by our own `AuthService` (packages/core/src/identity). Nothing else calls the library.
+- **No public auth API route.** The library's HTTP handler is not mounted; the web app calls the service from server actions only. This removes sign-up and every unused endpoint from the attack surface, and Next.js's origin check on server actions is the CSRF protection.
+- Password hashing is replaced with Argon2id from Node's built-in crypto (the library's default is scrypt).
+- Lockout is our own Redis-backed limiter, because the library's rate limiter only covers its HTTP handler.
+- It runs on the admin database connection (D20). Its tables (`sessions`, `accounts`, `verifications`, `two_factors`) have Row-Level Security enabled with no policy and no grant, so the runtime role cannot touch them.
+- Passwords now live in `accounts.password`; `users.password_hash` was dropped.
+Accepted trade-offs: session tokens are stored unhashed, and a two-factor code can be reused within its 30-second window (see PROJECT_STATUS.md, known limitations).
+
+### D26. Helper schema renamed from `app` to `app_private` (2026-11-11)
+PostgreSQL's default search path starts with a schema named after the connected role. Our owner role is called `app` locally and in CI, so once a schema named `app` existed, new tables were silently created in it instead of `public`. Caught by the drift check; fixed by migration `20261111141000_rename_helper_schema`. Rule going forward: helper objects live in `app_private`, and a test asserts no table exists outside `public`. Where D19 says `app.current_tenant_id()`, read `app_private.current_tenant_id()`; the settings `app.tenant_id` and `app.user_id` are unchanged.
+
+### D27. Staff accounts are created, not self-registered (2026-11-11)
+There is no sign-up page. Staff users are created with `pnpm admin:create` today and by invitation from the admin later. The command never accepts a password as an argument.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
