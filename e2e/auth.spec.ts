@@ -120,6 +120,9 @@ test.describe("staff sign-in", () => {
   test("two-factor can be turned on and is then required at sign-in", async ({
     page,
   }, testInfo) => {
+    // The longest scenario (two sign-ins, setup, verification); slow CI
+    // runners need more than the default 30 seconds.
+    test.slow();
     const email = user("mfa", testInfo.project.name);
 
     await signIn(page, email, password());
@@ -143,6 +146,7 @@ test.describe("staff sign-in", () => {
     await expect(page.getByTestId("two-factor-status")).toContainText("On.");
 
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/sign-in$/);
     await signIn(page, email, password());
     await expect(page).toHaveURL(/\/admin\/two-factor$/);
 
