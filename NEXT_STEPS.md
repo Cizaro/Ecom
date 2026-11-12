@@ -9,28 +9,33 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 2.2, product media
+## Next development task: Milestone 2.3, storefront listing
 
-See PROJECT_PLAN.md section 4 (Phase 2) and docs/DATA_MODEL.md section 2.
+See PROJECT_PLAN.md section 4 (Phase 2).
 
-1. `media_assets` and `product_images` tables, tenant-scoped with Row-Level Security and same-tenant triggers (pattern: the catalog migration).
-2. Storage provider interface with the S3 adapter (the local RustFS service is already running); object keys prefixed with the tenant ID.
-3. Upload from the product page: type and size limits checked on the server from the file's content, not its name; images re-encoded so metadata such as location is removed.
-4. Resized versions made by a worker job; alt text; drag or button ordering; one image marked as the main one; images optionally tied to a variant.
-5. Category image and brand logo (the two columns left out in 2.1).
-6. Tests: isolation (another tenant cannot read, attach or delete an asset), upload validation, and a browser test of upload and reorder.
+1. Public catalog reads in `packages/core`: only published products with at least one active variant, in the store resolved from the host; no cost prices or draft data ever leave the server.
+2. Homepage sections (featured, new arrivals, categories with their images) replacing the placeholder storefront.
+3. Category pages with sub-categories, filters (price, brand, colour), sorting and pagination in the URL.
+4. Search by name, description and SKU using PostgreSQL full-text (`search_vector`), behind the `SearchProvider` interface.
+5. Product cards using the resized images (`srcset`), with real prices and honest sale display (decision D37).
+6. Tests: a draft or archived product and another tenant's product never appear; filters and paging; phone-width browser test.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 2.3 to 2.6 Storefront: listing, product page, cart, SEO | First visible store content |
+| 2 | 2.4 to 2.6 Storefront: product page, cart, SEO | |
 | 3 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
 | 4 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Media: cleanup job for files in storage that no row points to (left behind only if storage was unreachable during a delete; each case is logged).
+- Media: drag-and-drop ordering and upload progress per file (buttons work today); crop or focal point.
+- Media: background removal and video, behind the existing interfaces (with content tools, Phase 6).
+- Media: production needs a public-read rule for `public/*` on the bucket (see `docker/storage-public-read-policy.json`) and ideally a CDN; set `S3_PUBLIC_URL` to it.
 
 - Catalog: bulk import and export (CSV), duplicate a product, reorder variants, and a list filter by category.
 - Catalog: length, width and height are stored per variant but not yet in the form.

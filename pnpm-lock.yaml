@@ -281,6 +281,9 @@ importers:
       '@ecom/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@ecom/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       bullmq:
         specifier: 6.7.4
         version: 6.7.4(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.1)
@@ -308,6 +311,9 @@ importers:
       better-auth:
         specifier: 1.7.20
         version: 1.7.20(@prisma/client@7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3))(typescript@6.0.3))(mysql2@3.24.4(@types/node@26.6.6))(next@16.4.6(@playwright/test@1.65.0)(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.1)(prisma@7.10.1(@types/node@26.6.6)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@26.6.6)(vite@8.3.7(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))
+      bullmq:
+        specifier: 6.7.4
+        version: 6.7.4(ioredis@6.0.0(supports-color@7.2.0))(pg@8.23.1)
       ioredis:
         specifier: 6.0.0
         version: 6.0.0(supports-color@7.2.0)
@@ -317,6 +323,9 @@ importers:
       pino:
         specifier: 10.4.0
         version: 10.4.0
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@26.6.6)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -353,7 +362,11 @@ importers:
         specifier: 4.23.15
         version: 4.23.15
 
-  packages/testing: {}
+  packages/testing:
+    dependencies:
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@26.6.6)
 
   packages/ui:
     devDependencies:
@@ -3352,8 +3365,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@img/colour@1.1.0':
-    optional: true
+  '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.35.5':
     optionalDependencies:
@@ -5147,7 +5159,6 @@ snapshots:
       '@img/sharp-win32-ia32': 0.35.5
       '@img/sharp-win32-x64': 0.35.5
       '@types/node': 26.6.6
-    optional: true
 
   shebang-command@2.0.0:
     dependencies:

@@ -4,6 +4,7 @@ import {
   hasPermission,
   listBrands,
   listCategories,
+  listProductImages,
   type ProductStatusValue,
 } from "@ecom/core";
 import {
@@ -27,6 +28,7 @@ import {
   TextAreaField,
   TextField,
 } from "../../../../_components/form";
+import { ProductImages } from "../../_components/product-images";
 import { setProductStatusAction, updateProductAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Product" };
@@ -65,9 +67,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const db = tenantDb(context);
   const product = await orNotFound(getProduct(db, context, id));
-  const [categories, brands] = await Promise.all([
+  const [categories, brands, images] = await Promise.all([
     listCategories(db, context),
     listBrands(db, context),
+    listProductImages(db, context, id),
   ]);
   const canWrite = hasPermission(context, "catalog.write");
 
@@ -104,6 +107,13 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </div>
         ) : null}
       </Card>
+
+      <ProductImages
+        productId={product.id}
+        images={images}
+        variants={product.variants}
+        canWrite={canWrite}
+      />
 
       <Card
         title="Variants"

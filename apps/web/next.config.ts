@@ -8,8 +8,7 @@ try {
   // No .env file: variables come from the real environment (CI, production).
 }
 
-// Baseline headers. A Content Security Policy is added with the design system
-// in Milestone 1.5, once the set of script and style sources is known.
+// Baseline headers. The Content Security Policy is set per request in src/proxy.ts.
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -22,10 +21,22 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Workspace packages are consumed as TypeScript source.
   transpilePackages: ["@ecom/config", "@ecom/core", "@ecom/db", "@ecom/ui"],
-  serverExternalPackages: ["pino", "ioredis", "pg", "@prisma/adapter-pg", "nodemailer"],
+  serverExternalPackages: [
+    "pino",
+    "ioredis",
+    "pg",
+    "@prisma/adapter-pg",
+    "nodemailer",
+    "bullmq",
+    "sharp",
+  ],
   outputFileTracingRoot: resolve(import.meta.dirname, "../.."),
   // Enables forbidden() and the 403 page used by the permission guard.
-  experimental: { authInterrupts: true },
+  experimental: {
+    authInterrupts: true,
+    // One image per upload request, 8 MB at most (MAX_UPLOAD_BYTES), plus form overhead.
+    serverActions: { bodySizeLimit: "9mb" },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

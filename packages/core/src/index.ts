@@ -118,3 +118,41 @@ export type {
   VariantStatusValue,
 } from "./catalog/products";
 export { seedDemoCatalog } from "./catalog/demo-seed";
+export {
+  addProductImage,
+  getBrandLogo,
+  getCategoryImage,
+  IMAGE_MOVES,
+  listProductImages,
+  MAX_ALT_TEXT_LENGTH,
+  MAX_PRODUCT_IMAGES,
+  moveProductImage,
+  removeBrandLogo,
+  removeCategoryImage,
+  removeProductImage,
+  setBrandLogo,
+  setCategoryImage,
+  updateProductImage,
+} from "./catalog/images";
+export type { ImageMove, ProductImageDetail, ProductImageUpdateInput } from "./catalog/images";
+export { imageView, markMediaAssetFailed, processMediaAsset } from "./media/assets";
+export type {
+  ImageView,
+  MediaDeps,
+  MediaProcessingJob,
+  MediaStatusValue,
+  ProcessOutcome,
+  StoredImage,
+  StoredVariant,
+} from "./media/assets";
+export { MAX_UPLOAD_BYTES } from "./media/image";
+export { createMemoryStorage, createS3Storage } from "./storage/storage";
+export type { MemoryStorage, StorageEnv, StorageProvider } from "./storage/storage";
+export {
+  closeQueues,
+  enqueueMediaProcessing,
+  MAINTENANCE_JOBS,
+  MEDIA_JOBS,
+  QUEUES,
+} from "./platform/queues";
+export { listUnprocessedMedia } from "./platform/media-sweep";

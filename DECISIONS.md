@@ -125,6 +125,18 @@ New variants are priced in the store's default currency; the currency is stored 
 ### D37. Sale and compare-at prices are constrained in the database (2026-11-12)
 A sale price must be lower than the price, and a compare-at ("was") price higher. Both rules are check constraints as well as form validation. This cannot prove a compare-at price was really charged before, so the form says so; a price-history record that can prove it is planned with promotions (Milestone 3.8).
 
+### D38. Product images are public files with unguessable addresses (2026-11-12)
+Images are served straight from object storage (or a CDN in front of it), not through the app. Only keys under `public/` are readable without credentials; the bucket cannot be listed. Every key is `public/<tenant id>/<32 random hex characters>/<file>`, so one address does not reveal another, and a database check constraint keeps each tenant's rows inside its own prefix. Consequence: the images of a draft product are reachable by anyone who has the exact address. Private files (invoices, exports) will go outside `public/` and be served through signed, expiring links.
+
+### D39. Uploads are re-encoded before they are stored (2026-11-12)
+The file type is decided from the file's first bytes (JPEG, PNG or WebP only; no SVG, GIF or anything executable), then the image is decoded and written out again: turned upright, scaled to 2560 pixels at most, with all embedded metadata (location, camera) dropped. Pictures with transparency stay PNG; the rest become JPEG. The original bytes are never stored. Limits: 8 MB per file, 50 megapixels, 20 images per product.
+
+### D40. Resized versions are made in the background; the status row is the source of truth (2026-11-12)
+The upload request stores the cleaned image and returns; a worker job makes WebP versions 320, 640 and 1280 pixels wide. Pages use the cleaned image until those exist. If the queue is unreachable the upload still succeeds: a sweep every minute queues any asset still marked `processing` after two minutes. After four failed attempts the asset is marked `failed` and keeps using the full-size image.
+
+### D41. The first image is the main image (2026-11-12)
+There is no separate "main" flag that could disagree with the order. "Make main" moves an image to the front. An image can be tied to one variant of the same product (enforced by a database trigger), for showing the right picture when a colour is chosen.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

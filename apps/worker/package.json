@@ -11,6 +11,7 @@
   "dependencies": {
     "@ecom/config": "workspace:*",
     "@ecom/core": "workspace:*",
+    "@ecom/db": "workspace:*",
     "bullmq": "6.7.4",
     "tsx": "4.23.15"
   }

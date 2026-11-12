@@ -1,4 +1,4 @@
-import { getCategory, listCategories } from "@ecom/core";
+import { getCategory, getCategoryImage, listCategories } from "@ecom/core";
 import { Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -11,7 +11,13 @@ import {
   TextAreaField,
   TextField,
 } from "../../../../_components/form";
-import { deleteCategoryAction, updateCategoryAction } from "../../actions";
+import { SingleImage } from "../../_components/single-image";
+import {
+  deleteCategoryAction,
+  removeCategoryImageAction,
+  setCategoryImageAction,
+  updateCategoryAction,
+} from "../../actions";
 
 export const metadata: Metadata = { title: "Edit category" };
 
@@ -20,7 +26,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const db = tenantDb(context);
   const category = await orNotFound(getCategory(db, context, id));
-  const categories = await listCategories(db, context);
+  const [categories, image] = await Promise.all([
+    listCategories(db, context),
+    getCategoryImage(db, context, id),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -85,6 +94,16 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
           />
         </ActionForm>
       </Card>
+      <SingleImage
+        title="Image"
+        description="Shown where the category is presented in the store."
+        noun="image"
+        id={category.id}
+        image={image}
+        alt={category.name}
+        setAction={setCategoryImageAction}
+        removeAction={removeCategoryImageAction}
+      />
       <Card
         title="Delete this category"
         description="Its products are kept and become uncategorised. This cannot be undone."

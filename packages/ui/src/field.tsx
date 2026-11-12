@@ -8,10 +8,14 @@ export const inputClasses =
 /**
  * A labelled text input with optional hint and error. The label is always
  * visible; the hint and error are linked with aria-describedby.
+ *
+ * The element ID is the field name. Pass `id` when the same field name
+ * appears more than once on a page (one form per list row, for example).
  */
 export function Field({
   label,
   name,
+  id = name,
   hint,
   error,
   className,
@@ -19,19 +23,20 @@ export function Field({
 }: {
   label: string;
   name: string;
+  id?: string;
   hint?: string;
   error?: string;
 } & Omit<ComponentProps<"input">, "name" | "id">) {
-  const hintId = hint ? `${name}-hint` : undefined;
-  const errorId = error ? `${name}-error` : undefined;
+  const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-sm font-medium">
+      <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
       <input
-        id={name}
+        id={id}
         name={name}
         aria-describedby={describedBy}
         aria-invalid={error ? true : undefined}
@@ -54,23 +59,23 @@ export function Field({
 
 function FieldShell({
   label,
-  name,
+  id,
   hint,
   error,
   children,
 }: {
   label: string;
-  name: string;
+  id: string;
   hint?: string;
   error?: string;
   children: (describedBy: string | undefined) => ReactNode;
 }) {
-  const hintId = hint ? `${name}-hint` : undefined;
-  const errorId = error ? `${name}-error` : undefined;
+  const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-sm font-medium">
+      <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
       {children(describedBy)}
@@ -104,7 +109,7 @@ export function TextArea({
   error?: string;
 } & Omit<ComponentProps<"textarea">, "name" | "id">) {
   return (
-    <FieldShell label={label} name={name} hint={hint} error={error}>
+    <FieldShell label={label} id={name} hint={hint} error={error}>
       {(describedBy) => (
         <textarea
           id={name}
@@ -129,6 +134,7 @@ export interface SelectOption {
 export function Select({
   label,
   name,
+  id = name,
   hint,
   error,
   options,
@@ -137,15 +143,16 @@ export function Select({
 }: {
   label: string;
   name: string;
+  id?: string;
   hint?: string;
   error?: string;
   options: readonly SelectOption[];
 } & Omit<ComponentProps<"select">, "name" | "id" | "children">) {
   return (
-    <FieldShell label={label} name={name} hint={hint} error={error}>
+    <FieldShell label={label} id={id} hint={hint} error={error}>
       {(describedBy) => (
         <select
-          id={name}
+          id={id}
           name={name}
           aria-describedby={describedBy}
           aria-invalid={error ? true : undefined}

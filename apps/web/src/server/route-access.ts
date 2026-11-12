@@ -81,6 +81,14 @@ const CATALOG_ACTION_ENTRIES: readonly ActionEntry[] = [
   "addVariantAction",
   "updateVariantAction",
   "deleteVariantAction",
+  "uploadProductImageAction",
+  "updateProductImageAction",
+  "moveProductImageAction",
+  "removeProductImageAction",
+  "setCategoryImageAction",
+  "removeCategoryImageAction",
+  "setBrandLogoAction",
+  "removeBrandLogoAction",
 ].map((name) => ({ id: `${CATALOG_ACTIONS}#${name}`, access: CATALOG_WRITE }));
 
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";

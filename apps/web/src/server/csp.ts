@@ -13,7 +13,25 @@ export function createNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
-export function buildCsp(nonce: string, options: { development: boolean }): string {
+/** The origin of an address, or null when it is missing or not a web address. */
+export function originOf(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+export function buildCsp(
+  nonce: string,
+  options: {
+    development: boolean;
+    /** Where uploaded images are served from (the storage service or its CDN). */
+    mediaOrigin?: string | null;
+  },
+): string {
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     // React's development build needs eval for its debugging features.
@@ -24,8 +42,8 @@ export function buildCsp(nonce: string, options: { development: boolean }): stri
       ...(options.development ? ["'unsafe-eval'"] : []),
     ],
     "style-src": ["'self'", "'unsafe-inline'"],
-    // data: for the two-factor QR code; blob: for future image previews.
-    "img-src": ["'self'", "data:", "blob:"],
+    // data: for the two-factor QR code; blob: for previews of a chosen file.
+    "img-src": ["'self'", "data:", "blob:", ...(options.mediaOrigin ? [options.mediaOrigin] : [])],
     "font-src": ["'self'"],
     // Development hot reload uses a websocket to the dev server.
     "connect-src": ["'self'", ...(options.development ? ["ws:"] : [])],

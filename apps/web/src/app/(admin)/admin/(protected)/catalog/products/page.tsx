@@ -19,6 +19,8 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
+import { viewOf } from "@/server/media";
+import { MediaImage } from "../../../_components/media-image";
 
 export const metadata: Metadata = { title: "Products" };
 
@@ -109,18 +111,33 @@ export default async function ProductsPage({
         <List testId="product-list">
           {result.items.map((product) => (
             <ListItem key={product.id} testId="product-row">
-              <div className="min-w-0">
-                <Link
-                  href={`/admin/catalog/products/${product.id}`}
-                  className="font-medium underline-offset-4 hover:underline"
-                >
-                  {product.name}
-                </Link>
-                <p className="truncate text-sm text-ink-muted">
-                  {[product.categoryName ?? "No category", product.brandName]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                {product.mainImage ? (
+                  <MediaImage
+                    image={viewOf(product.mainImage)}
+                    alt=""
+                    sizes="48px"
+                    className="size-12 shrink-0 rounded-control border border-line"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="size-12 shrink-0 rounded-control border border-dashed border-line-strong bg-surface-muted"
+                  />
+                )}
+                <div className="min-w-0">
+                  <Link
+                    href={`/admin/catalog/products/${product.id}`}
+                    className="font-medium underline-offset-4 hover:underline"
+                  >
+                    {product.name}
+                  </Link>
+                  <p className="truncate text-sm text-ink-muted">
+                    {[product.categoryName ?? "No category", product.brandName]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
                 <span>

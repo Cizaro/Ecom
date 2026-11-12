@@ -15,7 +15,8 @@ export interface TenantDb {
 
 export function createTenantDb(
   prisma: AppPrismaClient,
-  context: Pick<RequestContext, "tenantId" | "userId">,
+  /** Background jobs act for a tenant without a signed-in user. */
+  context: { tenantId: string; userId?: string },
 ): TenantDb {
   const binding = { tenantId: context.tenantId, userId: context.userId };
   return {

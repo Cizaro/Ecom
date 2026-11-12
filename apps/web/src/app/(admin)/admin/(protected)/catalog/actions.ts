@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  addProductImage,
   addVariant,
   createBrand,
   createCategory,
@@ -10,11 +11,19 @@ import {
   deleteVariant,
   getCatalogCurrency,
   getVariant,
+  IMAGE_MOVES,
+  moveProductImage,
   PRODUCT_STATUSES,
+  removeBrandLogo,
+  removeCategoryImage,
+  removeProductImage,
+  setBrandLogo,
+  setCategoryImage,
   setProductStatus,
   updateBrand,
   updateCategory,
   updateProduct,
+  updateProductImage,
   updateVariant,
   VARIANT_STATUSES,
   type ProductStatusValue,
@@ -33,6 +42,7 @@ import {
   tagList,
   wholeNumberField,
 } from "@/server/catalog-forms";
+import { mediaDeps, uploadedImage } from "@/server/media";
 import type { FormState } from "../../actions";
 
 // Server actions for the catalog. Every action checks the permission itself;
@@ -349,4 +359,129 @@ export async function deleteVariantAction(
   if (!result.ok) return result.state;
   revalidatePath(PRODUCTS);
   redirect(`${PRODUCTS}/${result.value.productId}`);
+}
+
+// --- Images -------------------------------------------------------------------
+// One image per request. The file's content, not its name, decides whether it
+// is accepted (see packages/core/src/media/image.ts).
+
+export async function uploadProductImageAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const productId = field(formData, "productId");
+  const result = await attempt(async () =>
+    addProductImage(tenantDb(context), context, mediaDeps(), productId, {
+      bytes: await uploadedImage(formData),
+    }),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(PRODUCTS);
+  revalidatePath(`${PRODUCTS}/${productId}`);
+  return { notice: "Image added." };
+}
+
+export async function updateProductImageAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const result = await attempt(
+    () =>
+      updateProductImage(tenantDb(context), context, field(formData, "id"), {
+        altText: field(formData, "altText"),
+        variantId: field(formData, "variantId"),
+      }),
+    echo(formData, ["altText", "variantId"]),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(PRODUCTS);
+  revalidatePath(`${PRODUCTS}/${result.value.productId}`);
+  return { notice: "Saved." };
+}
+
+export async function moveProductImageAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const requested = field(formData, "move");
+  const move = IMAGE_MOVES.find((value) => value === requested);
+  if (!move) return { error: "Unknown move." };
+  const result = await attempt(() =>
+    moveProductImage(tenantDb(context), context, field(formData, "id"), move),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(PRODUCTS);
+  revalidatePath(`${PRODUCTS}/${result.value.productId}`);
+  return {};
+}
+
+export async function removeProductImageAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const result = await attempt(() =>
+    removeProductImage(tenantDb(context), context, mediaDeps(), field(formData, "id")),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(PRODUCTS);
+  revalidatePath(`${PRODUCTS}/${result.value.productId}`);
+  return {};
+}
+
+export async function setCategoryImageAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const id = field(formData, "id");
+  const result = await attempt(async () =>
+    setCategoryImage(tenantDb(context), context, mediaDeps(), id, await uploadedImage(formData)),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(`${CATEGORIES}/${id}`);
+  return { notice: "Image saved." };
+}
+
+export async function removeCategoryImageAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const id = field(formData, "id");
+  const result = await attempt(() =>
+    removeCategoryImage(tenantDb(context), context, mediaDeps(), id),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(`${CATEGORIES}/${id}`);
+  return {};
+}
+
+export async function setBrandLogoAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const id = field(formData, "id");
+  const result = await attempt(async () =>
+    setBrandLogo(tenantDb(context), context, mediaDeps(), id, await uploadedImage(formData)),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(`${BRANDS}/${id}`);
+  return { notice: "Logo saved." };
+}
+
+export async function removeBrandLogoAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const id = field(formData, "id");
+  const result = await attempt(() => removeBrandLogo(tenantDb(context), context, mediaDeps(), id));
+  if (!result.ok) return result.state;
+  revalidatePath(`${BRANDS}/${id}`);
+  return {};
 }

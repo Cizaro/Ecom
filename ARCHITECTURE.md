@@ -156,10 +156,10 @@ Every external dependency sits behind an interface in the owning module, with a 
 | `ShippingProvider` | flat-rate table, then a carrier |
 | `TaxCalculator` | fixed-rate per region |
 | `EmailProvider` | console (dev), SMTP |
-| `StorageProvider` | S3-compatible |
+| `StorageProvider` | S3-compatible (built: `packages/core/src/storage`), in-memory for tests |
 | `SearchProvider` | PostgreSQL full-text |
 | `AIProvider` | mock, Anthropic, OpenAI-compatible |
-| `ImageProcessor` | local (sharp) for resize; provider for background removal |
+| `ImageProcessor` | local (sharp) for resize (built: `packages/core/src/media/image.ts`); provider for background removal |
 | `SocialPlatform` | Meta (Facebook, Instagram), TikTok |
 | `AdsPlatform` | Meta Ads |
 

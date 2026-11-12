@@ -50,7 +50,7 @@ erDiagram
 | --- | --- | --- |
 | tenants | Own row | Update own row; no create or delete |
 | stores, consent_records, notification_preferences, idempotency_keys, outbox_events, jobs | Own tenant | Own tenant |
-| store_domains, categories, brands, products, product_variants, product_attributes | Own tenant | Own tenant |
+| store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images | Own tenant | Own tenant |
 | user_tenant_memberships | Own tenant, plus the signed-in user's own memberships elsewhere | Own tenant |
 | users | Self and members of the current tenant; never `password_hash` or `is_platform_admin` | Own `name` only |
 | roles | System roles and own tenant's | Own tenant's non-system roles |
@@ -110,7 +110,15 @@ erDiagram
 - Prices are never negative; a sale price is below the price and a compare-at price above it; currency is a three-letter uppercase code.
 - Deleting a category or brand leaves its products in place without that category or brand. A category with sub-categories cannot be deleted.
 
-Not yet built from this section: `image_asset_id` and `logo_asset_id` (media, Milestone 2.2), `search_vector` (storefront search, Milestone 2.3), and the supplier, purchase-order and inventory tables (Milestone 3.2).
+**Media (Milestone 2.2):** `media_assets` and `product_images`, plus `categories.image_asset_id` and `brands.logo_asset_id`. Rules in the database:
+
+- `media_assets.storage_key` must start with `public/<the row's tenant id>/`, so a tenant cannot register a file under another tenant's prefix.
+- `media_assets` also has `status` (processing, ready, failed) and `processing_error`; `variants` is a list of `{ key, width, height, bytes, mimeType }`.
+- A product image's product, variant and asset, a category's image and a brand's logo must be in the same tenant; an image's variant must belong to the image's product.
+- An asset is used in one place only (unique links). Deleting the asset removes the product image row and clears a category or brand link.
+- The lowest `position` is the main image (decision D41). Alternative text is 300 characters at most.
+
+Not yet built from this section: video (`duration_ms`), `search_vector` (storefront search, Milestone 2.3), and the supplier, purchase-order and inventory tables (Milestone 3.2).
 
 ## 3. Commerce
 

@@ -60,6 +60,8 @@ model Tenant {
   products                Product[]
   productVariants         ProductVariant[]
   productAttributes       ProductAttribute[]
+  mediaAssets             MediaAsset[]
+  productImages           ProductImage[]
 
   @@map("tenants")
 }
@@ -132,10 +134,11 @@ model User {
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  memberships UserTenantMembership[]
-  sessions    Session[]
-  accounts    Account[]
-  twoFactors  TwoFactor[]
+  memberships   UserTenantMembership[]
+  sessions      Session[]
+  accounts      Account[]
+  twoFactors    TwoFactor[]
+  uploadedMedia MediaAsset[]
 
   @@map("users")
 }
@@ -473,7 +476,7 @@ model Job {
 // ---------------------------------------------------------------------------
 // Catalog. Every table is tenant-owned. References between catalog tables are
 // checked to stay inside one tenant by database triggers (see the migration).
-// Media arrives in Milestone 2.2 and stock levels in Milestone 3.2.
+// Stock levels arrive in Milestone 3.2.
 // ---------------------------------------------------------------------------
 
 model Category {
@@ -487,12 +490,14 @@ model Category {
   position       Int      @default(0)
   seoTitle       String?  @map("seo_title")
   seoDescription String?  @map("seo_description")
+  imageAssetId   String?  @unique @map("image_asset_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children Category[] @relation("CategoryTree")
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  image    MediaAsset? @relation(fields: [imageAssetId], references: [id], onDelete: SetNull)
+  parent   Category?   @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[]  @relation("CategoryTree")
   products Product[]
 
   @@unique([tenantId, slug])
@@ -501,14 +506,16 @@ model Category {
 }
 
 model Brand {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  name      String
-  slug      String
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id          String   @id @default(uuid(7)) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  slug        String
+  logoAssetId String?  @unique @map("logo_asset_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  logo     MediaAsset? @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
   products Product[]
 
   @@unique([tenantId, slug])
@@ -556,6 +563,7 @@ model Product {
   category   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   variants   ProductVariant[]
   attributes ProductAttribute[]
+  images     ProductImage[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status, createdAt])
@@ -602,8 +610,9 @@ model ProductVariant {
   createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images  ProductImage[]
 
   @@unique([tenantId, sku])
   @@index([productId, position])
@@ -627,4 +636,81 @@ model ProductAttribute {
   @@unique([productId, key])
   @@index([tenantId])
   @@map("product_attributes")
+}
+
+// ---------------------------------------------------------------------------
+// Media. Files live in object storage; these rows describe them. Every stored
+// file's key starts with "public/<tenant id>/" (enforced by a check constraint).
+// ---------------------------------------------------------------------------
+
+enum MediaKind {
+  image
+  video
+
+  @@map("media_kind")
+}
+
+enum MediaStatus {
+  /// Uploaded and usable; resized versions are still being made.
+  processing
+  ready
+  /// Resizing failed; the uploaded file is still used.
+  failed
+
+  @@map("media_status")
+}
+
+/// One uploaded file after cleaning (re-encoded, metadata removed), plus its
+/// resized versions. An asset is used in exactly one place.
+model MediaAsset {
+  id              String      @id @default(uuid(7)) @db.Uuid
+  tenantId        String      @map("tenant_id") @db.Uuid
+  kind            MediaKind   @default(image)
+  status          MediaStatus @default(processing)
+  storageKey      String      @unique @map("storage_key")
+  mimeType        String      @map("mime_type")
+  bytes           Int
+  width           Int
+  height          Int
+  /// SHA-256 of the stored file, in hexadecimal.
+  checksum        String
+  /// Resized versions: [{ key, width, height, bytes, mimeType }].
+  variants        Json        @default("[]")
+  processingError String?     @map("processing_error")
+  uploadedBy      String?     @map("uploaded_by") @db.Uuid
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader     User?         @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+  productImage ProductImage?
+  category     Category?
+  brand        Brand?
+
+  @@index([tenantId, createdAt])
+  @@index([status, createdAt])
+  @@map("media_assets")
+}
+
+/// A product's picture. The lowest position is the main image.
+model ProductImage {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  productId    String   @map("product_id") @db.Uuid
+  /// Set when the picture shows one variant (for example one colour).
+  variantId    String?  @map("variant_id") @db.Uuid
+  mediaAssetId String   @unique @map("media_asset_id") @db.Uuid
+  altText      String   @default("") @map("alt_text")
+  position     Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  asset   MediaAsset      @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@index([productId, position])
+  @@index([tenantId])
+  @@map("product_images")
 }

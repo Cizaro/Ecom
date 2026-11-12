@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildCsp, createNonce, CSP_HEADER, NONCE_HEADER } from "./server/csp";
+import { buildCsp, createNonce, CSP_HEADER, NONCE_HEADER, originOf } from "./server/csp";
 import { REQUEST_ID_HEADER, requestIdFrom } from "./server/request-id";
 
 // Runs before every page and API request:
@@ -11,8 +11,12 @@ import { REQUEST_ID_HEADER, requestIdFrom } from "./server/request-id";
 export function proxy(request: NextRequest) {
   const requestId = requestIdFrom(request.headers.get(REQUEST_ID_HEADER));
   const nonce = createNonce();
-  // eslint-disable-next-line no-restricted-properties -- inlined at build time by Next.js
-  const csp = buildCsp(nonce, { development: process.env.NODE_ENV === "development" });
+  const csp = buildCsp(nonce, {
+    // eslint-disable-next-line no-restricted-properties -- inlined at build time by Next.js
+    development: process.env.NODE_ENV === "development",
+    // eslint-disable-next-line no-restricted-properties -- validated in packages/config; only its origin is used here
+    mediaOrigin: originOf(process.env.S3_PUBLIC_URL),
+  });
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(REQUEST_ID_HEADER, requestId);

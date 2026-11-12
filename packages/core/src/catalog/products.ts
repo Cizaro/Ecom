@@ -2,6 +2,7 @@ import type { AppTransaction } from "@ecom/db";
 import { z } from "zod";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
+import { ASSET_SELECT, toStoredImage, type StoredImage } from "../media/assets";
 import {
   assertId,
   CatalogError,
@@ -39,6 +40,8 @@ export interface ProductSummary {
   variantCount: number;
   /** Lowest regular price among active variants, if there is one. */
   priceFrom: Money | null;
+  /** The first of the product's images, if it has any. */
+  mainImage: (StoredImage & { altText: string }) | null;
   updatedAt: Date;
 }
 
@@ -319,6 +322,11 @@ export async function listProducts(
         category: { select: { name: true } },
         brand: { select: { name: true } },
         variants: { select: { priceAmount: true, currency: true, status: true } },
+        images: {
+          select: { altText: true, asset: { select: ASSET_SELECT } },
+          orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+          take: 1,
+        },
       },
       orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
       skip: (page - 1) * PRODUCT_PAGE_SIZE,
@@ -344,6 +352,9 @@ export async function listProducts(
         brandName: row.brand?.name ?? null,
         variantCount: row.variants.length,
         priceFrom: cheapest ? { amount: cheapest.priceAmount, currency: cheapest.currency } : null,
+        mainImage: row.images[0]
+          ? { ...toStoredImage(row.images[0].asset), altText: row.images[0].altText }
+          : null,
         updatedAt: row.updatedAt,
       };
     }),

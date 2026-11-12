@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 2 (storefront and catalog) started: Milestone 2.1 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.2 (product media).
+**Phase 2 (storefront and catalog): Milestones 2.1 and 2.2 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.3 (storefront listing).
 
 ## Completed
 
@@ -53,7 +53,17 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants and prices; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. Visitors to http://localhost:3000 still see only the placeholder storefront: products appear there in Milestones 2.3 and 2.4. There are no product images, stock levels, orders or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. Visitors to http://localhost:3000 still see only the placeholder storefront: products appear there in Milestones 2.3 and 2.4. There are no stock levels, orders or dashboard yet.
+
+- **Milestone 2.2, product media:**
+  - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
+  - Storage behind a `StorageProvider` interface with an S3-compatible adapter (RustFS locally) and an in-memory one for tests. Only files under `public/` can be read without credentials; the bucket cannot be listed.
+  - Uploads accept JPEG, PNG and WebP up to 8 MB, judged by content, not name. Every image is re-encoded: turned upright, scaled to 2560 pixels at most, location and camera data removed.
+  - The worker makes WebP versions 320, 640 and 1280 pixels wide. A sweep every minute picks up anything the queue missed.
+  - Product page: upload several images at once (sent one at a time), description (alt text) per image, "Make main", move earlier or later, tie to a variant, remove. Up to 20 per product. Read-only roles see the images without controls.
+  - Category and brand pages: upload, replace and remove one image or logo.
+  - The product list shows each product's main image.
+  - The Content Security Policy allows images from the storage address only.
 
 ## In progress
 
@@ -65,7 +75,11 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 
 ## Known limitations of what is built
 
-- **Products have no images yet** (Milestone 2.2) **and no stock levels** (Milestone 3.2). "Published" means ready for the storefront, which does not list products until Milestone 2.3.
+- **Products have no stock levels** (Milestone 3.2). "Published" means ready for the storefront, which does not list products until Milestone 2.3.
+- **Images of a draft product are reachable by anyone who has the exact address** (a 32-character random part makes it unguessable; decision D38).
+- **Resized image versions need the worker running** (`pnpm dev` starts it). Without it, pages use the full-size cleaned image.
+- **Image ordering uses buttons, not drag and drop; no cropping.** Video is not supported yet.
+- **If storage is unreachable while an image is removed, its files stay in storage** (the image is still removed from the product and the event is logged). A cleanup job is a follow-up.
 - **A compare-at ("was") price is not verified.** The form asks for a price the item was really sold at; nothing checks it yet (decision D37).
 - **Catalog has no bulk import or export, and no API endpoints.** Products are entered one at a time in the admin.
 - **Product names written without Latin letters need a URL name typed by hand** (for example a name only in Arabic); the form says so.
@@ -78,7 +92,7 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 - **A two-factor code can be reused within its 30-second window** (library behaviour). An attacker would need the password and a code observed in that window.
 - **Client address for rate limits comes from `X-Forwarded-For`.** This is only trustworthy behind a proxy that overwrites the header; the deployment guide must require one.
 - **Staff users can only be created from the command line.** Inviting staff from the admin is part of settings (later).
-- **The test database shares the server, roles and Redis with development.** Rate-limit counters from tests can land in the development Redis; tests clear their own keys.
+- **The test database shares the server, roles, Redis and storage bucket with development.** Rate-limit counters from tests can land in the development Redis; tests clear their own keys. Image jobs queued by the browser tests reach a running development worker, which logs them as `missing` and moves on. Test files stay under the test tenants' own prefixes.
 
 ## Known issues
 
@@ -206,26 +220,28 @@ pnpm db:migrate
 | Stop services | `docker compose down` |
 | Stop services and delete local data | `docker compose down -v` |
 
+After pulling Milestone 2.2 on a computer that already has the services running, run `docker compose up -d --wait` once more: it applies the rule that makes uploaded images viewable.
+
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 2.1, on the first computer)
+## Checks run this session (Milestone 2.2, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 109 tests |
-| `pnpm test:int` | Pass, 102 tests, on the separate test database (27 for the catalog, including cross-tenant attempts) |
+| `pnpm test` | Pass, 128 tests (9 for image checking and cleaning) |
+| `pnpm test:int` | Pass, 121 tests, on the separate test database (19 for images: cross-tenant attempts, database rules, the local storage service) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 55 tests (isolation matrix on desktop only, so 25 mobile duplicates skipped) |
+| `pnpm test:e2e` | Pass, 57 tests (25 mobile duplicates of the isolation matrix skipped) |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Product list, product page, add-variant form (phone width: no sideways scrolling), categories |
-| CI on GitHub | See the Actions tab for the Milestone 2.1 commit |
+| Looked at in a browser | Product page with the worker running: two images uploaded and resized, a text file named `.jpg` refused, reorder, phone width without sideways scrolling |
+| CI on GitHub | See the Actions tab for the Milestone 2.2 commit |
 
 ## Recommended next task
 
-Milestone 2.2: product media. Details in NEXT_STEPS.md.
+Milestone 2.3: storefront listing. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -240,5 +256,6 @@ Milestone 2.2: product media. Details in NEXT_STEPS.md.
 | 2026-11-12 | CI: dropped `playwright install-deps` (stalled on Ubuntu mirrors) |
 | 2026-11-12 | Milestone 1.5: design tokens, shared components, admin and storefront shells, Content Security Policy, QR code, error pages |
 | 2026-11-12 | Milestone 2.1: catalog tables, services, admin pages for products, variants, categories and brands, demo catalog seed |
+| 2026-11-12 | Milestone 2.2: media tables, storage provider, cleaned and resized image uploads, product images with ordering, category image, brand logo |
 
 Commit hashes: `git log --oneline`.

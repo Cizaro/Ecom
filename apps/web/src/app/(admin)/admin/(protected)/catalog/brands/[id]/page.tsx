@@ -1,18 +1,26 @@
-import { getBrand } from "@ecom/core";
+import { getBrand, getBrandLogo } from "@ecom/core";
 import { Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
 import { orNotFound } from "@/server/catalog-forms";
 import { ActionForm, DangerForm, TextField } from "../../../../_components/form";
-import { deleteBrandAction, updateBrandAction } from "../../actions";
+import { SingleImage } from "../../_components/single-image";
+import {
+  deleteBrandAction,
+  removeBrandLogoAction,
+  setBrandLogoAction,
+  updateBrandAction,
+} from "../../actions";
 
 export const metadata: Metadata = { title: "Edit brand" };
 
 export default async function BrandPage({ params }: { params: Promise<{ id: string }> }) {
   const { context } = await requirePermission("catalog.write");
   const { id } = await params;
-  const brand = await orNotFound(getBrand(tenantDb(context), context, id));
+  const db = tenantDb(context);
+  const brand = await orNotFound(getBrand(db, context, id));
+  const logo = await getBrandLogo(db, context, id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,6 +45,16 @@ export default async function BrandPage({ params }: { params: Promise<{ id: stri
           />
         </ActionForm>
       </Card>
+      <SingleImage
+        title="Logo"
+        description="A logo with a transparent background (PNG) works best."
+        noun="logo"
+        id={brand.id}
+        image={logo}
+        alt={`${brand.name} logo`}
+        setAction={setBrandLogoAction}
+        removeAction={removeBrandLogoAction}
+      />
       <Card
         title="Delete this brand"
         description="Its products are kept and lose their brand. This cannot be undone."

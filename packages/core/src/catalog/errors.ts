@@ -9,7 +9,10 @@ export type CatalogErrorCode =
   | "parent_cycle"
   | "unknown_reference"
   | "needs_active_variant"
-  | "last_active_variant";
+  | "last_active_variant"
+  | "invalid_image"
+  | "image_too_large"
+  | "too_many_images";
 
 /**
  * A request the catalog refuses for a reason the user can fix. The message is

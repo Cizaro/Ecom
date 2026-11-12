@@ -49,7 +49,7 @@ export function TextField({
   name,
   defaultValue,
   ...props
-}: { label: string; name: string; hint?: string; defaultValue?: string } & Omit<
+}: { label: string; name: string; id?: string; hint?: string; defaultValue?: string } & Omit<
   ComponentProps<typeof Field>,
   "name" | "defaultValue"
 >) {
@@ -81,6 +81,7 @@ export function SelectField({
 }: {
   label: string;
   name: string;
+  id?: string;
   hint?: string;
   defaultValue?: string;
   options: readonly SelectOption[];
