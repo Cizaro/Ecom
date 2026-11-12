@@ -39,10 +39,14 @@ model Tenant {
   aiBudgetCurrency      String?      @map("ai_budget_currency") @db.Char(3)
   /// Global pause for all AI automation in this tenant.
   automationPaused      Boolean      @default(false) @map("automation_paused")
+  /// Staff with the owner or manager role must use two-factor authentication.
+  requireStaffTwoFactor Boolean      @default(false) @map("require_staff_two_factor")
   createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   stores                  Store[]
+  storeDomains            StoreDomain[]
+  activeSessions          Session[]
   memberships             UserTenantMembership[]
   roles                   Role[]
   consentRecords          ConsentRecord[]
@@ -68,11 +72,32 @@ model Store {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  domains StoreDomain[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, createdAt])
   @@map("stores")
+}
+
+/// Host names that serve a store's storefront. Looked up before any tenant
+/// context exists, through the app.resolve_store_host() database function.
+model StoreDomain {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  storeId   String   @map("store_id") @db.Uuid
+  /// Lowercase, no port, no trailing dot (enforced by a check constraint).
+  hostname  String   @unique
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store  Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([storeId])
+  @@map("store_domains")
 }
 
 // ---------------------------------------------------------------------------
@@ -118,20 +143,25 @@ model User {
 // ---------------------------------------------------------------------------
 
 model Session {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
+  id             String   @id @default(uuid(7)) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
   /// Bearer credential. Stored as issued by the library (not hashed).
-  token     String   @unique
-  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  token          String   @unique
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  /// The tenant this session is working in. Set only by the server after
+  /// checking membership; never taken from client input.
+  activeTenantId String?  @map("active_tenant_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeTenant Tenant? @relation(fields: [activeTenantId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([activeTenantId])
   @@map("sessions")
 }
 

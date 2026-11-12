@@ -18,6 +18,9 @@ export default defineConfig({
           environment: "node",
           include: ["{apps,packages}/*/src/**/*.int.test.ts"],
           exclude: ["**/node_modules/**"],
+          // Creates and migrates the separate test database, then points the
+          // database URLs at it, so tests never touch the development data.
+          globalSetup: ["./packages/testing/src/integration-global-setup.ts"],
           setupFiles: ["./packages/testing/src/load-env.ts"],
           testTimeout: 20_000,
           // Integration tests share one database, so files run one at a time.

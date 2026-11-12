@@ -24,7 +24,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "postinstall": "pnpm db:generate",
     "db:drift": "pnpm --filter @ecom/db migrate:drift",
-    "admin:create": "tsx scripts/create-admin.ts"
+    "admin:create": "tsx scripts/create-admin.ts",
+    "db:test:prepare": "tsx scripts/prepare-test-db.ts"
   },
   "devDependencies": {
     "@ecom/config": "workspace:*",
@@ -41,6 +42,8 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.2",
     "vitest": "5.1.0",
-    "@ecom/db": "workspace:*"
+    "@ecom/db": "workspace:*",
+    "pg": "8.23.1",
+    "@types/pg": "8.23.1"
   }
 }

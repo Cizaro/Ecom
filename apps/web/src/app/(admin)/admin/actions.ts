@@ -147,6 +147,9 @@ export async function disableTwoFactorAction(
     password: text(formData, "password"),
     ...(await getRequestInfo()),
   });
+  if (result.required) {
+    return { error: "Your store requires two-factor authentication for your role." };
+  }
   if (!result.ok) return { error: "Password is incorrect." };
   revalidatePath("/admin/account/security");
   redirect("/admin/account/security?disabled=1");

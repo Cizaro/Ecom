@@ -56,12 +56,44 @@ export default tseslint.config(
       "packages/config/**",
       "packages/db/prisma.config.ts",
       "packages/db/scripts/**",
+      "packages/testing/src/load-env.ts",
       "apps/web/next.config.ts",
       "playwright.config.ts",
       "e2e/**",
       "scripts/**",
     ],
     rules: { "no-restricted-properties": "off" },
+  },
+  {
+    // The admin database connection bypasses Row-Level Security. Only the
+    // identity and platform modules, migrations and command-line scripts may
+    // use it; everything else receives a TenantDb (see ARCHITECTURE.md).
+    files: ["**/*.{ts,tsx,mjs}"],
+    ignores: [
+      "packages/db/**",
+      "packages/core/src/identity/**",
+      "packages/core/src/platform/**",
+      "apps/web/src/server/auth.ts",
+      "apps/web/src/server/access.ts",
+      "scripts/**",
+      "e2e/**",
+      "**/*.int.test.ts",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@ecom/db",
+              importNames: ["getAdminPrisma", "AdminPrismaClient"],
+              message:
+                "The admin connection bypasses Row-Level Security. Use a TenantDb from the request context.",
+            },
+          ],
+        },
+      ],
+    },
   },
   prettier,
 );

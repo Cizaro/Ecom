@@ -56,8 +56,8 @@ test.describe("staff sign-in", () => {
     await signIn(page, email, password());
     await expect(page).toHaveURL(/\/admin$/);
     await expect(page.getByTestId("signed-in-email")).toHaveText(email);
-    await expect(page.getByText("End-to-end Test Store")).toBeVisible();
-    await expect(page.getByText("Store owner")).toBeVisible();
+    await expect(page.getByRole("main").getByText("End-to-end Test Store")).toBeVisible();
+    await expect(page.getByRole("main").getByText("Store owner")).toBeVisible();
 
     const session = (await context.cookies()).find((c) => c.name === "ecom.session_token");
     expect(session).toMatchObject({ httpOnly: true, sameSite: "Lax", path: "/" });

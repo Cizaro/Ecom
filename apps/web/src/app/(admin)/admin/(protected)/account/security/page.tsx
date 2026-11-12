@@ -9,14 +9,26 @@ export const metadata: Metadata = { title: "Security" };
 export default async function SecurityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ enabled?: string; disabled?: string }>;
+  searchParams: Promise<{ enabled?: string; disabled?: string; required?: string }>;
 }) {
-  const { user } = await requireSession();
-  const { enabled, disabled } = await searchParams;
+  const { user, memberships } = await requireSession();
+  const { enabled, disabled, required } = await searchParams;
+  const requiredBy = memberships.filter((membership) => membership.requiresTwoFactor);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-semibold tracking-tight">Security</h1>
+
+      {required && !user.twoFactorEnabled && requiredBy.length > 0 ? (
+        <p
+          role="alert"
+          data-testid="two-factor-required"
+          className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+        >
+          {requiredBy.map((membership) => membership.tenantName).join(", ")} requires two-factor
+          authentication for your role. Turn it on below to continue.
+        </p>
+      ) : null}
 
       {enabled || disabled ? (
         <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-900">

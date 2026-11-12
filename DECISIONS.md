@@ -95,6 +95,18 @@ PostgreSQL's default search path starts with a schema named after the connected 
 ### D27. Staff accounts are created, not self-registered (2026-11-11)
 There is no sign-up page. Staff users are created with `pnpm admin:create` today and by invitation from the admin later. The command never accepts a password as an argument.
 
+### D28. The working tenant is stored on the session (2026-11-12)
+Staff in several tenants choose one at `/admin/select-store`; the choice is saved in `sessions.active_tenant_id` after the server checks the membership. It never comes from a URL, header or form field that is trusted as is: a tenant ID in the switcher form is only a choice among the user's own memberships, and anything else gets the same not-found answer as a tenant that does not exist. Staff in exactly one tenant never see the switcher.
+
+### D29. One access registry drives guards, tests and the isolation suite (2026-11-12)
+`apps/web/src/server/route-access.ts` lists every admin page, server action and `/api/v1` route with one access level: public, session, tenant, or a single permission. A unit test fails when a route is missing or its source does not call the matching guard; the end-to-end suite visits every listed route signed out, as each tenant role and from another tenant. Missing permission answers 403 (a page via Next.js `forbidden()`, or the API error format); records in another tenant answer 404.
+
+### D30. Platform administrators have no implicit tenant access (2026-11-12)
+Tenant pages require a membership, whoever you are; tenant roles never include `platform.*` permissions. Platform pages use `requirePlatformAdmin()`. Acting inside a tenant for support is the separate, audited `platform.impersonate` feature (later).
+
+### D31. Tests use a separate database on the same server (2026-11-12)
+Integration and end-to-end tests run against `<database>_test` (locally `ecommerce_test`), created and migrated automatically by `scripts/prepare-test-db.ts`. Same server, roles and Redis as development, so nothing extra to install. The admin role must be allowed to create databases (true for the local and CI containers).
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

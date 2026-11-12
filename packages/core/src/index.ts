@@ -8,6 +8,7 @@ export {
   PERMISSIONS,
   SYSTEM_ROLES,
   TENANT_PERMISSIONS,
+  TWO_FACTOR_ROLES,
 } from "./identity/permissions";
 export type { PermissionKey, SystemRole, SystemRoleKey } from "./identity/permissions";
 export { DEMO_OWNER_EMAIL, DEMO_TENANT_SLUG, seedDemoData, seedSystemData } from "./identity/seed";
@@ -51,3 +52,15 @@ export type { Logger } from "./platform/logger";
 export { checkReadiness, closeReadinessConnections } from "./platform/readiness";
 export type { ReadinessCheck, ReadinessResult } from "./platform/readiness";
 export { redisConnectionOptions } from "./platform/redis";
+export { recordAudit, recordAuditBestEffort } from "./platform/audit";
+export type { AuditActorType, AuditEntry, AuditJson, AuditWriter } from "./platform/audit";
+export { assertPermission, ForbiddenError, hasPermission, NotFoundError } from "./access/context";
+export type { RequestContext } from "./access/context";
+export { audit, createTenantDb } from "./access/tenant-db";
+export type { AuditTarget, TenantDb } from "./access/tenant-db";
+export { createAccessService } from "./identity/access-service";
+export type { AccessService, ContextResult } from "./identity/access-service";
+export { normalizeHost, resolveStoreHost } from "./tenancy/store-host";
+export type { StoreHost } from "./tenancy/store-host";
+export { listTeamMembers } from "./identity/team";
+export type { TeamMember } from "./identity/team";

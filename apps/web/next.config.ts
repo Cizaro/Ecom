@@ -24,6 +24,8 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@ecom/config", "@ecom/core", "@ecom/db", "@ecom/ui"],
   serverExternalPackages: ["pino", "ioredis", "pg", "@prisma/adapter-pg", "nodemailer"],
   outputFileTracingRoot: resolve(import.meta.dirname, "../.."),
+  // Enables forbidden() and the 403 page used by the permission guard.
+  experimental: { authInterrupts: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

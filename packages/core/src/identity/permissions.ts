@@ -174,3 +174,6 @@ export const SYSTEM_ROLES = [
 ] as const satisfies readonly SystemRole[];
 
 export type SystemRoleKey = (typeof SYSTEM_ROLES)[number]["key"];
+
+/** Roles that must use two-factor when their tenant requires it. */
+export const TWO_FACTOR_ROLES: readonly string[] = ["store_owner", "store_manager"];

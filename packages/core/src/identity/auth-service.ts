@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 import type { AdminPrismaClient } from "@ecom/db";
+import { recordAuditBestEffort } from "../platform/audit";
 import type { Logger } from "../platform/logger";
 import type { RateLimiter, RateLimitRule } from "../platform/rate-limit";
 import type { Auth } from "./auth";
 import { passwordProblem } from "./password";
+import { TWO_FACTOR_ROLES } from "./permissions";
 
 // Lockout rules. Failures are counted per account and per client address.
 const SIGN_IN_PER_EMAIL: RateLimitRule = { limit: 5, windowSeconds: 15 * 60 };
@@ -25,10 +27,14 @@ export interface SessionMembership {
   tenantName: string;
   roleKey: string;
   roleName: string;
+  /** The tenant requires two-factor for this member's role. */
+  requiresTwoFactor: boolean;
 }
 
 export interface CurrentSession {
   sessionId: string;
+  /** Working tenant chosen for this session, if any. See AccessService. */
+  activeTenantId: string | null;
   user: {
     id: string;
     email: string;
@@ -83,7 +89,7 @@ export interface AuthService {
   ): Promise<{ ok: boolean } & WithCookies>;
   disableTwoFactor(
     input: { password: string } & RequestInfo,
-  ): Promise<{ ok: boolean } & WithCookies>;
+  ): Promise<{ ok: boolean; required?: boolean } & WithCookies>;
 }
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -111,30 +117,26 @@ export function createAuthService(deps: {
 }): AuthService {
   const { auth, prisma, limiter, logger } = deps;
 
-  async function audit(
+  function audit(
     action: string,
     ip: string,
     userId: string | null,
     detail?: Record<string, string | number | boolean>,
   ) {
-    try {
-      await prisma.auditLog.create({
-        data: {
-          tenantId: null,
-          actorType: userId ? "user" : "anonymous",
-          actorUserId: userId,
-          action,
-          entityType: "user",
-          entityId: userId,
-          ip,
-          ...(detail ? { after: detail } : {}),
-        },
-      });
-    } catch (error) {
-      // An audit failure must not turn a completed sign-out into an error, but
-      // it must be loud.
-      logger.error({ action, err: (error as Error).message }, "audit log write failed");
-    }
+    return recordAuditBestEffort(
+      prisma,
+      {
+        tenantId: null,
+        actorType: userId ? "user" : "anonymous",
+        actorUserId: userId,
+        action,
+        entityType: "user",
+        entityId: userId,
+        ip,
+        after: detail,
+      },
+      logger,
+    );
   }
 
   async function userIdForEmail(email: string): Promise<string | null> {
@@ -243,31 +245,40 @@ export function createAuthService(deps: {
       const session = await auth.api.getSession({ headers });
       if (!session) return null;
 
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          status: true,
-          deletedAt: true,
-          twoFactorEnabled: true,
-          isPlatformAdmin: true,
-          memberships: {
-            where: { status: "active", tenant: { status: "active" } },
-            select: {
-              tenant: { select: { id: true, slug: true, name: true } },
-              role: { select: { key: true, name: true } },
+      const [user, sessionRow] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            status: true,
+            deletedAt: true,
+            twoFactorEnabled: true,
+            isPlatformAdmin: true,
+            memberships: {
+              where: { status: "active", tenant: { status: "active" } },
+              select: {
+                tenant: {
+                  select: { id: true, slug: true, name: true, requireStaffTwoFactor: true },
+                },
+                role: { select: { key: true, name: true } },
+              },
+              orderBy: { createdAt: "asc" },
             },
-            orderBy: { createdAt: "asc" },
           },
-        },
-      });
+        }),
+        prisma.session.findUnique({
+          where: { id: session.session.id },
+          select: { activeTenantId: true },
+        }),
+      ]);
       // A user disabled after signing in loses access on the next request.
       if (!user || user.status !== "active" || user.deletedAt) return null;
 
       return {
         sessionId: session.session.id,
+        activeTenantId: sessionRow?.activeTenantId ?? null,
         user: {
           id: user.id,
           email: user.email,
@@ -281,6 +292,9 @@ export function createAuthService(deps: {
           tenantName: membership.tenant.name,
           roleKey: membership.role.key,
           roleName: membership.role.name,
+          requiresTwoFactor:
+            membership.tenant.requireStaffTwoFactor &&
+            TWO_FACTOR_ROLES.includes(membership.role.key),
         })),
       };
     },
@@ -358,6 +372,11 @@ export function createAuthService(deps: {
     async disableTwoFactor({ password, headers, ip }) {
       const userId = await sessionUserId(headers);
       if (!userId) return { ok: false, setCookies: [] };
+      // A store that requires two-factor for this user's role keeps it on.
+      const current = await this.getSession(headers);
+      if (current?.memberships.some((membership) => membership.requiresTwoFactor)) {
+        return { ok: false, required: true, setCookies: [] };
+      }
       let setCookies: string[];
       try {
         const result = await auth.api.disableTwoFactor({

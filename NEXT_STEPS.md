@@ -8,29 +8,23 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 2. The GitHub repository is currently **public**. Make it private in the repository settings if that is not intended.
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
-5. On the home computer: install Node.js 26, pnpm and Docker Desktop, then follow "First time on a computer" in PROJECT_STATUS.md.
 
-## Next development task: Milestone 1.4, permissions and tenant-scoped access
+## Next development task: Milestone 1.5, design system, app shells, Content Security Policy
 
-This is the milestone that makes roles mean something. Scope, and nothing more:
+Scope:
 
-1. **Request context.** One function that turns a request into `{ userId, tenantId, storeId?, roleKey, permissions, requestId }`, or refuses. The active tenant comes from the user's memberships (a tenant switcher when there is more than one), stored on the session, never from client input.
-2. **Permission guard.** `requirePermission("orders.refund")` for pages, server actions and API routes. Platform administrators are handled explicitly. A lint rule or test that fails when an admin route or action has no guard.
-3. **Tenant-scoped data client.** Domain services receive a database handle already bound to the context's tenant (wrapping `withTenant`), so service code cannot forget it. Restrict the admin client to the identity and platform modules by lint rule.
-4. **Audit helper.** One `audit(context, action, entity, before, after)` used by every sensitive action, replacing the ad-hoc writes in the auth service.
-5. **Two-factor enforcement.** Tenant setting "require two-factor for owners and managers"; users in those roles without it are sent to set it up.
-6. **Host-to-tenant resolution for the storefront** (store domains table and a safe lookup that works before a tenant context exists).
-7. **Separate test database** for integration and end-to-end tests, so they stop writing to the development database.
-8. **Isolation test harness.** Two tenants, one user per role. For every admin route and action: wrong tenant gets not-found, missing permission gets forbidden, no session gets redirected. New routes without an entry fail CI.
-9. **API foundation:** `/api/v1` route helper with the error format, request IDs and validation from docs/API_SPECIFICATION.md, plus one real endpoint (`GET /api/v1/admin/me`) to prove it.
+1. **Design tokens and components** in `packages/ui` (buttons, fields, form messages, tables, empty states, page header), replacing the ad-hoc classes in the admin pages. Placeholder theme until brand assets arrive.
+2. **Admin shell:** navigation built from the access registry and the user's permissions (so a link is shown only when the page would open), store switcher, mobile layout.
+3. **Storefront shell:** header, footer, layout; resolve the store from the host name with `resolveStoreHost` (seed a `localhost` domain for the demo store).
+4. **Content Security Policy** with nonces, added to the security headers and checked by the existing end-to-end header test.
+5. **Carried over from 1.3:** QR code for two-factor setup; keep form values after a failed submit.
 
-Done when: a marketer and a store owner signed in to the same tenant see different things on a demonstration page, a user from another tenant sees nothing, all checks pass, and status files are updated.
+Done when: admin and storefront use the shared components, the CSP blocks inline scripts without a nonce, all checks pass, and status files are updated.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 1.5 Design system, app shells, Content Security Policy | Includes QR code for two-factor setup and keeping form values after an error. Placeholder theme if brand assets are not ready. |
 | 3 | 2.1 to 2.6 Catalog and storefront | First visible store content |
 | 4 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
 | 5 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
@@ -38,6 +32,9 @@ Done when: a marketer and a store owner signed in to the same tenant see differe
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Screen for the tenant setting "require two-factor for owners and managers" (with store settings, Milestone 3.7). Until then: `UPDATE tenants SET require_staff_two_factor = true WHERE slug = '…'`.
+- Store selection within a tenant, and enforcing a membership's `store_ids`, when a tenant can have several stores.
 
 - Staff invitation and management screens (with settings, Milestone 3.7 at the latest).
 - Scheduled cleanup of expired sessions and verification tokens (worker job).

@@ -1,4 +1,16 @@
+import { resolve } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { useTestDatabase } from "./packages/testing/src/test-database";
+
+// End-to-end tests use the separate test database (see prepare-test-db.ts).
+// Setting it here, before the web server starts, means the server, the global
+// setup and the tests all see the same database.
+try {
+  process.loadEnvFile(resolve(import.meta.dirname, ".env"));
+} catch {
+  // No .env file: variables come from the real environment (CI).
+}
+useTestDatabase(process.env);
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;

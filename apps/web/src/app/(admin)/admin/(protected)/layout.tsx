@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { hasPermission } from "@ecom/core";
+import { getAccessOutcome } from "@/server/access";
 import { requireSession } from "@/server/auth";
 import { signOutAction } from "../actions";
 
@@ -7,6 +9,8 @@ import { signOutAction } from "../actions";
 // each protected page also calls requireSession() itself.
 export default async function ProtectedAdminLayout({ children }: { children: ReactNode }) {
   const session = await requireSession();
+  const outcome = await getAccessOutcome();
+  const context = "context" in outcome ? outcome.context : null;
 
   return (
     <div className="min-h-dvh bg-neutral-50">
@@ -14,11 +18,34 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <nav aria-label="Admin" className="flex items-center gap-4 text-sm font-medium">
             <Link href="/admin">Admin</Link>
+            {context ? (
+              <Link href="/admin/access" className="text-neutral-600">
+                Access
+              </Link>
+            ) : null}
+            {context && hasPermission(context, "staff.manage") ? (
+              <Link href="/admin/team" className="text-neutral-600">
+                Team
+              </Link>
+            ) : null}
             <Link href="/admin/account/security" className="text-neutral-600">
               Security
             </Link>
           </nav>
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            {session.memberships.length > 1 ? (
+              <Link
+                href="/admin/select-store"
+                className="font-medium underline underline-offset-4"
+                data-testid="active-store"
+              >
+                {context?.tenantName ?? "Choose a store"}
+              </Link>
+            ) : context ? (
+              <span className="font-medium" data-testid="active-store">
+                {context.tenantName}
+              </span>
+            ) : null}
             <span className="text-neutral-600" data-testid="signed-in-email">
               {session.user.email}
             </span>

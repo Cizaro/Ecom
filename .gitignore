@@ -38,3 +38,6 @@ Thumbs.db
 # Generated code
 **/generated/
 next-env.d.ts
+
+# Local AI-tooling state (claude-flow / ruflo)
+.claude-flow/

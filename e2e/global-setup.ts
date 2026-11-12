@@ -6,5 +6,6 @@ import { randomBytes } from "node:crypto";
 // never written to disk or printed.
 export default function globalSetup() {
   process.env.E2E_PASSWORD = `E2e-${randomBytes(18).toString("base64url")}`;
+  execSync("pnpm exec tsx scripts/prepare-test-db.ts", { stdio: "inherit", env: process.env });
   execSync("pnpm exec tsx scripts/e2e-setup.ts", { stdio: "inherit", env: process.env });
 }

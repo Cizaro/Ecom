@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-11-11
+Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 1 (foundation). Milestones 1.1, 1.2 and 1.3 complete.** Next: Milestone 1.4 (permission guard, request context, tenant-scoped data access).
+**Phase 1 (foundation). Milestones 1.1 to 1.4 complete.** Next: Milestone 1.5 (design system, app shells, Content Security Policy).
 
 ## Completed
 
@@ -22,8 +22,20 @@ Last updated: 2026-11-11
   - Email provider interface with SMTP (Mailpit locally) and console adapters.
   - `pnpm admin:create` to create staff users.
   - `/admin` and `/admin/account/security` require a session.
+- **Milestone 1.4, permissions and tenant-scoped access:**
+  - Request context (user, tenant, store, role, permissions, request ID) built on the server from the session. The working tenant is stored on the session after a membership check; a tenant switcher at `/admin/select-store` appears for staff in more than one store.
+  - Guards `requireSession()`, `requireTenantContext()`, `requirePermission("…")` and `requirePlatformAdmin()`. Missing permission shows a 403 page. Platform administrators get no implicit access to tenant data.
+  - Access registry (`apps/web/src/server/route-access.ts`): every admin page, server action and API route is listed with its access rule. A unit test fails if one is missing or does not call the matching guard.
+  - Tenant-bound database handle (`TenantDb`) for domain services; a lint rule keeps the admin connection inside the identity and platform modules.
+  - One audit helper used by authentication and by tenant actions (with request ID and client address).
+  - Tenant setting "require two-factor for owners and managers": those users are sent to set it up and cannot turn it off.
+  - Store domains table and a safe host-to-store lookup for the storefront (not wired to pages yet).
+  - Separate test database (`ecommerce_test`), created and migrated automatically before integration and end-to-end tests.
+  - Isolation suite: every admin page and API route visited signed out, as each of the 6 tenant roles, and from another tenant.
+  - `/api/v1` foundation: error format, request IDs on every response, Zod validation, and `GET /api/v1/admin/me`.
+  - Demonstration pages: `/admin/access` (what your role allows) and `/admin/team` (staff list, needs `staff.manage`).
 
-**What a signed-in user can do today:** see which stores they belong to and their role, manage two-factor, sign out. There are still no products, orders or dashboard.
+**What a signed-in user can do today:** choose which store to work in, see what their role allows, see the team (owners), manage two-factor, sign out. There are still no products, orders or dashboard.
 
 ## In progress
 
@@ -31,19 +43,20 @@ Nothing.
 
 ## Not started
 
-Milestones 1.4 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Meta, Instagram, Facebook, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
+Milestones 1.5 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Meta, Instagram, Facebook, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
 
 ## Known limitations of what is built
 
-- **Permissions are not enforced yet.** Roles and permissions exist in the database and the session knows the user's memberships, but no page or action checks a permission. That is Milestone 1.4. Until then every signed-in user sees the same pages.
-- **Two-factor is optional.** The rule "required for owner and manager roles when the tenant enables it" needs the permission layer and is planned for 1.4.
+- **Store-level restrictions are not enforced.** A membership can list specific stores (`store_ids`), but every tenant has one store today and the context uses the first one. Store selection comes with multi-store support.
+- **The storefront does not use host lookup yet.** The lookup exists and is tested; the storefront pages adopt it in Milestone 2.x. No domains are seeded.
+- **No screen to turn on "require two-factor".** The tenant setting exists and is enforced; it is changed in the database until store settings exist (Milestone 3.7).
 - **No QR code for two-factor setup.** The setup key is shown as text (and as a link that opens an authenticator app on a phone). A QR code comes with the design system in 1.5.
 - **Session tokens are stored unhashed** in the `sessions` table (how the Better Auth library works). The table is unreadable by the runtime database role; someone with owner-level database access could hijack live sessions. Recorded in the threat model.
 - **A two-factor code can be reused within its 30-second window** (library behaviour). An attacker would need the password and a code observed in that window.
 - **Client address for rate limits comes from `X-Forwarded-For`.** This is only trustworthy behind a proxy that overwrites the header; the deployment guide must require one.
 - **Form fields clear after a failed submit** (for example a wrong password clears the email). Cosmetic; fixed with the design system.
 - **Staff users can only be created from the command line.** Inviting staff from the admin is part of settings (later).
-- **Integration and end-to-end tests use the development database.** They create their own users and tenants (`e2e`, `auth-*`, `test-*`) and remove most of them, but audit-log rows stay. A separate test database is planned for 1.4.
+- **The test database shares the server, roles and Redis with development.** Rate-limit counters from tests can land in the development Redis; tests clear their own keys.
 
 ## Known issues
 
@@ -159,7 +172,8 @@ pnpm db:migrate
 | Format | `pnpm format` |
 | Type check | `pnpm typecheck` |
 | Unit tests | `pnpm test` |
-| Integration tests (need services running) | `pnpm test:int` |
+| Integration tests (need services running; use the separate `ecommerce_test` database, created automatically) | `pnpm test:int` |
+| Create or migrate the test database by hand | `pnpm db:test:prepare` |
 | Production build | `pnpm build` |
 | End-to-end tests (need build and services) | `pnpm test:e2e` |
 | Install the browser for end-to-end tests (once per computer) | `pnpm exec playwright install chromium` |
@@ -171,26 +185,23 @@ pnpm db:migrate
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 1.3, on the first computer)
+## Checks run this session (Milestone 1.4, on the home computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 38 tests |
-| `pnpm test:int` | Pass, 57 tests |
-| Migrate, seed, drift check and integration tests on a brand-new empty database | Pass |
+| `pnpm test` | Pass, 65 tests (includes the access-registry check) |
+| `pnpm test:int` | Pass, 75 tests, on the separate test database |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 18 tests (9 on desktop, 9 on mobile viewport), three runs in a row |
-| `pnpm admin:create` | Tried by hand: creates a user; rejects a short password, a duplicate email and missing options |
-| Sign-in page in the browser | Viewed; `/admin` redirects to it |
-| `pnpm audit --audit-level high` | Pass (1 moderate advisory) |
+| `pnpm test:e2e` | Pass, 34 tests (isolation matrix on desktop only, so 16 mobile duplicates skipped), three runs in a row |
+| `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | CI on GitHub | See the Actions tab for the latest commit |
 
 ## Recommended next task
 
-Milestone 1.4: permission guard, request context, tenant-scoped data access and the isolation test harness. Details in NEXT_STEPS.md.
+Milestone 1.5: design system, app shells and Content Security Policy. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -200,5 +211,7 @@ Milestone 1.4: permission guard, request context, tenant-scoped data access and 
 | 2026-11-11 | Milestone 1.1: scaffold, local services, checks, CI workflow; remote added |
 | 2026-11-11 | Milestone 1.2: tenancy and identity schema, Row-Level Security, permissions, seed |
 | 2026-11-11 | Milestone 1.3: staff sign-in, password reset, two-factor, lockout, admin-creation command |
+| 2026-11-12 | Set up the home computer (project moved out of OneDrive to `C:\dev\Ecom`) |
+| 2026-11-12 | Milestone 1.4: request context, permission guards, tenant-bound data access, audit helper, two-factor rule, host lookup, test database, isolation suite, `/api/v1` foundation |
 
 Commit hashes: `git log --oneline`.
