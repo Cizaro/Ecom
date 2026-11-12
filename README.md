@@ -2,7 +2,7 @@
 
 Storefront, admin, AI assistant, social inbox, marketing and giveaway platform for a fashion-accessories store (women's bags, men's wallets, watches, jewelry, accessories), designed to become a multi-tenant SaaS.
 
-**Status: Phase 1 in progress. Staff can sign in, choose a store and see what their role allows (permissions enforced per page and API route); there are no store features yet.** See [PROJECT_STATUS.md](PROJECT_STATUS.md).
+**Status: Phase 1 (foundation) complete. Staff can sign in, choose a store and see what their role allows; the storefront shell shows a placeholder page. Catalog work (Phase 2) is next.** See [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Start here
 

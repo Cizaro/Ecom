@@ -63,6 +63,7 @@ export async function seedSystemData(prisma: AdminPrismaClient): Promise<SeedSum
 
 export const DEMO_TENANT_SLUG = "demo";
 export const DEMO_OWNER_EMAIL = "owner@example.com";
+export const DEMO_STORE_HOST = "localhost";
 
 /**
  * Local-development data: one tenant, one store, one owner. The owner has no
@@ -76,11 +77,23 @@ export async function seedDemoData(prisma: AdminPrismaClient): Promise<{ tenantI
       create: { slug: DEMO_TENANT_SLUG, name: "Demo Store" },
       update: {},
     });
-    await tx.store.upsert({
+    const store = await tx.store.upsert({
       where: { tenantId_slug: { tenantId: tenant.id, slug: "main" } },
       create: { tenantId: tenant.id, slug: "main", name: "Demo Store" },
       update: {},
     });
+    // The local storefront at http://localhost:3000 shows the demo store.
+    // Left alone if another tenant already claimed localhost.
+    if (!(await tx.storeDomain.findUnique({ where: { hostname: DEMO_STORE_HOST } }))) {
+      await tx.storeDomain.create({
+        data: {
+          tenantId: tenant.id,
+          storeId: store.id,
+          hostname: DEMO_STORE_HOST,
+          isPrimary: true,
+        },
+      });
+    }
     const owner = await tx.user.upsert({
       where: { email: DEMO_OWNER_EMAIL },
       create: { email: DEMO_OWNER_EMAIL, name: "Demo Owner" },

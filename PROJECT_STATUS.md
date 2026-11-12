@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 1 (foundation). Milestones 1.1 to 1.4 complete.** Next: Milestone 1.5 (design system, app shells, Content Security Policy).
+**Phase 1 (foundation) complete: Milestones 1.1 to 1.5.** Next: Milestone 2.1 (catalog data model).
 
 ## Completed
 
@@ -34,8 +34,16 @@ Last updated: 2026-11-12
   - Isolation suite: every admin page and API route visited signed out, as each of the 6 tenant roles, and from another tenant.
   - `/api/v1` foundation: error format, request IDs on every response, Zod validation, and `GET /api/v1/admin/me`.
   - Demonstration pages: `/admin/access` (what your role allows) and `/admin/team` (staff list, needs `staff.manage`).
+- **Milestone 1.5, design system and shells:**
+  - Design tokens (colors, radius, font) in `apps/web/src/app/globals.css`, placeholder theme until brand assets arrive; components use token names only.
+  - Shared components in `packages/ui`: Button, Field, Alert, Badge, Card, List, PageHeader, EmptyState. Admin pages rebuilt on them.
+  - Admin shell: navigation generated from the access registry (a link appears only if the page would open), store switcher, skip link, works on phones.
+  - Storefront shell (header, footer) that finds its store from the host name; unknown hosts get the 404 page. The demo store answers at `localhost`.
+  - Content Security Policy with a fresh nonce per request; injected inline handlers are blocked (tested in the browser).
+  - Error page (with a support reference) and 404 page.
+  - QR code for two-factor setup (generated on the server); the sign-in email is kept after a failed attempt.
 
-**What a signed-in user can do today:** choose which store to work in, see what their role allows, see the team (owners), manage two-factor, sign out. There are still no products, orders or dashboard.
+**What a signed-in user can do today:** choose which store to work in, see what their role allows, see the team (owners), manage two-factor (with a QR code), sign out. Visitors to http://localhost:3000 see the demo store's placeholder storefront. There are still no products, orders or dashboard.
 
 ## In progress
 
@@ -43,12 +51,14 @@ Nothing.
 
 ## Not started
 
-Milestones 1.5 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Meta, Instagram, Facebook, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
+Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Meta, Instagram, Facebook, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
 
 ## Known limitations of what is built
 
 - **Store-level restrictions are not enforced.** A membership can list specific stores (`store_ids`), but every tenant has one store today and the context uses the first one. Store selection comes with multi-store support.
-- **The storefront does not use host lookup yet.** The lookup exists and is tested; the storefront pages adopt it in Milestone 2.x. No domains are seeded.
+- **Host lookup trusts the Host header.** Behind a proxy that rewrites it, the deployment must pass the original host through (same requirement as the client address).
+- **Every page renders on request** (needed for the per-request nonce). Fine at this size; revisit caching with the catalog.
+- **Placeholder theme.** Colors and font are stand-ins until the brand assets arrive.
 - **No screen to turn on "require two-factor".** The tenant setting exists and is enforced; it is changed in the database until store settings exist (Milestone 3.7).
 - **No QR code for two-factor setup.** The setup key is shown as text (and as a link that opens an authenticator app on a phone). A QR code comes with the design system in 1.5.
 - **Session tokens are stored unhashed** in the `sessions` table (how the Better Auth library works). The table is unreadable by the runtime database role; someone with owner-level database access could hijack live sessions. Recorded in the threat model.
@@ -59,6 +69,8 @@ Milestones 1.5 onward (PROJECT_PLAN.md section 4). No integration with payments,
 - **The test database shares the server, roles and Redis with development.** Rate-limit counters from tests can land in the development Redis; tests clear their own keys.
 
 ## Known issues
+
+- **Pushing workflow changes needs the GitHub `workflow` permission.** The saved GitHub login on the home computer lacks it, so commits that touch `.github/workflows/` are refused. Fix once with `gh auth refresh -h github.com -s workflow` (or sign in again in Git Credential Manager), then push.
 
 - **Prisma and Node 26:** Prisma 7.10 warns that Node 26 is not a listed supported version. Everything works here; Node 24 is the fallback.
 - **Dependency audit:** 1 moderate advisory in a transitive dependency. CI fails only on high or above.
@@ -185,23 +197,23 @@ pnpm db:migrate
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 1.4, on the home computer)
+## Checks run this session (Milestones 1.4 and 1.5, on the home computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 65 tests (includes the access-registry check) |
+| `pnpm test` | Pass, 70 tests (includes the access-registry, navigation and CSP checks) |
 | `pnpm test:int` | Pass, 75 tests, on the separate test database |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 34 tests (isolation matrix on desktop only, so 16 mobile duplicates skipped), three runs in a row |
+| `pnpm test:e2e` | Pass, 44 tests (isolation matrix on desktop only, so 16 mobile duplicates skipped), three runs in a row |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| CI on GitHub | See the Actions tab for the latest commit |
+| CI on GitHub | Milestone 1.4 commit passed. Later commits not pushed yet: see Known issues |
 
 ## Recommended next task
 
-Milestone 1.5: design system, app shells and Content Security Policy. Details in NEXT_STEPS.md.
+Milestone 2.1: catalog data model. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -213,5 +225,7 @@ Milestone 1.5: design system, app shells and Content Security Policy. Details in
 | 2026-11-11 | Milestone 1.3: staff sign-in, password reset, two-factor, lockout, admin-creation command |
 | 2026-11-12 | Set up the home computer (project moved out of OneDrive to `C:\dev\Ecom`) |
 | 2026-11-12 | Milestone 1.4: request context, permission guards, tenant-bound data access, audit helper, two-factor rule, host lookup, test database, isolation suite, `/api/v1` foundation |
+| 2026-11-12 | CI: dropped `playwright install-deps` (stalled on Ubuntu mirrors) |
+| 2026-11-12 | Milestone 1.5: design tokens, shared components, admin and storefront shells, Content Security Policy, QR code, error pages |
 
 Commit hashes: `git log --oneline`.

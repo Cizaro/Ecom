@@ -21,7 +21,7 @@ export default async function ResetPasswordPage({
     return (
       <div className="flex flex-col gap-5">
         <h1 className="text-2xl font-semibold tracking-tight">Link not valid</h1>
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-ink-muted">
           This password reset link is incomplete. Request a new one.
         </p>
         <Link href="/admin/forgot-password" className="text-sm underline underline-offset-4">

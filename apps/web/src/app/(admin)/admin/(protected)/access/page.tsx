@@ -1,5 +1,6 @@
 import { hasPermission, type PermissionKey } from "@ecom/core";
 import type { Metadata } from "next";
+import { Badge, List, PageHeader } from "@ecom/ui";
 import Link from "next/link";
 import { requireTenantContext } from "@/server/access";
 
@@ -26,18 +27,20 @@ export default async function AccessPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Your access</h1>
-        <p className="mt-1 text-neutral-600">
-          In <span className="font-medium">{context.tenantName}</span> you are{" "}
-          <span className="font-medium" data-testid="access-role">
-            {context.roleName}
-          </span>
-          .
-        </p>
-      </div>
+      <PageHeader
+        title="Your access"
+        description={
+          <>
+            In <span className="font-medium">{context.tenantName}</span> you are{" "}
+            <span className="font-medium" data-testid="access-role">
+              {context.roleName}
+            </span>
+            .
+          </>
+        }
+      />
 
-      <ul className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white">
+      <List>
         {CAPABILITIES.map(({ permission, label, href }) => {
           const allowed = hasPermission(context, permission);
           return (
@@ -47,7 +50,7 @@ export default async function AccessPage() {
               data-allowed={allowed}
               className="flex items-center justify-between gap-3 px-4 py-3"
             >
-              <span className={allowed ? "" : "text-neutral-500"}>
+              <span className={allowed ? "" : "text-ink-subtle"}>
                 {allowed && href ? (
                   <Link href={href} className="font-medium underline underline-offset-4">
                     {label}
@@ -56,15 +59,13 @@ export default async function AccessPage() {
                   label
                 )}
               </span>
-              <span
-                className={`text-sm font-medium ${allowed ? "text-green-800" : "text-neutral-500"}`}
-              >
+              <Badge tone={allowed ? "success" : "neutral"}>
                 {allowed ? "Allowed" : "Not allowed"}
-              </span>
+              </Badge>
             </li>
           );
         })}
-      </ul>
+      </List>
     </div>
   );
 }

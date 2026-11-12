@@ -1,94 +1,73 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { Alert, buttonClasses, Field, type ButtonTone } from "@ecom/ui";
+import {
+  createContext,
+  useActionState,
+  useContext,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { useFormStatus } from "react-dom";
 import type { FormState } from "../actions";
 
-// Plain, accessible form pieces for the admin sign-in screens. The design
-// system (Milestone 1.5) replaces the styling, not the behaviour.
+// Form behaviour for admin screens on top of the design system: pending state,
+// server-action messages, and keeping what the user typed after a failed
+// submit (actions return the safe values in `state.values`; passwords never).
+
+const FormStateContext = createContext<FormState>({});
 
 export function SubmitButton({
   children,
   tone = "primary",
 }: {
   children: ReactNode;
-  tone?: "primary" | "quiet";
+  tone?: ButtonTone;
 }) {
   const { pending } = useFormStatus();
-  const tones = {
-    primary: "bg-neutral-900 text-white hover:bg-neutral-700",
-    quiet: "border border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-50",
-  };
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      aria-busy={pending}
-      className={`inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 disabled:opacity-60 ${tones[tone]}`}
-    >
+    <button type="submit" disabled={pending} aria-busy={pending} className={buttonClasses(tone)}>
       {pending ? "Please wait…" : children}
     </button>
   );
 }
 
+/**
+ * A text field inside an ActionForm. After a failed submit it shows the value
+ * the action echoed back in `state.values[name]`, if any.
+ */
 export function TextField({
-  label,
   name,
-  hint,
-  ...input
-}: {
-  label: string;
-  name: string;
-  hint?: string;
-} & Omit<React.ComponentProps<"input">, "name" | "id" | "className">) {
-  const hintId = hint ? `${name}-hint` : undefined;
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-sm font-medium">
-        {label}
-      </label>
-      <input
-        id={name}
-        name={name}
-        aria-describedby={hintId}
-        className="min-h-11 rounded-md border border-neutral-300 px-3 text-base focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-neutral-900"
-        {...input}
-      />
-      {hint ? (
-        <p id={hintId} className="text-sm text-neutral-600">
-          {hint}
-        </p>
-      ) : null}
-    </div>
-  );
+  ...props
+}: { label: string; name: string; hint?: string } & Omit<
+  ComponentProps<typeof Field>,
+  "name" | "defaultValue"
+>) {
+  const state = useContext(FormStateContext);
+  const kept = props.type === "password" ? undefined : state.values?.[name];
+  // A changed key remounts the input so the kept value is shown even though
+  // React resets the form after the action.
+  return <Field key={kept ?? ""} name={name} defaultValue={kept} {...props} />;
 }
 
 export function FormMessages({ state }: { state: FormState }) {
   return (
     <>
       {state.error ? (
-        <p
-          role="alert"
-          data-testid="form-error"
-          className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800"
-        >
+        <Alert tone="error" testId="form-error">
           {state.error}
-        </p>
+        </Alert>
       ) : null}
       {state.notice ? (
-        <p
-          role="status"
-          data-testid="form-notice"
-          className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-900"
-        >
+        <Alert tone="success" testId="form-notice">
           {state.notice}
-        </p>
+        </Alert>
       ) : null}
     </>
   );
 }
 
-/** A form bound to a server action that reports `{ error, notice }`. */
+/** A form bound to a server action that reports `{ error, notice, values }`. */
 export function ActionForm({
   action,
   children,
@@ -98,14 +77,16 @@ export function ActionForm({
   action: (previous: FormState, formData: FormData) => Promise<FormState>;
   children?: ReactNode;
   submitLabel: string;
-  submitTone?: "primary" | "quiet";
+  submitTone?: ButtonTone;
 }) {
   const [state, formAction] = useActionState(action, {});
   return (
-    <form action={formAction} className="flex flex-col gap-4" noValidate>
-      <FormMessages state={state} />
-      {children}
-      <SubmitButton tone={submitTone}>{submitLabel}</SubmitButton>
-    </form>
+    <FormStateContext.Provider value={state}>
+      <form action={formAction} className="flex flex-col gap-4" noValidate>
+        <FormMessages state={state} />
+        {children}
+        <SubmitButton tone={submitTone}>{submitLabel}</SubmitButton>
+      </form>
+    </FormStateContext.Provider>
   );
 }

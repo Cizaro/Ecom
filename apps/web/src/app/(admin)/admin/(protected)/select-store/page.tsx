@@ -1,3 +1,4 @@
+import { Badge, EmptyState, List, ListItem, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import { getAccessOutcome } from "@/server/access";
 import { requireSession } from "@/server/auth";
@@ -13,35 +14,32 @@ export default async function SelectStorePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Choose a store</h1>
-        <p className="mt-1 text-neutral-600">You can switch at any time from the top bar.</p>
-      </div>
+      <PageHeader
+        title="Choose a store"
+        description="You can switch at any time from the top bar."
+      />
 
       {memberships.length === 0 ? (
-        <p className="text-sm text-neutral-600">You are not a member of any store yet.</p>
+        <EmptyState title="You are not a member of any store yet" />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <List>
           {memberships.map((membership) => (
-            <li
-              key={membership.tenantId}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white p-4"
-            >
+            <ListItem key={membership.tenantId}>
               <div>
                 <p className="font-medium">{membership.tenantName}</p>
-                <p className="text-sm text-neutral-600">{membership.roleName}</p>
+                <p className="text-sm text-ink-muted">{membership.roleName}</p>
               </div>
               {membership.tenantId === activeTenantId ? (
-                <span className="text-sm font-medium text-green-800">Current</span>
+                <Badge tone="success">Current</Badge>
               ) : (
                 <form action={selectStoreAction}>
                   <input type="hidden" name="tenantId" value={membership.tenantId} />
-                  <SubmitButton tone="quiet">Work in this store</SubmitButton>
+                  <SubmitButton tone="secondary">Work in this store</SubmitButton>
                 </form>
               )}
-            </li>
+            </ListItem>
           ))}
-        </ul>
+        </List>
       )}
     </div>
   );

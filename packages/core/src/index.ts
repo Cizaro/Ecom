@@ -11,7 +11,13 @@ export {
   TWO_FACTOR_ROLES,
 } from "./identity/permissions";
 export type { PermissionKey, SystemRole, SystemRoleKey } from "./identity/permissions";
-export { DEMO_OWNER_EMAIL, DEMO_TENANT_SLUG, seedDemoData, seedSystemData } from "./identity/seed";
+export {
+  DEMO_OWNER_EMAIL,
+  DEMO_STORE_HOST,
+  DEMO_TENANT_SLUG,
+  seedDemoData,
+  seedSystemData,
+} from "./identity/seed";
 export { createAuth, RESET_PASSWORD_PATH, SESSION_LIFETIME_SECONDS } from "./identity/auth";
 export type { Auth, AuthDependencies } from "./identity/auth";
 export { createAuthService } from "./identity/auth-service";
@@ -60,7 +66,7 @@ export { audit, createTenantDb } from "./access/tenant-db";
 export type { AuditTarget, TenantDb } from "./access/tenant-db";
 export { createAccessService } from "./identity/access-service";
 export type { AccessService, ContextResult } from "./identity/access-service";
-export { normalizeHost, resolveStoreHost } from "./tenancy/store-host";
-export type { StoreHost } from "./tenancy/store-host";
+export { loadStorefront, normalizeHost, resolveStoreHost } from "./tenancy/store-host";
+export type { StoreHost, Storefront } from "./tenancy/store-host";
 export { listTeamMembers } from "./identity/team";
 export type { TeamMember } from "./identity/team";

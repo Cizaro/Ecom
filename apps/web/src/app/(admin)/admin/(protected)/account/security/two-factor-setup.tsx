@@ -30,21 +30,32 @@ export function TwoFactorSetup() {
     );
   }
 
-  const { secret, totpUri, backupCodes } = state.setup;
+  const { secret, totpUri, qrSvg, backupCodes } = state.setup;
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2 text-sm">
         <p>
-          <span className="font-medium">1.</span> Add this account to your authenticator app. On
-          this phone,{" "}
+          <span className="font-medium">1.</span> Scan this code with your authenticator app.
+        </p>
+        {/* eslint-disable-next-line @next/next/no-img-element -- inline SVG data, nothing to optimise */}
+        <img
+          src={`data:image/svg+xml;utf8,${encodeURIComponent(qrSvg)}`}
+          alt="QR code for adding this account to an authenticator app"
+          width={192}
+          height={192}
+          data-testid="totp-qr"
+          className="rounded-control border border-line bg-surface p-2"
+        />
+        <p>
+          On this phone,{" "}
           <a href={totpUri} className="underline underline-offset-4">
             open the authenticator app
-          </a>
-          . Otherwise choose “enter a setup key” in the app and type this key:
+          </a>{" "}
+          instead. Or choose “enter a setup key” in the app and type this key:
         </p>
         <code
           data-testid="totp-secret"
-          className="rounded-md bg-neutral-100 px-3 py-2 font-mono text-sm break-all select-all"
+          className="rounded-control bg-surface-muted px-3 py-2 font-mono text-sm break-all select-all"
         >
           {secret}
         </code>
@@ -57,7 +68,7 @@ export function TwoFactorSetup() {
         </p>
         <ul
           data-testid="backup-codes"
-          className="grid grid-cols-2 gap-1 rounded-md bg-neutral-100 px-3 py-2 font-mono text-sm"
+          className="grid grid-cols-2 gap-1 rounded-control bg-surface-muted px-3 py-2 font-mono text-sm"
         >
           {backupCodes.map((code) => (
             <li key={code}>{code}</li>

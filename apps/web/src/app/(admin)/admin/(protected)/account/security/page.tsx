@@ -23,7 +23,7 @@ export default async function SecurityPage({
         <p
           role="alert"
           data-testid="two-factor-required"
-          className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+          className="rounded-control border border-warning-line bg-warning-soft px-3 py-2 text-sm text-warning-ink"
         >
           {requiredBy.map((membership) => membership.tenantName).join(", ")} requires two-factor
           authentication for your role. Turn it on below to continue.
@@ -31,20 +31,23 @@ export default async function SecurityPage({
       ) : null}
 
       {enabled || disabled ? (
-        <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-900">
+        <p
+          role="status"
+          className="rounded-control bg-success-soft px-3 py-2 text-sm text-success-ink"
+        >
           Two-factor authentication is now {enabled ? "on" : "off"}.
         </p>
       ) : null}
 
       <section
         aria-labelledby="two-factor-heading"
-        className="flex flex-col gap-4 rounded-xl border border-neutral-200 bg-white p-5"
+        className="flex flex-col gap-4 rounded-card border border-line bg-surface p-5"
       >
         <div>
           <h2 id="two-factor-heading" className="text-lg font-semibold">
             Two-factor authentication
           </h2>
-          <p className="mt-1 text-sm text-neutral-600" data-testid="two-factor-status">
+          <p className="mt-1 text-sm text-ink-muted" data-testid="two-factor-status">
             {user.twoFactorEnabled
               ? "On. You are asked for a code from your authenticator app when you sign in."
               : "Off. Turn it on to require a code from an authenticator app when you sign in."}
@@ -55,7 +58,7 @@ export default async function SecurityPage({
             <ActionForm
               action={disableTwoFactorAction}
               submitLabel="Turn off two-factor"
-              submitTone="quiet"
+              submitTone="secondary"
             >
               <TextField
                 label="Confirm your password"
@@ -73,16 +76,14 @@ export default async function SecurityPage({
 
       <section
         aria-labelledby="sessions-heading"
-        className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-5"
+        className="flex flex-col gap-3 rounded-card border border-line bg-surface p-5"
       >
         <h2 id="sessions-heading" className="text-lg font-semibold">
           Sessions
         </h2>
-        <p className="text-sm text-neutral-600">
-          Signs you out on every device, including this one.
-        </p>
+        <p className="text-sm text-ink-muted">Signs you out on every device, including this one.</p>
         <form action={signOutEverywhereAction}>
-          <SubmitButton tone="quiet">Sign out everywhere</SubmitButton>
+          <SubmitButton tone="secondary">Sign out everywhere</SubmitButton>
         </form>
       </section>
     </div>

@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-2xl font-semibold tracking-tight">Reset your password</h1>
-      <p className="text-sm text-neutral-600">
+      <p className="text-sm text-ink-muted">
         Enter your email address and we will send you a link to choose a new password.
       </p>
       <ActionForm action={requestPasswordResetAction} submitLabel="Send reset link">

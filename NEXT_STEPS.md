@@ -4,30 +4,24 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 
 ## Owner actions (do not block development)
 
+0. **Let this computer push workflow changes:** run `gh auth refresh -h github.com -s workflow` once, then ask for a push. Two commits are waiting locally.
+
 1. **Try signing in.** Create yourself a user with `pnpm admin:create --email you@example.com --name "Your Name" --tenant demo`, run `pnpm dev`, open http://localhost:3000/admin. Password-reset emails arrive at http://localhost:8025.
 2. The GitHub repository is currently **public**. Make it private in the repository settings if that is not intended.
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 1.5, design system, app shells, Content Security Policy
+## Next development task: Milestone 2.1, catalog data model
 
-Scope:
-
-1. **Design tokens and components** in `packages/ui` (buttons, fields, form messages, tables, empty states, page header), replacing the ad-hoc classes in the admin pages. Placeholder theme until brand assets arrive.
-2. **Admin shell:** navigation built from the access registry and the user's permissions (so a link is shown only when the page would open), store switcher, mobile layout.
-3. **Storefront shell:** header, footer, layout; resolve the store from the host name with `resolveStoreHost` (seed a `localhost` domain for the demo store).
-4. **Content Security Policy** with nonces, added to the security headers and checked by the existing end-to-end header test.
-5. **Carried over from 1.3:** QR code for two-factor setup; keep form values after a failed submit.
-
-Done when: admin and storefront use the shared components, the CSP blocks inline scripts without a nonce, all checks pass, and status files are updated.
+See PROJECT_PLAN.md section 4 (Phase 2) and docs/DATA_MODEL.md. Products, variants, categories, brands, media and prices, each tenant-scoped with Row-Level Security and covered by the isolation suite; admin list and edit pages built on `packages/ui` and registered in the access registry with `catalog.read` / `catalog.write`.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 3 | 2.1 to 2.6 Catalog and storefront | First visible store content |
-| 4 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
-| 5 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
+| 2 | 2.2 to 2.6 Catalog admin and storefront | First visible store content |
+| 3 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
+| 4 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 

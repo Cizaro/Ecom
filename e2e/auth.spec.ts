@@ -52,6 +52,9 @@ test.describe("staff sign-in", () => {
     await signIn(page, email, "definitely-not-the-password");
     await expect(page.getByTestId("form-error")).toHaveText("Email or password is incorrect.");
     await expect(page).toHaveURL(/\/admin\/sign-in$/);
+    // The email is kept for the next attempt; the password is not.
+    await expect(page.getByLabel("Email")).toHaveValue(email);
+    await expect(page.getByLabel("Password")).toHaveValue("");
 
     await signIn(page, email, password());
     await expect(page).toHaveURL(/\/admin$/);
@@ -131,6 +134,7 @@ test.describe("staff sign-in", () => {
 
     await page.getByLabel("Confirm your password").fill(password());
     await page.getByRole("button", { name: "Set up two-factor" }).click();
+    await expect(page.getByTestId("totp-qr")).toBeVisible();
     const secret = (await page.getByTestId("totp-secret").innerText()).trim();
     await expect(page.getByTestId("backup-codes").getByRole("listitem")).not.toHaveCount(0);
 

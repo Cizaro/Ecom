@@ -19,7 +19,10 @@ export default async function SignInPage({
     <div className="flex flex-col gap-5">
       <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
       {reset ? (
-        <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-900">
+        <p
+          role="status"
+          className="rounded-control bg-success-soft px-3 py-2 text-sm text-success-ink"
+        >
           Your password has been changed. Sign in with the new password.
         </p>
       ) : null}

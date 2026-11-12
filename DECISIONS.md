@@ -107,6 +107,12 @@ Tenant pages require a membership, whoever you are; tenant roles never include `
 ### D31. Tests use a separate database on the same server (2026-11-12)
 Integration and end-to-end tests run against `<database>_test` (locally `ecommerce_test`), created and migrated automatically by `scripts/prepare-test-db.ts`. Same server, roles and Redis as development, so nothing extra to install. The admin role must be allowed to create databases (true for the local and CI containers).
 
+### D32. Content Security Policy with per-request nonces (2026-11-12)
+Scripts run only with the request's nonce or when loaded by such a script (`'strict-dynamic'`); inline event handlers are blocked. The price is that every page renders on request (no prebuilt pages), acceptable until the catalog needs caching. Styles allow `'unsafe-inline'`, which React and Next.js need and which cannot run code.
+
+### D33. Design tokens live in one CSS block (2026-11-12)
+Colors, radius and font are Tailwind theme variables in `globals.css`; components in `packages/ui` and the app use only those names. Rebranding means editing that block.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

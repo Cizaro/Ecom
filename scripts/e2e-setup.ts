@@ -54,6 +54,21 @@ try {
     }
   }
 
+  // The end-to-end server runs at localhost, so localhost shows the main test store.
+  const mainTenant = await prisma.tenant.findUniqueOrThrow({
+    where: { slug: E2E_TENANT_SLUG },
+    include: { stores: { take: 1, orderBy: { createdAt: "asc" } } },
+  });
+  await prisma.storeDomain.deleteMany({ where: { hostname: "localhost" } });
+  await prisma.storeDomain.create({
+    data: {
+      tenantId: mainTenant.id,
+      storeId: mainTenant.stores[0]!.id,
+      hostname: "localhost",
+      isPrimary: true,
+    },
+  });
+
   const createUser = async (
     email: string,
     tenantSlug: string,

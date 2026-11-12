@@ -1,4 +1,4 @@
-import type { AppPrismaClient } from "@ecom/db";
+import { withTenant, type AppPrismaClient } from "@ecom/db";
 
 export interface StoreHost {
   tenantId: string;
@@ -37,4 +37,29 @@ export async function resolveStoreHost(
     SELECT tenant_id, store_id FROM app_private.resolve_store_host(${host})`;
   const row = rows[0];
   return row ? { tenantId: row.tenant_id, storeId: row.store_id } : null;
+}
+
+export interface Storefront extends StoreHost {
+  name: string;
+  defaultLocale: string;
+  defaultCurrency: string;
+}
+
+/**
+ * The store for a storefront request, with what the shell needs to render.
+ * Null when no active store answers to this host name.
+ */
+export async function loadStorefront(
+  prisma: AppPrismaClient,
+  hostHeader: string | null | undefined,
+): Promise<Storefront | null> {
+  const host = await resolveStoreHost(prisma, hostHeader);
+  if (!host) return null;
+  const store = await withTenant(prisma, { tenantId: host.tenantId }, (tx) =>
+    tx.store.findUnique({
+      where: { id: host.storeId },
+      select: { name: true, defaultLocale: true, defaultCurrency: true },
+    }),
+  );
+  return store ? { ...host, ...store } : null;
 }

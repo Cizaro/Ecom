@@ -1,6 +1,7 @@
 "use server";
 
 import { PASSWORD_MIN_LENGTH } from "@ecom/core";
+import QRCode from "qrcode";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthService, getRequestInfo, requireSession, SIGN_IN_PATH } from "@/server/auth";
@@ -11,10 +12,12 @@ import { getAuthService, getRequestInfo, requireSession, SIGN_IN_PATH } from "@/
 export interface FormState {
   error?: string;
   notice?: string;
+  /** Safe values to show again after a failed submit. Never passwords. */
+  values?: Record<string, string>;
 }
 
 export interface TwoFactorSetupState extends FormState {
-  setup?: { secret: string; totpUri: string; backupCodes: string[] };
+  setup?: { secret: string; totpUri: string; qrSvg: string; backupCodes: string[] };
 }
 
 const text = (formData: FormData, name: string) => {
@@ -25,7 +28,8 @@ const text = (formData: FormData, name: string) => {
 export async function signInAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const email = text(formData, "email");
   const password = text(formData, "password");
-  if (!email || !password) return { error: "Enter your email and password." };
+  const values = { email };
+  if (!email || !password) return { error: "Enter your email and password.", values };
 
   const result = await getAuthService().signIn({ email, password, ...(await getRequestInfo()) });
 
@@ -33,9 +37,9 @@ export async function signInAction(_previous: FormState, formData: FormData): Pr
   if (result.status === "two_factor_required") redirect("/admin/two-factor");
   if (result.status === "locked") {
     const minutes = Math.max(1, Math.ceil(result.retryAfterSeconds / 60));
-    return { error: `Too many attempts. Try again in about ${minutes} minutes.` };
+    return { error: `Too many attempts. Try again in about ${minutes} minutes.`, values };
   }
-  return { error: "Email or password is incorrect." };
+  return { error: "Email or password is incorrect.", values };
 }
 
 export async function verifySecondFactorAction(
@@ -114,7 +118,13 @@ export async function beginTwoFactorSetupAction(
   });
   if (result.status === "ok") {
     return {
-      setup: { secret: result.secret, totpUri: result.totpUri, backupCodes: result.backupCodes },
+      setup: {
+        secret: result.secret,
+        totpUri: result.totpUri,
+        // Rendered on the server so the secret never goes to a third party.
+        qrSvg: await QRCode.toString(result.totpUri, { type: "svg", margin: 1, width: 192 }),
+        backupCodes: result.backupCodes,
+      },
     };
   }
   if (result.status === "already_enabled") {
