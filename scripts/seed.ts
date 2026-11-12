@@ -4,8 +4,8 @@
 
 import { resolve } from "node:path";
 import { parseEnv } from "@ecom/config";
-import { seedDemoData, seedSystemData } from "@ecom/core";
-import { disconnectDatabase, getAdminPrisma } from "@ecom/db";
+import { seedDemoCatalog, seedDemoData, seedSystemData } from "@ecom/core";
+import { disconnectDatabase, getAdminPrisma, getAppPrisma, withTenant } from "@ecom/db";
 
 try {
   process.loadEnvFile(resolve(import.meta.dirname, "../.env"));
@@ -26,8 +26,20 @@ try {
   if (env.NODE_ENV === "production") {
     console.log("Seed: production environment, demo data skipped.");
   } else {
-    await seedDemoData(prisma);
+    const { tenantId } = await seedDemoData(prisma);
     console.log("Seed: demo tenant, store and owner present.");
+
+    // Written through the runtime connection, inside the demo tenant.
+    const app = getAppPrisma(env.DATABASE_URL);
+    const catalog = await seedDemoCatalog({
+      tenantId,
+      run: (work) => withTenant(app, { tenantId }, work),
+    });
+    console.log(
+      catalog.created
+        ? `Seed: demo catalog added (${catalog.categories} categories, ${catalog.products} sample products).`
+        : "Seed: demo catalog left as it is (the demo store already has categories).",
+    );
   }
 } finally {
   await disconnectDatabase();

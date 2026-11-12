@@ -55,6 +55,11 @@ model Tenant {
   idempotencyKeys         IdempotencyKey[]
   outboxEvents            OutboxEvent[]
   jobs                    Job[]
+  categories              Category[]
+  brands                  Brand[]
+  products                Product[]
+  productVariants         ProductVariant[]
+  productAttributes       ProductAttribute[]
 
   @@map("tenants")
 }
@@ -463,4 +468,163 @@ model Job {
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, status, createdAt])
   @@map("jobs")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog. Every table is tenant-owned. References between catalog tables are
+// checked to stay inside one tenant by database triggers (see the migration).
+// Media arrives in Milestone 2.2 and stock levels in Milestone 3.2.
+// ---------------------------------------------------------------------------
+
+model Category {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  parentId       String?  @map("parent_id") @db.Uuid
+  name           String
+  /// Lowercase words joined by hyphens (enforced by a check constraint).
+  slug           String
+  description    String   @default("")
+  position       Int      @default(0)
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, parentId, position])
+  @@map("categories")
+}
+
+model Brand {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  slug      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, name])
+  @@map("brands")
+}
+
+enum ProductStatus {
+  /// Being prepared; never shown to shoppers.
+  draft
+  /// Shown to shoppers.
+  active
+  /// Withdrawn; kept for order history.
+  archived
+
+  @@map("product_status")
+}
+
+model Product {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  tenantId         String        @map("tenant_id") @db.Uuid
+  name             String
+  slug             String
+  shortDescription String        @default("") @map("short_description")
+  description      String        @default("")
+  seoTitle         String?       @map("seo_title")
+  seoDescription   String?       @map("seo_description")
+  brandId          String?       @map("brand_id") @db.Uuid
+  categoryId       String?       @map("category_id") @db.Uuid
+  /// For example "women", "men", "gift".
+  audienceTags     String[]      @default([]) @map("audience_tags")
+  material         String?
+  careInfo         String?       @map("care_info")
+  taxClass         String?       @map("tax_class")
+  status           ProductStatus @default(draft)
+  isFeatured       Boolean       @default(false) @map("is_featured")
+  isNewArrival     Boolean       @default(false) @map("is_new_arrival")
+  /// A manual merchandising flag, not a sales claim computed from orders.
+  isBestSeller     Boolean       @default(false) @map("is_best_seller")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  brand      Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  category   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants   ProductVariant[]
+  attributes ProductAttribute[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, brandId])
+  @@map("products")
+}
+
+enum VariantStatus {
+  active
+  /// Not for sale; kept so the SKU is not reused.
+  inactive
+
+  @@map("variant_status")
+}
+
+/// The thing that is actually sold: one SKU with its own price.
+model ProductVariant {
+  id                  String        @id @default(uuid(7)) @db.Uuid
+  tenantId            String        @map("tenant_id") @db.Uuid
+  productId           String        @map("product_id") @db.Uuid
+  sku                 String
+  barcode             String?
+  color               String?
+  size                String?
+  /// Any further options, as { "Strap": "Leather" }.
+  optionValues        Json          @default("{}") @map("option_values")
+  /// Money is stored in minor units (cents) of `currency`.
+  priceAmount         Int           @map("price_amount")
+  /// Sale price, when lower than priceAmount.
+  discountPriceAmount Int?          @map("discount_price_amount")
+  /// "Was" price shown struck through. Must be a price really charged before.
+  compareAtAmount     Int?          @map("compare_at_amount")
+  /// What the store paid. Never shown to shoppers.
+  costAmount          Int?          @map("cost_amount")
+  currency            String        @db.Char(3)
+  weightGrams         Int?          @map("weight_grams")
+  lengthMm            Int?          @map("length_mm")
+  widthMm             Int?          @map("width_mm")
+  heightMm            Int?          @map("height_mm")
+  lowStockThreshold   Int?          @map("low_stock_threshold")
+  position            Int           @default(0)
+  status              VariantStatus @default(active)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sku])
+  @@index([productId, position])
+  @@map("product_variants")
+}
+
+/// Specifications such as strap length or movement type.
+model ProductAttribute {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  key       String
+  value     String
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, key])
+  @@index([tenantId])
+  @@map("product_attributes")
 }

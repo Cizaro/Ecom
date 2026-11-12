@@ -70,3 +70,51 @@ export { loadStorefront, normalizeHost, resolveStoreHost } from "./tenancy/store
 export type { StoreHost, Storefront } from "./tenancy/store-host";
 export { listTeamMembers } from "./identity/team";
 export type { TeamMember } from "./identity/team";
+export { CatalogError } from "./catalog/errors";
+export type { CatalogErrorCode } from "./catalog/errors";
+export { isSlug, slugify } from "./catalog/slug";
+export {
+  currencyExponent,
+  formatMoney,
+  isCurrencyCode,
+  moneyToInput,
+  parseMoney,
+} from "./catalog/money";
+export {
+  createCategory,
+  deleteCategory,
+  getCategory,
+  listCategories,
+  updateCategory,
+} from "./catalog/categories";
+export type { CategoryDetail, CategoryInput, CategoryNode } from "./catalog/categories";
+export { createBrand, deleteBrand, getBrand, listBrands, updateBrand } from "./catalog/brands";
+export type { BrandInput, BrandSummary } from "./catalog/brands";
+export {
+  addVariant,
+  createProduct,
+  deleteVariant,
+  getCatalogCurrency,
+  getProduct,
+  getVariant,
+  listProducts,
+  PRODUCT_STATUSES,
+  setProductStatus,
+  updateProduct,
+  updateVariant,
+  VARIANT_STATUSES,
+} from "./catalog/products";
+export type {
+  Money,
+  ProductCreateInput,
+  ProductDetail,
+  ProductList,
+  ProductListInput,
+  ProductStatusValue,
+  ProductSummary,
+  ProductUpdateInput,
+  VariantDetail,
+  VariantInput,
+  VariantStatusValue,
+} from "./catalog/products";
+export { seedDemoCatalog } from "./catalog/demo-seed";

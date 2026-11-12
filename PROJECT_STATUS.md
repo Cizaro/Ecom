@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 1 (foundation) complete: Milestones 1.1 to 1.5.** Next: Milestone 2.1 (catalog data model).
+**Phase 2 (storefront and catalog) started: Milestone 2.1 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.2 (product media).
 
 ## Completed
 
@@ -43,7 +43,17 @@ Last updated: 2026-11-12
   - Error page (with a support reference) and 404 page.
   - QR code for two-factor setup (generated on the server); the sign-in email is kept after a failed attempt.
 
-**What a signed-in user can do today:** choose which store to work in, see what their role allows, see the team (owners), manage two-factor (with a QR code), sign out. Visitors to http://localhost:3000 see the demo store's placeholder storefront. There are still no products, orders or dashboard.
+- **Milestone 2.1, catalog:**
+  - Tables for categories (a tree), brands, products, variants and product specifications, each limited to its own tenant by Row-Level Security, with database rules for URL names, SKUs, prices and same-tenant references.
+  - Catalog services in `packages/core/src/catalog`: every function checks the permission (`catalog.read` or `catalog.write`), runs inside the tenant, and writes an audit-log entry for each change.
+  - Admin pages: Products (search by name or SKU, filter by status, paging), add product, product page (status, variants, details), add and edit variant, Categories, Brands.
+  - Product states: draft, published, archived. Publishing needs at least one variant that is for sale; a published product cannot lose its last one.
+  - Prices typed as plain amounts (`49.90`), stored as whole minor units in the store's currency; sale price and compare-at price validated.
+  - Roles with only `catalog.read` (marketer, customer service) see the catalog with the forms locked; pages that only make sense for editing answer 403.
+  - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
+  - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
+
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants and prices; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. Visitors to http://localhost:3000 still see only the placeholder storefront: products appear there in Milestones 2.3 and 2.4. There are no product images, stock levels, orders or dashboard yet.
 
 ## In progress
 
@@ -55,23 +65,24 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 
 ## Known limitations of what is built
 
+- **Products have no images yet** (Milestone 2.2) **and no stock levels** (Milestone 3.2). "Published" means ready for the storefront, which does not list products until Milestone 2.3.
+- **A compare-at ("was") price is not verified.** The form asks for a price the item was really sold at; nothing checks it yet (decision D37).
+- **Catalog has no bulk import or export, and no API endpoints.** Products are entered one at a time in the admin.
+- **Product names written without Latin letters need a URL name typed by hand** (for example a name only in Arabic); the form says so.
 - **Store-level restrictions are not enforced.** A membership can list specific stores (`store_ids`), but every tenant has one store today and the context uses the first one. Store selection comes with multi-store support.
 - **Host lookup trusts the Host header.** Behind a proxy that rewrites it, the deployment must pass the original host through (same requirement as the client address).
 - **Every page renders on request** (needed for the per-request nonce). Fine at this size; revisit caching with the catalog.
 - **Placeholder theme.** Colors and font are stand-ins until the brand assets arrive.
 - **No screen to turn on "require two-factor".** The tenant setting exists and is enforced; it is changed in the database until store settings exist (Milestone 3.7).
-- **No QR code for two-factor setup.** The setup key is shown as text (and as a link that opens an authenticator app on a phone). A QR code comes with the design system in 1.5.
 - **Session tokens are stored unhashed** in the `sessions` table (how the Better Auth library works). The table is unreadable by the runtime database role; someone with owner-level database access could hijack live sessions. Recorded in the threat model.
 - **A two-factor code can be reused within its 30-second window** (library behaviour). An attacker would need the password and a code observed in that window.
 - **Client address for rate limits comes from `X-Forwarded-For`.** This is only trustworthy behind a proxy that overwrites the header; the deployment guide must require one.
-- **Form fields clear after a failed submit** (for example a wrong password clears the email). Cosmetic; fixed with the design system.
 - **Staff users can only be created from the command line.** Inviting staff from the admin is part of settings (later).
 - **The test database shares the server, roles and Redis with development.** Rate-limit counters from tests can land in the development Redis; tests clear their own keys.
 
 ## Known issues
 
-- **Pushing workflow changes needs the GitHub `workflow` permission.** The saved GitHub login on the home computer lacks it, so commits that touch `.github/workflows/` are refused. Fix once with `gh auth refresh -h github.com -s workflow` (or sign in again in Git Credential Manager), then push.
-
+- **Database driver warning in the logs:** `DeprecationWarning: Calling client.query() when the client is already executing a query`. It comes from inside the Prisma library when one request loads related rows in a transaction; nothing is wrong today, but it must be rechecked before upgrading the `pg` driver to version 9.
 - **Prisma and Node 26:** Prisma 7.10 warns that Node 26 is not a listed supported version. Everything works here; Node 24 is the fallback.
 - **Dependency audit:** 1 moderate advisory in a transitive dependency. CI fails only on high or above.
 - **pnpm `minimumReleaseAgeExclude`:** pnpm listed some very recently published packages in `pnpm-workspace.yaml` so they could be installed. Can be removed once those versions are older.
@@ -197,23 +208,24 @@ pnpm db:migrate
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestones 1.4 and 1.5, on the home computer)
+## Checks run this session (Milestone 2.1, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 70 tests (includes the access-registry, navigation and CSP checks) |
-| `pnpm test:int` | Pass, 75 tests, on the separate test database |
+| `pnpm test` | Pass, 109 tests |
+| `pnpm test:int` | Pass, 102 tests, on the separate test database (27 for the catalog, including cross-tenant attempts) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 44 tests (isolation matrix on desktop only, so 16 mobile duplicates skipped), three runs in a row |
+| `pnpm test:e2e` | Pass, 55 tests (isolation matrix on desktop only, so 25 mobile duplicates skipped) |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| CI on GitHub | Milestone 1.4 commit passed. Later commits not pushed yet: see Known issues |
+| Looked at in a browser | Product list, product page, add-variant form (phone width: no sideways scrolling), categories |
+| CI on GitHub | See the Actions tab for the Milestone 2.1 commit |
 
 ## Recommended next task
 
-Milestone 2.1: catalog data model. Details in NEXT_STEPS.md.
+Milestone 2.2: product media. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -227,5 +239,6 @@ Milestone 2.1: catalog data model. Details in NEXT_STEPS.md.
 | 2026-11-12 | Milestone 1.4: request context, permission guards, tenant-bound data access, audit helper, two-factor rule, host lookup, test database, isolation suite, `/api/v1` foundation |
 | 2026-11-12 | CI: dropped `playwright install-deps` (stalled on Ubuntu mirrors) |
 | 2026-11-12 | Milestone 1.5: design tokens, shared components, admin and storefront shells, Content Security Policy, QR code, error pages |
+| 2026-11-12 | Milestone 2.1: catalog tables, services, admin pages for products, variants, categories and brands, demo catalog seed |
 
 Commit hashes: `git log --oneline`.

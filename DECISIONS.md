@@ -113,6 +113,18 @@ Scripts run only with the request's nonce or when loaded by such a script (`'str
 ### D33. Design tokens live in one CSS block (2026-11-12)
 Colors, radius and font are Tailwind theme variables in `globals.css`; components in `packages/ui` and the app use only those names. Rebranding means editing that block.
 
+### D34. Catalog references are kept inside one tenant by database triggers (2026-11-12)
+A foreign key is checked without Row-Level Security, so on its own it would accept a product pointing at another tenant's category. Composite foreign keys `(tenant_id, id)` would prevent that, but Prisma cannot express an optional one. Instead a trigger function, `app_private.check_same_tenant()`, rejects any category parent, product category, product brand, variant product or attribute product from a different tenant. The services also check first and answer exactly as for a record that does not exist.
+
+### D35. Products are archived, never deleted; variants can be deleted (2026-11-12)
+A product has three states: draft, published (`active`) and archived. There is no delete, so order history can always point at it. A variant can be deleted until orders reference it (Phase 3 adds that restriction). A published product must keep at least one variant that is for sale: publishing without one, and removing or switching off the last one, are refused.
+
+### D36. One currency per store; prices live on variants (2026-11-12)
+New variants are priced in the store's default currency; the currency is stored on each variant so a later multi-currency design does not need a migration. Amounts are integers in minor units (D6) in a 32-bit column, which allows up to 21,474,836.47 in a two-decimal currency. Text typed by staff is parsed without floating-point arithmetic.
+
+### D37. Sale and compare-at prices are constrained in the database (2026-11-12)
+A sale price must be lower than the price, and a compare-at ("was") price higher. Both rules are check constraints as well as form validation. This cannot prove a compare-at price was really charged before, so the form says so; a price-history record that can prove it is planned with promotions (Milestone 3.8).
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

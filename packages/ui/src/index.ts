@@ -6,5 +6,6 @@ export type { ButtonTone } from "./button";
 export { cx } from "./cx";
 export { Alert, Badge, EmptyState } from "./feedback";
 export type { AlertTone, BadgeTone } from "./feedback";
-export { Field, inputClasses } from "./field";
+export { Checkbox, Field, inputClasses, Select, TextArea } from "./field";
+export type { SelectOption } from "./field";
 export { Card, List, ListItem, PageHeader } from "./layout";

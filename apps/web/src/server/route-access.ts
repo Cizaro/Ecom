@@ -36,6 +36,14 @@ export interface ApiEntry {
   access: RouteAccess;
 }
 
+const CATALOG_READ: RouteAccess = { level: "permission", permission: "catalog.read" };
+const CATALOG_WRITE: RouteAccess = { level: "permission", permission: "catalog.write" };
+
+/**
+ * A path segment in square brackets (`[id]`) stands for a record identifier.
+ * The guard runs before the record is looked up, so an unknown identifier
+ * answers 404 to a user with access and 403 to one without.
+ */
 export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/sign-in", access: { level: "public" } },
   { path: "/admin/two-factor", access: { level: "public" } },
@@ -46,7 +54,34 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/select-store", access: { level: "session" } },
   { path: "/admin/access", access: { level: "tenant" } },
   { path: "/admin/team", access: { level: "permission", permission: "staff.manage" } },
+  { path: "/admin/catalog/products", access: CATALOG_READ },
+  { path: "/admin/catalog/products/new", access: CATALOG_WRITE },
+  // Viewing a product needs catalog.read; its edit form is read-only without catalog.write.
+  { path: "/admin/catalog/products/[id]", access: CATALOG_READ },
+  { path: "/admin/catalog/products/[id]/variants/new", access: CATALOG_WRITE },
+  { path: "/admin/catalog/products/[id]/variants/[variantId]", access: CATALOG_WRITE },
+  { path: "/admin/catalog/categories", access: CATALOG_READ },
+  { path: "/admin/catalog/categories/[id]", access: CATALOG_WRITE },
+  { path: "/admin/catalog/brands", access: CATALOG_READ },
+  { path: "/admin/catalog/brands/[id]", access: CATALOG_WRITE },
 ];
+
+const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
+
+const CATALOG_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "createCategoryAction",
+  "updateCategoryAction",
+  "deleteCategoryAction",
+  "createBrandAction",
+  "updateBrandAction",
+  "deleteBrandAction",
+  "createProductAction",
+  "updateProductAction",
+  "setProductStatusAction",
+  "addVariantAction",
+  "updateVariantAction",
+  "deleteVariantAction",
+].map((name) => ({ id: `${CATALOG_ACTIONS}#${name}`, access: CATALOG_WRITE }));
 
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 
@@ -65,6 +100,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
     id: "(admin)/admin/(protected)/select-store/actions.ts#selectStoreAction",
     access: { level: "session" },
   },
+  ...CATALOG_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [

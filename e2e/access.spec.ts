@@ -18,6 +18,13 @@ import {
 const password = () => process.env.E2E_PASSWORD!;
 const guarded = ADMIN_PAGES.filter((page) => page.access.level !== "public");
 
+// A registry path such as /admin/catalog/products/[id] is visited with an
+// identifier that matches no record. The guard runs first, so the answer is
+// 403 without access and 404 with it; nobody learns whether a record exists.
+const UNKNOWN_ID = "00000000-0000-7000-8000-000000000000";
+const isDynamic = (path: string) => path.includes("[");
+const urlFor = (path: string) => path.replace(/\[\w+\]/g, UNKNOWN_ID);
+
 async function signIn(page: Page, email: string) {
   await page.goto("/admin/sign-in");
   await page.getByLabel("Email").fill(email);
@@ -42,7 +49,7 @@ test.beforeEach(({}, testInfo) => {
 test.describe("signed out", () => {
   for (const { path } of guarded) {
     test(`${path} redirects to sign-in`, async ({ page }) => {
-      await page.goto(path);
+      await page.goto(urlFor(path));
       await expect(page).toHaveURL(/\/admin\/sign-in$/);
     });
   }
@@ -66,10 +73,12 @@ test.describe("each role in its own tenant", () => {
       await signIn(page, roleEmail(role));
 
       for (const { path, access } of guarded) {
-        const response = await page.goto(path);
-        const expected = allowed(role, access) ? 200 : 403;
+        const response = await page.goto(urlFor(path));
+        const expected = !allowed(role, access) ? 403 : isDynamic(path) ? 404 : 200;
         expect(response?.status(), `${role} at ${path}`).toBe(expected);
-        expect(page.url(), `${role} at ${path} was redirected`).toMatch(new RegExp(`${path}$`));
+        expect(page.url(), `${role} at ${path} was redirected`).toMatch(
+          new RegExp(`${urlFor(path)}$`),
+        );
       }
 
       for (const { path, method, access } of ADMIN_API) {

@@ -15,6 +15,14 @@ describe("admin navigation", () => {
   it("shows tenant pages only with a tenant, and permission pages only with the permission", () => {
     expect(labels(visibleNav(null))).toEqual(["Home", "Security"]);
     expect(labels(visibleNav(context("marketing.write")))).toEqual(["Home", "Access", "Security"]);
+    expect(labels(visibleNav(context("catalog.read")))).toEqual([
+      "Home",
+      "Products",
+      "Categories",
+      "Brands",
+      "Access",
+      "Security",
+    ]);
     expect(labels(visibleNav(context("staff.manage")))).toEqual([
       "Home",
       "Access",

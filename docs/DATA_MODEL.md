@@ -50,6 +50,7 @@ erDiagram
 | --- | --- | --- |
 | tenants | Own row | Update own row; no create or delete |
 | stores, consent_records, notification_preferences, idempotency_keys, outbox_events, jobs | Own tenant | Own tenant |
+| store_domains, categories, brands, products, product_variants, product_attributes | Own tenant | Own tenant |
 | user_tenant_memberships | Own tenant, plus the signed-in user's own memberships elsewhere | Own tenant |
 | users | Self and members of the current tenant; never `password_hash` or `is_platform_admin` | Own `name` only |
 | roles | System roles and own tenant's | Own tenant's non-system roles |
@@ -101,6 +102,15 @@ erDiagram
 | StockMovement | variant_id, location_id, quantity_delta, bucket (on_hand, reserved, damaged), reason (purchase, sale, return, adjustment, damage, reservation, release), reference_type, reference_id, actor_user_id, note |
 
 `is_best_seller` is a manual flag; a computed best-seller ranking from real order data is used for sorting. Stock levels shown to shoppers and given to the AI always come from `InventoryLevel`.
+
+**Implemented so far (Milestone 2.1):** `categories`, `brands`, `products`, `product_variants` and `product_attributes`. Each has `tenant_id`, Row-Level Security (own tenant only, read and write) and these rules in the database:
+
+- URL names (`slug`) are unique per tenant and limited to lowercase letters, digits and hyphens. SKUs are unique per tenant.
+- A category parent, a product's category and brand, and a variant's or attribute's product must be in the same tenant (trigger, decision D34).
+- Prices are never negative; a sale price is below the price and a compare-at price above it; currency is a three-letter uppercase code.
+- Deleting a category or brand leaves its products in place without that category or brand. A category with sub-categories cannot be deleted.
+
+Not yet built from this section: `image_asset_id` and `logo_asset_id` (media, Milestone 2.2), `search_vector` (storefront search, Milestone 2.3), and the supplier, purchase-order and inventory tables (Milestone 3.2).
 
 ## 3. Commerce
 
