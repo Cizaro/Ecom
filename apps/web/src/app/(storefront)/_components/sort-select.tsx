@@ -1,6 +1,6 @@
 "use client";
 
-import { inputClasses } from "@ecom/ui";
+import { buttonClasses, inputClasses } from "@ecom/ui";
 
 /**
  * The sort drop-down. Choosing an option submits the surrounding form at
@@ -31,6 +31,11 @@ export function SortSelect({
           </option>
         ))}
       </select>
+      <noscript>
+        <button type="submit" className={buttonClasses("secondary")}>
+          Sort
+        </button>
+      </noscript>
     </div>
   );
 }

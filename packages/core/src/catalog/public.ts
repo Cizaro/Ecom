@@ -75,6 +75,8 @@ export interface PublicListInput {
   pageSize?: number;
   /** Skip the facet queries (home page sections do not show filters). */
   withoutFacets?: boolean;
+  /** Leave this product out (for "more like this" lists). */
+  excludeProductId?: string;
 }
 
 // --- Search ------------------------------------------------------------------
@@ -209,6 +211,9 @@ async function listProductsIn(
       baseWhere.push(Prisma.sql`p.category_id = ANY(${ids}::uuid[])`);
     }
     if (input.flag) baseWhere.push(FLAG_SQL[input.flag]);
+    if (input.excludeProductId) {
+      baseWhere.push(Prisma.sql`p.id <> ${input.excludeProductId}::uuid`);
+    }
 
     let rank = Prisma.sql`0::real`;
     if (terms.length > 0) {
@@ -503,7 +508,7 @@ export interface PublicProduct {
   material: string | null;
   careInfo: string | null;
   brandName: string | null;
-  category: { name: string; slug: string } | null;
+  category: { id: string; name: string; slug: string } | null;
   isNewArrival: boolean;
   isBestSeller: boolean;
   attributes: { key: string; value: string }[];
@@ -530,7 +535,7 @@ export async function getPublicProduct(db: TenantDb, slug: string): Promise<Publ
         isNewArrival: true,
         isBestSeller: true,
         brand: { select: { name: true } },
-        category: { select: { name: true, slug: true } },
+        category: { select: { id: true, name: true, slug: true } },
         attributes: { select: { key: true, value: true }, orderBy: { position: "asc" } },
         variants: {
           where: { status: "active" },
@@ -583,4 +588,55 @@ export async function getPublicProduct(db: TenantDb, slug: string): Promise<Publ
       image: toStoredImage(image.asset),
     })),
   };
+}
+
+// --- Lists built around one product ------------------------------------------
+
+/** Other products for sale in the same category (and its sub-categories), newest first. */
+export async function listRelatedProducts(
+  db: TenantDb,
+  product: { id: string; categoryId: string | null },
+  limit = 4,
+): Promise<PublicProductCard[]> {
+  if (!product.categoryId) return [];
+  const categoryId = product.categoryId;
+  return db.run(
+    async (tx) =>
+      (
+        await listProductsIn(tx, {
+          categoryId,
+          excludeProductId: product.id,
+          pageSize: limit,
+          withoutFacets: true,
+        })
+      ).items,
+  );
+}
+
+export const MAX_RECENT_PRODUCTS = 8;
+
+/**
+ * Cards for the given URL names, in the given order. Names that are not valid,
+ * not published or not in this store are left out without a trace, so the
+ * list can come straight from the visitor's browser.
+ */
+export async function listPublicProductsBySlug(
+  db: TenantDb,
+  slugs: readonly string[],
+): Promise<PublicProductCard[]> {
+  const wanted = [...new Set(slugs)].filter(isSlug).slice(0, MAX_RECENT_PRODUCTS);
+  if (wanted.length === 0) return [];
+  return db.run(async (tx) => {
+    const rows = await tx.product.findMany({
+      where: {
+        slug: { in: wanted },
+        status: "active",
+        variants: { some: { status: "active" } },
+      },
+      select: { id: true, slug: true },
+    });
+    const idBySlug = new Map(rows.map((row) => [row.slug, row.id]));
+    const ids = wanted.flatMap((slug) => idBySlug.get(slug) ?? []);
+    return loadCards(tx, ids);
+  });
 }

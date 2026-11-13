@@ -149,6 +149,18 @@ When a variant has a sale price, the storefront shows the sale price with the re
 ### D45. Filters live in the page address (2026-11-13)
 Sort, filters, search words and page number are query parameters, submitted by a plain form, so lists work without JavaScript and can be shared and bookmarked. Unknown or malformed parameters are dropped. Blank parameters from an empty form field are removed by a redirect so one list has one address. Filter options are counted over the whole list, not the filtered one, so choosing one brand does not hide the others.
 
+### D46. The chosen variant lives in the page address (2026-11-13)
+On a product page, colour and size choices are links to the same page with `?color=…&size=…`. The server works out the variant, so the price, SKU and pictures are right on first load, choosing works without JavaScript, and a link to "the tan one" can be shared. Colour takes priority: a size that the chosen colour is not made in is shown struck through and cannot be picked, and changing colour keeps the size when that colour has it. Every variant address points search engines at the one plain product address (canonical link). The selection rules are plain logic in `packages/core/src/catalog/variant-selection.ts`, to be reused by the cart.
+
+### D47. Pictures follow the variant (2026-11-13)
+The gallery shows the chosen variant's own pictures first, then pictures not tied to any variant; pictures of other variants are left out. If neither kind exists, all pictures are shown. The gallery is a native scroll-snap strip (swipe, trackpad, arrow keys) with thumbnail links, so it needs no script to be usable.
+
+### D48. Nothing is said about stock until stock is tracked (2026-11-13)
+The product page shows no "in stock", "only N left" or delivery promise, and the data given to search engines has no availability field, because inventory does not exist yet (Milestone 3.2). There is also no add-to-cart button until the cart exists (Milestone 2.5), rather than a button that does nothing.
+
+### D49. "Recently viewed" is a first-party cookie of product URL names (2026-11-13)
+Viewing a product stores up to nine product URL names in a cookie named `recent` (30 days, SameSite=Lax, set by the page's own script). The server reads it and shows current cards for those that are still published, so prices are never stale and an edited cookie can only ever name public products of the same store. It holds no identifier of the visitor. It is a preference cookie, not a strictly necessary one: when the consent banner is built (privacy work), setting it must depend on the visitor's choice.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

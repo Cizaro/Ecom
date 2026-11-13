@@ -47,3 +47,20 @@ export async function publicOrNotFound<T>(work: Promise<T>): Promise<T> {
     throw error;
   }
 }
+
+/**
+ * The address this storefront is being reached at, for absolute links in
+ * page metadata. The host name has already matched a store (requireStorefront),
+ * so it is not an arbitrary value from the request.
+ */
+export async function storefrontOrigin(): Promise<string> {
+  await requireStorefront();
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") ?? new URL(getEnv().APP_URL).host;
+  const forwarded = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const protocol =
+    forwarded === "https" || forwarded === "http"
+      ? forwarded
+      : new URL(getEnv().APP_URL).protocol.replace(":", "");
+  return `${protocol}://${host}`;
+}

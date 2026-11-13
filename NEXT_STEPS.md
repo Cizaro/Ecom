@@ -9,28 +9,33 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 2.4, product page
+## Next development task: Milestone 2.5, cart
 
-See PROJECT_PLAN.md section 4 (Phase 2). A first version of the page exists at `/p/[slug]` (pictures, price, description, specifications); this milestone completes it.
+See PROJECT_PLAN.md section 4 (Phase 2) and docs/DATA_MODEL.md section 3.
 
-1. Gallery: one main picture with thumbnails, swipe on phones, keyboard reachable; the picture follows the chosen variant.
-2. Choosing a variant (colour, size) with the price updating; unavailable combinations shown as such.
-3. Stock status wording. Real stock arrives with inventory (Milestone 3.2); until then show nothing rather than an invented "in stock".
-4. Related products (same category, excluding this one) and a "recently viewed" strip kept in the browser.
-5. Share links and the structured data needed by Milestone 2.6.
-6. Tests: variant choice changes price and picture; a draft's address is 404; phone-width browser test.
+1. `carts` and `cart_items` tables, tenant-scoped with Row-Level Security; a guest cart is found by an unguessable token in an HttpOnly cookie (strictly necessary, so no consent needed).
+2. Cart services: add, change quantity, remove; prices always re-read from the variant, never trusted from the browser; a variant that is no longer for sale is flagged, not silently dropped.
+3. "Add to cart" on the product page for the chosen variant (reuse `selectVariant`), with quantity; a cart page and a cart count in the header.
+4. Limits: quantity bounds, items per cart, rate limit on cart changes.
+5. Totals in minor units: subtotal only for now (shipping, tax and discounts come with checkout in Phase 3).
+6. Tests: one visitor cannot read or change another's cart; another store's variant cannot be added; price changes are picked up; phone-width browser test.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 2.5 and 2.6 Storefront: cart, SEO | |
+| 2 | 2.6 Storefront: SEO (sitemap, robots, remaining metadata) | Product pages already have structured data, canonical and link-preview tags |
 | 3 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
 | 4 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Product page: zoom on the main picture; video; a size guide; previous and next buttons on the gallery for mouse users.
+- Product page: gate the "recently viewed" cookie behind the consent choice once the banner exists (decision D49).
+- Product page: show stock wording and availability in structured data once inventory exists (Milestone 3.2).
+- Sort drop-down: a choice made in the instant before the page's script attaches is not submitted (the browser tests retry; without JavaScript a "Sort" button is shown).
 
 - Storefront: admin screen to choose and order home page sections (today: Featured, New arrivals, Best sellers from the product flags).
 - Storefront: filters by size and material; a price slider; infinite scroll as an enhancement over paging.

@@ -160,8 +160,11 @@ export {
   getPublicCategory,
   getPublicProduct,
   listPublicProducts,
+  listPublicProductsBySlug,
+  listRelatedProducts,
   listTopCategories,
   loadHomeSections,
+  MAX_RECENT_PRODUCTS,
   PRODUCT_FLAGS,
   PUBLIC_PAGE_SIZE,
   PUBLIC_SORTS,
@@ -180,3 +183,9 @@ export type {
   PublicSort,
   PublicVariant,
 } from "./catalog/public";
+export { selectVariant } from "./catalog/variant-selection";
+export type {
+  OptionChoice,
+  SelectableVariant,
+  VariantSelection,
+} from "./catalog/variant-selection";

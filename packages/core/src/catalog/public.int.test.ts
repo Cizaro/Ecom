@@ -8,6 +8,8 @@ import {
   getPublicCategory,
   getPublicProduct,
   listPublicProducts,
+  listPublicProductsBySlug,
+  listRelatedProducts,
   listTopCategories,
   type PublicListInput,
 } from "./public";
@@ -394,5 +396,47 @@ describe("one product and one category", () => {
     await expect(getPublicCategory(shopB, "bags")).rejects.toBeInstanceOf(NotFoundError);
     await expect(getPublicCategory(shopA, "hidden")).rejects.toBeInstanceOf(NotFoundError);
     await expect(getPublicCategory(shopA, "Not A Slug")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("lists built around one product", () => {
+  it("offers other products from the same category tree, never the product itself", async () => {
+    const backpack = await getPublicProduct(shopA, "city-backpack");
+    const related = await listRelatedProducts(shopA, {
+      id: backpack.id,
+      categoryId: backpack.category!.id,
+    });
+    // Bags includes Totes; the draft, archived and unsellable totes stay hidden.
+    expect(related.map((item) => item.name)).toEqual(["Classic Leather Tote"]);
+
+    const tote = await getPublicProduct(shopA, "classic-leather-tote");
+    expect(
+      await listRelatedProducts(shopA, { id: tote.id, categoryId: tote.category!.id }),
+    ).toEqual([]);
+    expect(await listRelatedProducts(shopA, { id: tote.id, categoryId: null })).toEqual([]);
+    // Another store asking with this store's identifiers gets nothing.
+    expect(
+      await listRelatedProducts(shopB, { id: backpack.id, categoryId: backpack.category!.id }),
+    ).toEqual([]);
+  });
+
+  it("turns a list of URL names from a browser into cards, dropping what must not show", async () => {
+    const cards = await listPublicProductsBySlug(shopA, [
+      "slim-wallet",
+      "secret-tote", // draft
+      "old-tote", // archived
+      "ghost-tote", // nothing for sale
+      "other-leather-tote", // another store
+      "Not A Slug",
+      "'; DROP TABLE products; --",
+      "classic-leather-tote",
+      "slim-wallet", // repeated
+    ]);
+    expect(cards.map((card) => card.name)).toEqual(["Slim Wallet", "Classic Leather Tote"]);
+    expect(JSON.stringify(cards)).not.toMatch(/cost/i);
+    expect(await listPublicProductsBySlug(shopA, [])).toEqual([]);
+
+    const many = Array.from({ length: 50 }, (_, index) => `no-such-${index}`);
+    expect(await listPublicProductsBySlug(shopA, [...many, "slim-wallet"])).toEqual([]);
   });
 });
