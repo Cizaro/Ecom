@@ -1,29 +1,14 @@
 /// <reference lib="dom" />
 import { randomUUID } from "node:crypto";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { makeTestImage } from "../packages/testing/src/images";
-import { createProduct, exact, signIn } from "./catalog-helpers";
+import { addVariant, createProduct, exact, signIn } from "./catalog-helpers";
 import { roleEmail } from "./users";
 
 // The product page as a visitor uses it: choosing a colour and size changes
 // the price, the SKU and the pictures; the choice lives in the address;
 // related and recently viewed products appear; and the data for search
 // engines says what the page says.
-
-async function addVariant(
-  page: Page,
-  productUrl: string,
-  variant: { sku: string; color: string; size: string; price: string; salePrice?: string },
-) {
-  await page.goto(`${productUrl}/variants/new`);
-  await page.getByLabel("SKU", exact).fill(variant.sku);
-  await page.getByLabel("Color", exact).fill(variant.color);
-  await page.getByLabel("Size", exact).fill(variant.size);
-  await page.getByLabel("Price (USD)", exact).fill(variant.price);
-  if (variant.salePrice) await page.getByLabel("Sale price (USD)", exact).fill(variant.salePrice);
-  await page.getByRole("button", { name: "Add variant" }).click();
-  await expect(page).toHaveURL(productUrl);
-}
 
 test("a visitor chooses a variant and sees related and recently viewed products", async ({
   page,

@@ -115,6 +115,23 @@ export const ADMIN_API: readonly ApiEntry[] = [
   { path: "/api/v1/admin/me", method: "GET", access: { level: "tenant" } },
 ];
 
+const CART_ACTIONS = "(storefront)/cart/actions.ts";
+
+/**
+ * Server actions visitors can call without signing in. Each must find its
+ * store from the host name (storefrontDb) and act only on what the
+ * visitor's own cookie identifies; the unit test checks the first and the
+ * cart tests check the second.
+ */
+export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
+  "addToCartAction",
+  "updateCartItemAction",
+  "removeCartItemAction",
+].map((name) => ({ id: `${CART_ACTIONS}#${name}`, access: { level: "public" } }));
+
+/** The call every storefront action's source must contain. */
+export const STOREFRONT_GUARD = "storefrontDb()";
+
 /** The guard call each access level requires in the route's source. */
 export function guardCallFor(access: RouteAccess): string | null {
   switch (access.level) {

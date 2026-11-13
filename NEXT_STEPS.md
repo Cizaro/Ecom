@@ -4,33 +4,37 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 
 ## Owner actions (do not block development)
 
-1. **Try signing in.** Create yourself a user with `pnpm admin:create --email you@example.com --name "Your Name" --tenant demo`, run `pnpm dev`, open http://localhost:3000/admin. Password-reset emails arrive at http://localhost:8025.
+1. Done 2026-11-13: the owner has a sign-in for the demo store. More staff: `pnpm admin:create --email someone@example.com --name "Name" --tenant demo --role store_manager`. Password-reset emails arrive at http://localhost:8025 in development.
 2. The GitHub repository is currently **public**. Make it private in the repository settings if that is not intended.
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 2.5, cart
+## Next development task: Milestone 2.6, storefront SEO and Phase 2 wrap-up
 
-See PROJECT_PLAN.md section 4 (Phase 2) and docs/DATA_MODEL.md section 3.
+See PROJECT_PLAN.md section 4 (Phase 2). Product pages already have a canonical address, link-preview tags and structured data.
 
-1. `carts` and `cart_items` tables, tenant-scoped with Row-Level Security; a guest cart is found by an unguessable token in an HttpOnly cookie (strictly necessary, so no consent needed).
-2. Cart services: add, change quantity, remove; prices always re-read from the variant, never trusted from the browser; a variant that is no longer for sale is flagged, not silently dropped.
-3. "Add to cart" on the product page for the chosen variant (reuse `selectVariant`), with quantity; a cart page and a cart count in the header.
-4. Limits: quantity bounds, items per cart, rate limit on cart changes.
-5. Totals in minor units: subtotal only for now (shipping, tax and discounts come with checkout in Phase 3).
-6. Tests: one visitor cannot read or change another's cart; another store's variant cannot be added; price changes are picked up; phone-width browser test.
+1. `sitemap.xml` per store (home, categories, published products; paged when large) and `robots.txt` (allow the shop; disallow `/admin`, `/cart`, `/search`).
+2. Canonical addresses and link-preview tags for the home, category and all-products pages; filtered and paged lists point at their unfiltered first page or are marked noindex.
+3. The store's name in page titles (today: "Store").
+4. A storefront 404 page inside the shop's shell, with links back to shopping.
+5. Performance pass on a phone profile: image sizes, layout shift, what blocks first paint; record the numbers in docs.
+6. Tests: sitemap lists only published products of the right store; robots rules; canonical tags.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 2.6 Storefront: SEO (sitemap, robots, remaining metadata) | Product pages already have structured data, canonical and link-preview tags |
-| 3 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
-| 4 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
+| 2 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
+| 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Cart: worker job to delete carts that expired (they are ignored today, not removed).
+- Cart: link a cart to a signed-in customer and merge the guest cart (with customer accounts, Phase 3).
+- Cart: a small "added" panel with the picture, and a cart drawer, as enhancements over the page.
+- Cart: abandoned-cart reminders need consent and customer contact details (Phase 4 marketing).
 
 - Product page: zoom on the main picture; video; a size guide; previous and next buttons on the gallery for mouse users.
 - Product page: gate the "recently viewed" cookie behind the consent choice once the banner exists (decision D49).

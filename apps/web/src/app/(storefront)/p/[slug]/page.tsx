@@ -3,6 +3,7 @@ import {
   getPublicProduct,
   listPublicProductsBySlug,
   listRelatedProducts,
+  MAX_LINE_QUANTITY,
   selectVariant,
   type PublicProduct,
   type PublicVariant,
@@ -18,15 +19,17 @@ import {
   productStructuredData,
 } from "@/server/structured-data";
 import { Breadcrumbs } from "../../_components/breadcrumbs";
+import { AddToCartForm } from "../../_components/cart-forms";
 import { Price, ProductGrid } from "../../_components/product-card";
 import { RememberProduct, ShareButton } from "../../_components/product-extras";
 import { ProductGallery } from "../../_components/product-gallery";
 import { VariantPicker } from "../../_components/variant-picker";
+import { addToCartAction } from "../../cart/actions";
 
 // The product page. The chosen colour and size are in the page address
 // (?color=tan&size=m), so choosing works without JavaScript and a link to a
 // particular variant can be shared. Nothing is said about stock until stock
-// is tracked (Milestone 3.2); add to cart arrives with the cart (2.5).
+// is tracked (Milestone 3.2).
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -189,6 +192,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
               sizes={selection.sizes}
               hrefFor={hrefFor}
               selectedColor={variant.color}
+            />
+            {/* A new key per variant clears the "added" message of the previous one. */}
+            <AddToCartForm
+              key={variant.id}
+              action={addToCartAction}
+              variantId={variant.id}
+              maxQuantity={MAX_LINE_QUANTITY}
             />
             <p className="text-sm text-ink-muted" data-testid="sku">
               SKU: {variant.sku}

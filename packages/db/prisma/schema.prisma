@@ -62,6 +62,8 @@ model Tenant {
   productAttributes       ProductAttribute[]
   mediaAssets             MediaAsset[]
   productImages           ProductImage[]
+  carts                   Cart[]
+  cartItems               CartItem[]
 
   @@map("tenants")
 }
@@ -613,9 +615,10 @@ model ProductVariant {
   createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  images  ProductImage[]
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images    ProductImage[]
+  cartItems CartItem[]
 
   @@unique([tenantId, sku])
   @@index([productId, position])
@@ -716,4 +719,60 @@ model ProductImage {
   @@index([productId, position])
   @@index([tenantId])
   @@map("product_images")
+}
+
+// ---------------------------------------------------------------------------
+// Cart. A visitor's cart is found by a random token kept in an HttpOnly
+// cookie; only a hash of the token is stored, so reading this table does not
+// let anyone open a cart.
+// ---------------------------------------------------------------------------
+
+enum CartStatus {
+  active
+  /// Turned into an order (Phase 3). Kept for the record, no longer editable.
+  converted
+
+  @@map("cart_status")
+}
+
+model Cart {
+  id        String     @id @default(uuid(7)) @db.Uuid
+  tenantId  String     @map("tenant_id") @db.Uuid
+  /// SHA-256 of the cookie token, in hexadecimal.
+  tokenHash String     @unique @map("token_hash")
+  currency  String     @db.Char(3)
+  status    CartStatus @default(active)
+  /// Pushed forward on every change; an expired cart is treated as empty.
+  expiresAt DateTime   @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  CartItem[]
+
+  @@index([tenantId, status, expiresAt])
+  @@index([expiresAt])
+  @@map("carts")
+}
+
+model CartItem {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  cartId          String   @map("cart_id") @db.Uuid
+  variantId       String   @map("variant_id") @db.Uuid
+  quantity        Int
+  /// What the variant cost when it was added, to tell the shopper if the
+  /// price has changed since. Totals always use the current price.
+  unitPriceAmount Int      @map("unit_price_amount")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@index([tenantId])
+  @@index([variantId])
+  @@map("cart_items")
 }

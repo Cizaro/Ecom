@@ -161,6 +161,18 @@ The product page shows no "in stock", "only N left" or delivery promise, and the
 ### D49. "Recently viewed" is a first-party cookie of product URL names (2026-11-13)
 Viewing a product stores up to nine product URL names in a cookie named `recent` (30 days, SameSite=Lax, set by the page's own script). The server reads it and shows current cards for those that are still published, so prices are never stale and an edited cookie can only ever name public products of the same store. It holds no identifier of the visitor. It is a preference cookie, not a strictly necessary one: when the consent banner is built (privacy work), setting it must depend on the visitor's choice.
 
+### D50. A guest cart is opened by an unguessable token; only its hash is stored (2026-11-13)
+A visitor needs no account to use a cart. The first "add to cart" creates a cart and a 256-bit random token, kept in a cookie named `cart` that scripts cannot read (HttpOnly), SameSite=Lax, Secure over HTTPS, 30 days. The database stores only the SHA-256 of the token, and a cart is only ever looked up by that hash inside the store's tenant, so a database leak opens no carts and a line ID from another cart is simply "not found". The cookie is strictly necessary for the cart, so it needs no consent. When customer accounts exist, a signed-in customer's cart will be linked to the account and merged with the guest cart.
+
+### D51. The cart never trusts a price from the browser (2026-11-13)
+Cart forms send only which variant (or which line) and how many. Prices are read from the catalog every time the cart is shown, and totals are computed on the server in whole minor units. Each line remembers the price at the time it was added only to tell the shopper when it has changed; the total always uses the current price. Only a variant that is for sale in a published product of the same store can be added. An item that later stops being for sale stays in the cart, flagged and left out of the total, so the shopper sees what happened instead of an item silently vanishing.
+
+### D52. Cart limits (2026-11-13)
+At most 10 of one item and 50 different items per cart, enforced in the service and (quantity) in the database. Cart changes are limited to 60 a minute per visitor address per store. If the counter (Redis) is unreachable the change is allowed: losing the ability to shop is worse than briefly losing the limit. A cart unused for 30 days is treated as empty.
+
+### D53. Visitors' server actions are registered separately (2026-11-13)
+Server actions that need no sign-in live under the storefront folder and are listed in `STOREFRONT_ACTIONS`. The unit test requires each to be listed, to take its store from the host name (`storefrontDb()`), and never to call a staff guard; staff actions stay under the admin folder with their own list.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

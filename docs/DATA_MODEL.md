@@ -50,7 +50,7 @@ erDiagram
 | --- | --- | --- |
 | tenants | Own row | Update own row; no create or delete |
 | stores, consent_records, notification_preferences, idempotency_keys, outbox_events, jobs | Own tenant | Own tenant |
-| store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images | Own tenant | Own tenant |
+| store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items | Own tenant | Own tenant |
 | user_tenant_memberships | Own tenant, plus the signed-in user's own memberships elsewhere | Own tenant |
 | users | Self and members of the current tenant; never `password_hash` or `is_platform_admin` | Own `name` only |
 | roles | System roles and own tenant's | Own tenant's non-system roles |
@@ -149,7 +149,7 @@ erDiagram
 | --- | --- |
 | Customer | email, phone, first_name, last_name, locale, status, assigned_agent_id, deletion_requested_at, anonymized_at |
 | Address | customer_id, type, name, line1, line2, city, region, postal_code, country, phone, is_default |
-| Cart / CartItem | customer_id or anonymous token, currency, expires_at; variant_id, quantity, unit_price_amount snapshot |
+| Cart / CartItem | customer_id or anonymous token, currency, expires_at; variant_id, quantity, unit_price_amount snapshot. **Built (Milestone 2.5)** for guests: `carts.token_hash` (SHA-256 of the cookie token, unique), `status` (active, converted), one line per variant per cart, quantity 1 to 99 by check constraint (the service allows 10), same-tenant triggers on the cart and the variant. `customer_id` arrives with customer accounts. |
 | CheckoutSession | cart_id, email, shipping_address, billing_address, shipping_method, coupon_id, totals (JSON), idempotency_key, status, expires_at |
 | Order | number (per-store sequence), customer_id, status, currency, subtotal_amount, discount_amount, shipping_amount, tax_amount, total_amount, refunded_amount, address snapshots, coupon_id, placed_at |
 | OrderItem | order_id, variant_id, name/sku/price snapshots, quantity, tax_amount, discount_amount |

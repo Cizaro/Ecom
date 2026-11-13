@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 2 (storefront and catalog): Milestones 2.1 to 2.4 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.5 (cart).
+**Phase 2 (storefront and catalog): Milestones 2.1 to 2.5 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.6 (storefront SEO and Phase 2 wrap-up).
 
 ## Completed
 
@@ -53,7 +53,7 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures. There is no cart or checkout yet. There are no stock levels, orders or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines. There is no checkout yet. There are no stock levels, orders or dashboard yet.
 
 - **Milestone 2.2, product media:**
   - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
@@ -82,6 +82,15 @@ Last updated: 2026-11-12
   - For search engines and link previews: canonical address, Open Graph tags, and schema.org Product and Breadcrumb data with the real price range; no stock, rating or review claims.
   - Selection rules as plain logic in `packages/core`, ready for the cart.
 
+- **Milestone 2.5, cart:**
+  - Tables `carts` and `cart_items`, limited to their tenant by Row-Level Security and same-tenant triggers.
+  - A guest cart opened by a random token in an HttpOnly cookie; only the token's hash is stored.
+  - Cart services in `packages/core/src/cart`: add, change quantity, remove, read. Prices are always read from the catalog; totals are whole minor units computed on the server.
+  - Only variants a shopper could see can be added. An item that stops being for sale is flagged and left out of the total; a changed price is pointed out.
+  - "Add to cart" with quantity on the product page for the chosen variant; cart page; cart count in the header. All of it works without JavaScript.
+  - Limits: 10 of one item, 50 different items, 60 changes a minute per visitor address.
+  - Visitors' server actions have their own registry and test rule.
+
 ## In progress
 
 Nothing.
@@ -93,7 +102,10 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 ## Known limitations of what is built
 
 - **Products have no stock levels** (Milestone 3.2), so the storefront says nothing about availability yet.
-- **No add to cart yet** (Milestone 2.5). The product page deliberately has no buy button and says nothing about stock or delivery (decision D48).
+- **No checkout yet** (Phase 3). The cart page says so and offers no pay button. The subtotal has no shipping, tax or discounts.
+- **Carts are for guests only**, on one device. Customer accounts and cart merging come in Phase 3.
+- **The product page says nothing about stock or delivery** (decision D48); the cart does not reserve stock.
+- **Expired carts stay in the database** (ignored, not deleted) until a cleanup job exists.
 - **"Recently viewed" sets a preference cookie without asking**, because there is no consent banner yet (decision D49). Must be gated before launch in regions that require consent.
 - **Gallery has no zoom and no previous/next buttons**; thumbnails, swipe and arrow keys work.
 - **Search has no stemming or typo tolerance** ("bags" does not find "bag" unless typed as "bag"; word beginnings do match). Decision D42.
@@ -120,6 +132,8 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 ## Known issues
 
 - **Browser tests run four at a time locally.** All tests share one web server process; with more browsers than that it falls behind and tests time out (seen on a 20-core computer). Set in `playwright.config.ts`; CI keeps its default.
+- **Development server can serve a stale layout** after files are rewritten by a script (seen once: the header change did not appear until `pnpm dev` was restarted). Restart it if a change does not show.
+- **`pnpm` is not found in the terminal panel of the Claude desktop app** on the first computer (it is found in other terminals). Workaround: `node node_modules\tsx\dist\cli.mjs scripts\<name>.ts`.
 - **Database driver warning in the logs:** `DeprecationWarning: Calling client.query() when the client is already executing a query`. It comes from inside the Prisma library when one request loads related rows in a transaction; nothing is wrong today, but it must be rechecked before upgrading the `pg` driver to version 9.
 - **Prisma and Node 26:** Prisma 7.10 warns that Node 26 is not a listed supported version. Everything works here; Node 24 is the fallback.
 - **Dependency audit:** 1 moderate advisory in a transitive dependency. CI fails only on high or above.
@@ -249,24 +263,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 2.4, on the first computer)
+## Checks run this session (Milestone 2.5, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 152 tests (18 new: variant selection, recently viewed cookie, structured data) |
-| `pnpm test:int` | Pass, 140 tests, on the separate test database |
+| `pnpm test` | Pass, 155 tests |
+| `pnpm test:int` | Pass, 155 tests, on the separate test database (15 for the cart: other visitors, other stores, prices, limits) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 61 tests, three full runs in a row (25 mobile duplicates of the isolation matrix skipped) |
+| `pnpm test:e2e` | Pass, 63 tests, two full runs in a row (25 mobile duplicates of the isolation matrix skipped) |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Product page: variant choice, gallery, related and recently viewed, at phone width without sideways scrolling |
-| CI on GitHub | Milestone 2.3 commit passed; see the Actions tab for the Milestone 2.4 commit |
+| Looked at in a browser | Add to cart on a product page and the cart page at phone width, no sideways scrolling |
+| CI on GitHub | Milestone 2.4 commit passed; see the Actions tab for the Milestone 2.5 commit |
 
 ## Recommended next task
 
-Milestone 2.5: cart. Details in NEXT_STEPS.md.
+Milestone 2.6: storefront SEO and Phase 2 wrap-up. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -284,5 +298,7 @@ Milestone 2.5: cart. Details in NEXT_STEPS.md.
 | 2026-11-12 | Milestone 2.2: media tables, storage provider, cleaned and resized image uploads, product images with ordering, category image, brand logo |
 | 2026-11-13 | Milestone 2.3: public catalog reads, search, home, category, all-products and search pages with sort, filters and paging, first product page, sample catalog command |
 | 2026-11-13 | Milestone 2.4: product page with variant choice in the address, gallery, related and recently viewed products, share, structured data |
+| 2026-11-13 | Owner's sign-in created (password set through the reset page) |
+| 2026-11-13 | Milestone 2.5: guest cart with hashed token, cart services, add to cart, cart page, header count |
 
 Commit hashes: `git log --oneline`.

@@ -189,3 +189,17 @@ export type {
   SelectableVariant,
   VariantSelection,
 } from "./catalog/variant-selection";
+export {
+  addToCart,
+  CART_LIFETIME_DAYS,
+  CartError,
+  EMPTY_CART,
+  getCart,
+  getCartCount,
+  isCartToken,
+  MAX_CART_LINES,
+  MAX_LINE_QUANTITY,
+  removeCartItem,
+  setCartItemQuantity,
+} from "./cart/cart";
+export type { AddToCartResult, CartErrorCode, CartLine, CartView } from "./cart/cart";

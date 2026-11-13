@@ -1,14 +1,20 @@
-import { listTopCategories } from "@ecom/core";
+import { getCartCount, listTopCategories } from "@ecom/core";
 import { buttonClasses, inputClasses } from "@ecom/ui";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { readCartToken } from "@/server/cart";
 import { storefrontDb } from "@/server/storefront";
 
 // Storefront shell: header with search and category navigation, main, footer.
 // The store comes from the host name.
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   const { store, db } = await storefrontDb();
-  const categories = await listTopCategories(db);
+  const cartToken = await readCartToken();
+  const [categories, cartCount] = await Promise.all([
+    listTopCategories(db),
+    // No cookie, no query: most visitors never have a cart.
+    cartToken ? getCartCount(db, cartToken) : 0,
+  ]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
@@ -27,7 +33,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
             action="/search"
             method="get"
             role="search"
-            className="flex w-full items-center gap-2 sm:w-auto sm:flex-1 sm:justify-end"
+            className="order-3 flex w-full items-center gap-2 sm:order-2 sm:w-auto sm:flex-1 sm:justify-end"
           >
             <label htmlFor="site-search" className="sr-only">
               Search products
@@ -44,6 +50,21 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               Search
             </button>
           </form>
+          <Link
+            href="/cart"
+            // Beside the store name on phones, after the search box on wider screens.
+            className="order-2 flex min-h-11 items-center gap-2 rounded-control px-3 text-sm font-medium hover:bg-surface-muted sm:order-3"
+            data-testid="cart-link"
+          >
+            Cart
+            <span
+              className="rounded-full bg-brand px-2 py-0.5 text-xs text-brand-contrast"
+              data-testid="cart-count"
+            >
+              {cartCount}
+            </span>
+            <span className="sr-only">{cartCount === 1 ? "item" : "items"}</span>
+          </Link>
         </div>
         {/* Scrolls sideways inside itself on small screens; the page never does. */}
         <nav aria-label="Shop" className="mx-auto max-w-6xl overflow-x-auto px-4">

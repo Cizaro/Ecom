@@ -6,6 +6,8 @@ import {
   ADMIN_API,
   ADMIN_PAGES,
   guardCallFor,
+  STOREFRONT_ACTIONS,
+  STOREFRONT_GUARD,
   type RouteAccess,
 } from "./route-access";
 
@@ -81,7 +83,9 @@ describe("server actions", () => {
     expect(exported.length).toBeGreaterThan(5);
   });
 
-  for (const action of exported) {
+  const isStorefront = (id: string) => id.startsWith("(storefront)/");
+
+  for (const action of exported.filter((candidate) => !isStorefront(candidate.id))) {
     it(`${action.id} is registered and guarded`, () => {
       const entry = ADMIN_ACTIONS.find((candidate) => candidate.id === action.id);
       expect(entry, `${action.id} has no entry in ADMIN_ACTIONS`).toBeDefined();
@@ -89,15 +93,31 @@ describe("server actions", () => {
     });
   }
 
+  // Visitors' actions need no sign-in, so the check is different: each must
+  // be listed, be public, and take its store from the host name.
+  for (const action of exported.filter((candidate) => isStorefront(candidate.id))) {
+    it(`${action.id} is a registered storefront action bound to the store's host`, () => {
+      const entry = STOREFRONT_ACTIONS.find((candidate) => candidate.id === action.id);
+      expect(entry, `${action.id} has no entry in STOREFRONT_ACTIONS`).toBeDefined();
+      expect(entry!.access).toEqual({ level: "public" });
+      expect(action.body, `${action.id} must call ${STOREFRONT_GUARD}`).toContain(STOREFRONT_GUARD);
+      // A visitor's action must never reach for staff access.
+      expect(action.body).not.toMatch(/requirePermission|requireSession|requireTenantContext/);
+    });
+  }
+
   it("has no registry entries for actions that no longer exist", () => {
     const existing = new Set(exported.map((action) => action.id));
-    expect(ADMIN_ACTIONS.map((a) => a.id).filter((id) => !existing.has(id))).toEqual([]);
+    const registered = [...ADMIN_ACTIONS, ...STOREFRONT_ACTIONS].map((a) => a.id);
+    expect(registered.filter((id) => !existing.has(id))).toEqual([]);
   });
 
-  it("allows no other file to export server actions", () => {
+  it("keeps staff actions under the admin and visitor actions under the storefront", () => {
     for (const file of actionFiles) {
-      expect(rel(file), "server actions live under (admin)/admin").toMatch(/^\(admin\)\/admin\//);
+      expect(rel(file)).toMatch(/^(\(admin\)\/admin|\(storefront\))\//);
     }
+    for (const entry of ADMIN_ACTIONS) expect(entry.id).toMatch(/^\(admin\)\/admin\//);
+    for (const entry of STOREFRONT_ACTIONS) expect(entry.id).toMatch(/^\(storefront\)\//);
   });
 });
 

@@ -65,3 +65,19 @@ export async function createProduct(page: Page, product: NewProduct): Promise<st
   }
   return productUrl;
 }
+
+/** Adds another variant to a product, given the address of its admin page. */
+export async function addVariant(
+  page: Page,
+  productUrl: string,
+  variant: { sku: string; color: string; size?: string; price: string; salePrice?: string },
+) {
+  await page.goto(`${productUrl}/variants/new`);
+  await page.getByLabel("SKU", exact).fill(variant.sku);
+  await page.getByLabel("Color", exact).fill(variant.color);
+  if (variant.size) await page.getByLabel("Size", exact).fill(variant.size);
+  await page.getByLabel("Price (USD)", exact).fill(variant.price);
+  if (variant.salePrice) await page.getByLabel("Sale price (USD)", exact).fill(variant.salePrice);
+  await page.getByRole("button", { name: "Add variant" }).click();
+  await expect(page).toHaveURL(productUrl);
+}
