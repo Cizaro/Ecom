@@ -25,25 +25,27 @@
     "postinstall": "pnpm db:generate",
     "db:drift": "pnpm --filter @ecom/db migrate:drift",
     "admin:create": "tsx scripts/create-admin.ts",
-    "db:test:prepare": "tsx scripts/prepare-test-db.ts"
+    "db:test:prepare": "tsx scripts/prepare-test-db.ts",
+    "demo:catalog": "tsx scripts/demo-catalog.ts"
   },
   "devDependencies": {
     "@ecom/config": "workspace:*",
     "@ecom/core": "workspace:*",
+    "@ecom/db": "workspace:*",
     "@eslint/js": "9.39.5",
     "@next/eslint-plugin-next": "16.4.6",
     "@playwright/test": "1.65.0",
     "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
     "globals": "17.14.0",
+    "pg": "8.23.1",
     "prettier": "3.9.10",
+    "sharp": "0.35.5",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.2",
-    "vitest": "5.1.0",
-    "@ecom/db": "workspace:*",
-    "pg": "8.23.1",
-    "@types/pg": "8.23.1"
+    "vitest": "5.1.0"
   }
 }

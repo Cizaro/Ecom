@@ -9,28 +9,34 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 2.3, storefront listing
+## Next development task: Milestone 2.4, product page
 
-See PROJECT_PLAN.md section 4 (Phase 2).
+See PROJECT_PLAN.md section 4 (Phase 2). A first version of the page exists at `/p/[slug]` (pictures, price, description, specifications); this milestone completes it.
 
-1. Public catalog reads in `packages/core`: only published products with at least one active variant, in the store resolved from the host; no cost prices or draft data ever leave the server.
-2. Homepage sections (featured, new arrivals, categories with their images) replacing the placeholder storefront.
-3. Category pages with sub-categories, filters (price, brand, colour), sorting and pagination in the URL.
-4. Search by name, description and SKU using PostgreSQL full-text (`search_vector`), behind the `SearchProvider` interface.
-5. Product cards using the resized images (`srcset`), with real prices and honest sale display (decision D37).
-6. Tests: a draft or archived product and another tenant's product never appear; filters and paging; phone-width browser test.
+1. Gallery: one main picture with thumbnails, swipe on phones, keyboard reachable; the picture follows the chosen variant.
+2. Choosing a variant (colour, size) with the price updating; unavailable combinations shown as such.
+3. Stock status wording. Real stock arrives with inventory (Milestone 3.2); until then show nothing rather than an invented "in stock".
+4. Related products (same category, excluding this one) and a "recently viewed" strip kept in the browser.
+5. Share links and the structured data needed by Milestone 2.6.
+6. Tests: variant choice changes price and picture; a draft's address is 404; phone-width browser test.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 2.4 to 2.6 Storefront: product page, cart, SEO | |
+| 2 | 2.5 and 2.6 Storefront: cart, SEO | |
 | 3 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
 | 4 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Storefront: admin screen to choose and order home page sections (today: Featured, New arrivals, Best sellers from the product flags).
+- Storefront: filters by size and material; a price slider; infinite scroll as an enhancement over paging.
+- Storefront: search suggestions and "did you mean"; synonyms; searching specification values.
+- Storefront: caching of category and home pages (every page renders on request today).
+- Storefront: translated interface text and right-to-left layout when the store's languages are decided (open decision).
 
 - Media: cleanup job for files in storage that no row points to (left behind only if storage was unreachable during a delete; each case is logged).
 - Media: drag-and-drop ordering and upload progress per file (buttons work today); crop or focal point.

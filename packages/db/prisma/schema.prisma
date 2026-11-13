@@ -535,28 +535,30 @@ enum ProductStatus {
 }
 
 model Product {
-  id               String        @id @default(uuid(7)) @db.Uuid
-  tenantId         String        @map("tenant_id") @db.Uuid
+  id               String                   @id @default(uuid(7)) @db.Uuid
+  tenantId         String                   @map("tenant_id") @db.Uuid
   name             String
   slug             String
-  shortDescription String        @default("") @map("short_description")
-  description      String        @default("")
-  seoTitle         String?       @map("seo_title")
-  seoDescription   String?       @map("seo_description")
-  brandId          String?       @map("brand_id") @db.Uuid
-  categoryId       String?       @map("category_id") @db.Uuid
+  shortDescription String                   @default("") @map("short_description")
+  description      String                   @default("")
+  seoTitle         String?                  @map("seo_title")
+  seoDescription   String?                  @map("seo_description")
+  brandId          String?                  @map("brand_id") @db.Uuid
+  categoryId       String?                  @map("category_id") @db.Uuid
   /// For example "women", "men", "gift".
-  audienceTags     String[]      @default([]) @map("audience_tags")
+  audienceTags     String[]                 @default([]) @map("audience_tags")
   material         String?
-  careInfo         String?       @map("care_info")
-  taxClass         String?       @map("tax_class")
-  status           ProductStatus @default(draft)
-  isFeatured       Boolean       @default(false) @map("is_featured")
-  isNewArrival     Boolean       @default(false) @map("is_new_arrival")
+  careInfo         String?                  @map("care_info")
+  taxClass         String?                  @map("tax_class")
+  status           ProductStatus            @default(draft)
+  isFeatured       Boolean                  @default(false) @map("is_featured")
+  isNewArrival     Boolean                  @default(false) @map("is_new_arrival")
   /// A manual merchandising flag, not a sales claim computed from orders.
-  isBestSeller     Boolean       @default(false) @map("is_best_seller")
-  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  isBestSeller     Boolean                  @default(false) @map("is_best_seller")
+  /// Words shoppers can search for. Kept up to date by a database trigger.
+  searchVector     Unsupported("tsvector")? @map("search_vector")
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   brand      Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
@@ -569,6 +571,7 @@ model Product {
   @@index([tenantId, status, createdAt])
   @@index([tenantId, categoryId])
   @@index([tenantId, brandId])
+  @@index([searchVector], type: Gin)
   @@map("products")
 }
 

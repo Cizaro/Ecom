@@ -156,3 +156,27 @@ export {
   QUEUES,
 } from "./platform/queues";
 export { listUnprocessedMedia } from "./platform/media-sweep";
+export {
+  getPublicCategory,
+  getPublicProduct,
+  listPublicProducts,
+  listTopCategories,
+  loadHomeSections,
+  PRODUCT_FLAGS,
+  PUBLIC_PAGE_SIZE,
+  PUBLIC_SORTS,
+  searchTerms,
+} from "./catalog/public";
+export type {
+  HomeSections,
+  ProductFlag,
+  PublicCategory,
+  PublicCategoryLink,
+  PublicFacets,
+  PublicListInput,
+  PublicProduct,
+  PublicProductCard,
+  PublicProductList,
+  PublicSort,
+  PublicVariant,
+} from "./catalog/public";

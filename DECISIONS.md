@@ -137,6 +137,18 @@ The upload request stores the cleaned image and returns; a worker job makes WebP
 ### D41. The first image is the main image (2026-11-12)
 There is no separate "main" flag that could disagree with the order. "Make main" moves an image to the front. An image can be tied to one variant of the same product (enforced by a database trigger), for showing the right picture when a colour is chosen.
 
+### D42. Search uses PostgreSQL full-text with the language-neutral configuration (2026-11-13)
+Each product has a `search_vector` column kept current by a database trigger: name (highest weight), short description, material and audience tags, long description. It uses PostgreSQL's `simple` configuration, which splits text into lowercase words without language-specific stemming, so it behaves the same whatever language a store writes in (English stemming would mishandle Arabic, for example). To make up for no stemming, every typed word matches as a word beginning ("tot" finds "tote") and all words must match. SKUs and brand names are also matched from their start. The query is built only from letters and digits, so nothing a shopper types is interpreted as a search operator. A dedicated search service can replace this behind the same function later.
+
+### D43. What shoppers can read (2026-11-13)
+Shopper-facing reads need no sign-in. They are protected by two things together: the tenant comes only from the host name (Row-Level Security then limits every query to that store), and every public query asks only for products that are published and have at least one variant for sale. These reads live in one file (`packages/core/src/catalog/public.ts`) that never selects cost prices. A draft, archived or unsellable product answers "not found" by its address.
+
+### D44. The struck-through price is the variant's own regular price (2026-11-13)
+When a variant has a sale price, the storefront shows the sale price with the regular price struck through and a "Sale" label. Both are the store's current prices for that variant. The separate compare-at ("was") price is not shown to shoppers until a price history can back it (decision D37, Milestone 3.8). "Best seller" is shown only where staff ticked the box; no sales claim is computed or invented.
+
+### D45. Filters live in the page address (2026-11-13)
+Sort, filters, search words and page number are query parameters, submitted by a plain form, so lists work without JavaScript and can be shared and bookmarked. Unknown or malformed parameters are dropped. Blank parameters from an empty form field are removed by a redirect so one list has one address. Filter options are counted over the whole list, not the filtered one, so choosing one brand does not hide the others.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

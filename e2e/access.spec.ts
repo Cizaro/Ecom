@@ -70,6 +70,8 @@ test.describe("signed out", () => {
 test.describe("each role in its own tenant", () => {
   for (const role of E2E_ROLES) {
     test(`${role} reaches exactly the pages its permissions allow`, async ({ page }) => {
+      // Visits every registered page in turn, so it grows with the admin.
+      test.setTimeout(90_000);
       await signIn(page, roleEmail(role));
 
       for (const { path, access } of guarded) {

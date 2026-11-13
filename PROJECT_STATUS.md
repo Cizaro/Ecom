@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 2 (storefront and catalog): Milestones 2.1 and 2.2 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.3 (storefront listing).
+**Phase 2 (storefront and catalog): Milestones 2.1 to 2.3 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.4 (product page).
 
 ## Completed
 
@@ -53,7 +53,7 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. Visitors to http://localhost:3000 still see only the placeholder storefront: products appear there in Milestones 2.3 and 2.4. There are no stock levels, orders or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a first version of a product page. There is no cart or checkout yet. There are no stock levels, orders or dashboard yet.
 
 - **Milestone 2.2, product media:**
   - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
@@ -65,6 +65,15 @@ Last updated: 2026-11-12
   - The product list shows each product's main image.
   - The Content Security Policy allows images from the storage address only.
 
+- **Milestone 2.3, storefront listing:**
+  - Shopper-facing catalog reads in one file (`packages/core/src/catalog/public.ts`): only published products with something for sale, in the store found from the host name; cost prices are never selected.
+  - Search: a `search_vector` column kept current by a database trigger; typed words match word beginnings; SKU and brand name also match. Anything typed is treated as plain words.
+  - Pages: home (`/`), category (`/c/<url-name>`, including its sub-categories), all products (`/products`), search (`/search?q=`), and a first product page (`/p/<url-name>`).
+  - Sort (newest, price up or down, name, best match), filters (brand, colour, price range) and paging, all in the page address and working without JavaScript.
+  - Product cards use the resized images, show a sale price beside the regular price, and never show a draft.
+  - Header with search and category navigation; breadcrumbs.
+  - `pnpm demo:catalog` adds ten labelled sample products with generated pictures to the demo store (development only).
+
 ## In progress
 
 Nothing.
@@ -75,7 +84,11 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 
 ## Known limitations of what is built
 
-- **Products have no stock levels** (Milestone 3.2). "Published" means ready for the storefront, which does not list products until Milestone 2.3.
+- **Products have no stock levels** (Milestone 3.2), so the storefront says nothing about availability yet.
+- **The product page is a first version:** all pictures stacked, lowest price shown, no variant choice, no add to cart (Milestones 2.4 and 2.5).
+- **Search has no stemming or typo tolerance** ("bags" does not find "bag" unless typed as "bag"; word beginnings do match). Decision D42.
+- **Home page sections are fixed** (Featured, New arrivals, Best sellers from the product flags); there is no screen to arrange them.
+- **Storefront text is English only**; languages are an open decision.
 - **Images of a draft product are reachable by anyone who has the exact address** (a 32-character random part makes it unguessable; decision D38).
 - **Resized image versions need the worker running** (`pnpm dev` starts it). Without it, pages use the full-size cleaned image.
 - **Image ordering uses buttons, not drag and drop; no cropping.** Video is not supported yet.
@@ -96,6 +109,7 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 
 ## Known issues
 
+- **Browser tests run four at a time locally.** All tests share one web server process; with more browsers than that it falls behind and tests time out (seen on a 20-core computer). Set in `playwright.config.ts`; CI keeps its default.
 - **Database driver warning in the logs:** `DeprecationWarning: Calling client.query() when the client is already executing a query`. It comes from inside the Prisma library when one request loads related rows in a transaction; nothing is wrong today, but it must be rechecked before upgrading the `pg` driver to version 9.
 - **Prisma and Node 26:** Prisma 7.10 warns that Node 26 is not a listed supported version. Everything works here; Node 24 is the fallback.
 - **Dependency audit:** 1 moderate advisory in a transitive dependency. CI fails only on high or above.
@@ -217,6 +231,7 @@ pnpm db:migrate
 | Create a migration after a schema change | `pnpm db:migrate:dev` |
 | Seed data (safe to repeat) | `pnpm db:seed` |
 | Check schema and migrations agree | `pnpm db:drift` |
+| Add sample products to the demo store | `pnpm demo:catalog` |
 | Stop services | `docker compose down` |
 | Stop services and delete local data | `docker compose down -v` |
 
@@ -224,24 +239,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 2.2, on the first computer)
+## Checks run this session (Milestone 2.3, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 128 tests (9 for image checking and cleaning) |
-| `pnpm test:int` | Pass, 121 tests, on the separate test database (19 for images: cross-tenant attempts, database rules, the local storage service) |
+| `pnpm test` | Pass, 134 tests (6 for list address parameters) |
+| `pnpm test:int` | Pass, 138 tests, on the separate test database (17 for what shoppers can see: drafts, other stores, search input, cost prices) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 57 tests (25 mobile duplicates of the isolation matrix skipped) |
+| `pnpm test:e2e` | Pass, 59 tests (25 mobile duplicates of the isolation matrix skipped) |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Product page with the worker running: two images uploaded and resized, a text file named `.jpg` refused, reorder, phone width without sideways scrolling |
-| CI on GitHub | See the Actions tab for the Milestone 2.2 commit |
+| Looked at in a browser | Home, a filtered category at phone width (no sideways scrolling), search, product page, with the sample catalog |
+| CI on GitHub | Milestone 2.2 commit passed; see the Actions tab for the Milestone 2.3 commit |
 
 ## Recommended next task
 
-Milestone 2.3: storefront listing. Details in NEXT_STEPS.md.
+Milestone 2.4: product page. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -257,5 +272,6 @@ Milestone 2.3: storefront listing. Details in NEXT_STEPS.md.
 | 2026-11-12 | Milestone 1.5: design tokens, shared components, admin and storefront shells, Content Security Policy, QR code, error pages |
 | 2026-11-12 | Milestone 2.1: catalog tables, services, admin pages for products, variants, categories and brands, demo catalog seed |
 | 2026-11-12 | Milestone 2.2: media tables, storage provider, cleaned and resized image uploads, product images with ordering, category image, brand logo |
+| 2026-11-13 | Milestone 2.3: public catalog reads, search, home, category, all-products and search pages with sort, filters and paging, first product page, sample catalog command |
 
 Commit hashes: `git log --oneline`.

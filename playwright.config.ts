@@ -21,6 +21,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // All tests share one web server process, which renders pages on a single
+  // thread. On a computer with many cores the default (half the cores) starts
+  // more browsers than that server can keep up with, and tests time out.
+  workers: process.env.CI ? undefined : 4,
   reporter: process.env.CI ? "github" : "list",
   use: { baseURL, trace: "on-first-retry" },
   projects: [

@@ -20,7 +20,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
 import { viewOf } from "@/server/media";
-import { MediaImage } from "../../../_components/media-image";
+import { MediaImage } from "@/components/media-image";
 
 export const metadata: Metadata = { title: "Products" };
 

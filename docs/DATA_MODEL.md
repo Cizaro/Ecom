@@ -118,7 +118,9 @@ erDiagram
 - An asset is used in one place only (unique links). Deleting the asset removes the product image row and clears a category or brand link.
 - The lowest `position` is the main image (decision D41). Alternative text is 300 characters at most.
 
-Not yet built from this section: video (`duration_ms`), `search_vector` (storefront search, Milestone 2.3), and the supplier, purchase-order and inventory tables (Milestone 3.2).
+**Search (Milestone 2.3):** `products.search_vector` (type `tsvector`, GIN index) is filled by the trigger `products_search_vector` on insert and whenever the name, descriptions, material or audience tags change (decision D42). A partial index on `(tenant_id, created_at DESC) WHERE status = 'active'` serves storefront lists.
+
+Not yet built from this section: video (`duration_ms`), and the supplier, purchase-order and inventory tables (Milestone 3.2).
 
 ## 3. Commerce
 

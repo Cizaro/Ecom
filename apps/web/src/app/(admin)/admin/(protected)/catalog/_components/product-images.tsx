@@ -3,7 +3,7 @@ import { Badge, Card, EmptyState } from "@ecom/ui";
 import { viewOf } from "@/server/media";
 import { ActionForm, DangerForm, SelectField, TextField } from "../../../_components/form";
 import { ImageUploader } from "../../../_components/image-uploader";
-import { MediaImage } from "../../../_components/media-image";
+import { MediaImage } from "@/components/media-image";
 import {
   moveProductImageAction,
   removeProductImageAction,

@@ -4,7 +4,7 @@ import { viewOf } from "@/server/media";
 import type { FormState } from "../../../actions";
 import { DangerForm } from "../../../_components/form";
 import { ImageUploader } from "../../../_components/image-uploader";
-import { MediaImage } from "../../../_components/media-image";
+import { MediaImage } from "@/components/media-image";
 
 type Action = (previous: FormState, formData: FormData) => Promise<FormState>;
 
