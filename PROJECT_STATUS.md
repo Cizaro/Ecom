@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 2 (storefront and catalog): Milestones 2.1 to 2.5 complete.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Milestone 2.6 (storefront SEO and Phase 2 wrap-up).
+**Phase 2 (storefront and catalog) complete: Milestones 2.1 to 2.6.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Phase 3 (checkout and operations), starting with Milestone 3.1 (customers and addresses).
 
 ## Completed
 
@@ -91,6 +91,14 @@ Last updated: 2026-11-12
   - Limits: 10 of one item, 50 different items, 60 changes a minute per visitor address.
   - Visitors' server actions have their own registry and test rule.
 
+- **Milestone 2.6, search engines and Phase 2 wrap-up:**
+  - `ALLOW_SEARCH_INDEXING` switch, off by default: while off, `robots.txt` disallows everything and every page says `noindex`.
+  - `/robots.txt` and `/sitemap.xml` per store. The sitemap lists the home page, all products, categories and published products, from the same public reads as the pages.
+  - Page titles carry the store's name ("Women's Bags | Demo Store").
+  - Canonical addresses and link-preview tags on the home, category and all-products pages. Sorted, filtered and searched views are not indexed and point at the plain list.
+  - A "not found" page inside the shop's header and footer, still answering 404.
+  - Page-weight and layout-shift budgets enforced by a browser test; first measurements in docs/PERFORMANCE.md.
+
 ## In progress
 
 Nothing.
@@ -111,6 +119,8 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 - **Search has no stemming or typo tolerance** ("bags" does not find "bag" unless typed as "bag"; word beginnings do match). Decision D42.
 - **Home page sections are fixed** (Featured, New arrivals, Best sellers from the product flags); there is no screen to arrange them.
 - **Storefront text is English only**; languages are an open decision.
+- **Search engines are blocked by default.** The live site must set `ALLOW_SEARCH_INDEXING=true` (decision D54).
+- **Page timings are not measured**, only page weight and layout shift (docs/PERFORMANCE.md).
 - **Images of a draft product are reachable by anyone who has the exact address** (a 32-character random part makes it unguessable; decision D38).
 - **Resized image versions need the worker running** (`pnpm dev` starts it). Without it, pages use the full-size cleaned image.
 - **Image ordering uses buttons, not drag and drop; no cropping.** Video is not supported yet.
@@ -167,7 +177,8 @@ Read by code today (validated in `packages/config/src/env.ts`):
 | `REDIS_URL` | Queues and rate limits |
 | `AUTH_SECRET` | Signs session cookies and encrypts two-factor secrets. Changing it signs everyone out and invalidates two-factor enrolments. |
 | `ENCRYPTION_KEY` | Reserved for encrypting stored OAuth tokens (Phase 6) |
-| `S3_*` | Object storage |
+| `ALLOW_SEARCH_INDEXING` | "true" lets search engines index the storefront. Default "false". Set "true" on the live site only. |
+| `S3_PUBLIC_URL`
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Email. `smtp` needs host and port. |
 
 `.env.example` works as-is for local development. Generate your own `AUTH_SECRET` and `ENCRYPTION_KEY` (command is in the file). `.env` is never committed, so each computer has its own.
@@ -263,24 +274,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 2.5, on the first computer)
+## Checks run this session (Milestone 2.6, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 155 tests |
-| `pnpm test:int` | Pass, 155 tests, on the separate test database (15 for the cart: other visitors, other stores, prices, limits) |
+| `pnpm test` | Pass, 162 tests |
+| `pnpm test:int` | Pass, 156 tests, on the separate test database |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 63 tests, two full runs in a row (25 mobile duplicates of the isolation matrix skipped) |
+| `pnpm test:e2e` | Pass, 71 tests (27 skipped by design: phone duplicates of the isolation matrix, desktop duplicates of the performance budgets) |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Add to cart on a product page and the cart page at phone width, no sideways scrolling |
-| CI on GitHub | Milestone 2.4 commit passed; see the Actions tab for the Milestone 2.5 commit |
+| Looked at in a browser | Category title and canonical address, the in-shop "not found" page, robots.txt with indexing off |
+| CI on GitHub | The Milestone 2.5 commit failed on a chance-based test assertion (a random ID contained "999"); fixed in the next commit. See the Actions tab for the Milestone 2.6 commit |
 
 ## Recommended next task
 
-Milestone 2.6: storefront SEO and Phase 2 wrap-up. Details in NEXT_STEPS.md.
+Milestone 3.1: customers and addresses. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -300,5 +311,7 @@ Milestone 2.6: storefront SEO and Phase 2 wrap-up. Details in NEXT_STEPS.md.
 | 2026-11-13 | Milestone 2.4: product page with variant choice in the address, gallery, related and recently viewed products, share, structured data |
 | 2026-11-13 | Owner's sign-in created (password set through the reset page) |
 | 2026-11-13 | Milestone 2.5: guest cart with hashed token, cart services, add to cart, cart page, header count |
+| 2026-11-14 | Test fix: cost-leak checks look at fields, not text (CI failed once by chance) |
+| 2026-11-14 | Milestone 2.6: indexing switch, robots.txt, sitemap.xml, store-name titles, canonical addresses, in-shop 404, performance budgets. Phase 2 complete |
 
 Commit hashes: `git log --oneline`.

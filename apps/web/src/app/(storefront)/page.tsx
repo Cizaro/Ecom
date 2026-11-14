@@ -1,5 +1,6 @@
 import { loadHomeSections, type PublicProductCard } from "@ecom/core";
 import { buttonClasses } from "@ecom/ui";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { MediaImage } from "@/components/media-image";
 import { viewOf } from "@/server/media";
@@ -7,6 +8,16 @@ import { storefrontDb } from "@/server/storefront";
 import { ProductGrid } from "./_components/product-card";
 
 const SECTION_SIZE = 8;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { store } = await storefrontDb();
+  return {
+    // The home page's title is the store's name alone.
+    title: { absolute: store.name },
+    alternates: { canonical: "/" },
+    openGraph: { title: store.name, url: "/" },
+  };
+}
 
 function Section({
   title,

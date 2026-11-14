@@ -162,6 +162,7 @@ export {
   listPublicProducts,
   listPublicProductsBySlug,
   listRelatedProducts,
+  listSitemapSource,
   listTopCategories,
   loadHomeSections,
   MAX_RECENT_PRODUCTS,
@@ -182,6 +183,7 @@ export type {
   PublicProductList,
   PublicSort,
   PublicVariant,
+  SitemapSource,
 } from "./catalog/public";
 export { selectVariant } from "./catalog/variant-selection";
 export type {

@@ -1,8 +1,10 @@
 import { getPublicCategory } from "@ecom/core";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { RawParams } from "@/server/listing";
+import { parseListing, type RawParams } from "@/server/listing";
 import { listingState } from "@/server/listing-page";
+import { viewOf } from "@/server/media";
+import { listingSeo } from "@/server/seo";
 import { publicOrNotFound, storefrontDb } from "@/server/storefront";
 import { Breadcrumbs } from "../../_components/breadcrumbs";
 import { ProductListing } from "../../_components/listing";
@@ -12,12 +14,26 @@ interface Props {
   searchParams: Promise<RawParams>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { db } = await storefrontDb();
   const category = await publicOrNotFound(getPublicCategory(db, (await params).slug));
+  const title = category.seoTitle ?? category.name;
+  const description = category.seoDescription ?? (category.description || undefined);
+  const seo = listingSeo(`/c/${category.slug}`, parseListing(await searchParams));
+  const image = category.image ? viewOf(category.image).url : undefined;
   return {
-    title: category.seoTitle ?? category.name,
-    description: category.seoDescription ?? (category.description || undefined),
+    title,
+    description,
+    alternates: { canonical: seo.canonical },
+    // Only set when this view must stay out of search results; otherwise the
+    // store-wide default applies.
+    ...(seo.index ? {} : { robots: { index: false, follow: true } }),
+    openGraph: {
+      title,
+      description,
+      url: seo.canonical,
+      ...(image ? { images: [{ url: image }] } : {}),
+    },
   };
 }
 

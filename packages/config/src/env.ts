@@ -30,6 +30,16 @@ const envSchema = z.object({
   AUTH_SECRET: secret,
   ENCRYPTION_KEY: secret,
 
+  /**
+   * Whether search engines may index the storefront. Off unless set to
+   * "true", so development, test and staging copies stay out of search
+   * results. Switch it on for the live site only.
+   */
+  ALLOW_SEARCH_INDEXING: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
   S3_ENDPOINT: z.url(),
   S3_REGION: z.string().min(1),
   S3_BUCKET: z.string().min(1),

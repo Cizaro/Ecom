@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
-import type { RawParams } from "@/server/listing";
+import { parseListing, type RawParams } from "@/server/listing";
 import { listingState } from "@/server/listing-page";
+import { listingSeo } from "@/server/seo";
 import { storefrontDb } from "@/server/storefront";
 import { Breadcrumbs } from "../_components/breadcrumbs";
 import { ProductListing } from "../_components/listing";
 
-export const metadata: Metadata = { title: "All products" };
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<RawParams>;
+}): Promise<Metadata> {
+  const seo = listingSeo("/products", parseListing(await searchParams));
+  return {
+    title: "All products",
+    alternates: { canonical: seo.canonical },
+    ...(seo.index ? {} : { robots: { index: false, follow: true } }),
+    openGraph: { title: "All products", url: seo.canonical },
+  };
+}
 
 export default async function AllProductsPage({
   searchParams,

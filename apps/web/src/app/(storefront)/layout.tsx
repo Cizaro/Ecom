@@ -1,9 +1,28 @@
 import { getCartCount, listTopCategories } from "@ecom/core";
 import { buttonClasses, inputClasses } from "@ecom/ui";
+import { getEnv } from "@ecom/config";
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { readCartToken } from "@/server/cart";
-import { storefrontDb } from "@/server/storefront";
+import { storefrontDb, storefrontOrigin } from "@/server/storefront";
+
+/**
+ * Defaults for every shop page: the store's name in the title, absolute
+ * addresses for link previews, and whether search engines may index at all.
+ * A page that sets its own `robots` (search, cart, filtered lists) replaces
+ * the default.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { store } = await storefrontDb();
+  const allowIndexing = getEnv().ALLOW_SEARCH_INDEXING;
+  return {
+    metadataBase: new URL(await storefrontOrigin()),
+    title: { default: store.name, template: `%s | ${store.name}` },
+    openGraph: { siteName: store.name, type: "website" },
+    robots: { index: allowIndexing, follow: allowIndexing },
+  };
+}
 
 // Storefront shell: header with search and category navigation, main, footer.
 // The store comes from the host name.

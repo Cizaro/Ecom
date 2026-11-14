@@ -11,6 +11,7 @@ import {
   listPublicProducts,
   listPublicProductsBySlug,
   listRelatedProducts,
+  listSitemapSource,
   listTopCategories,
   type PublicListInput,
 } from "./public";
@@ -446,5 +447,28 @@ describe("lists built around one product", () => {
 
     const many = Array.from({ length: 50 }, (_, index) => `no-such-${index}`);
     expect(await listPublicProductsBySlug(shopA, [...many, "slim-wallet"])).toEqual([]);
+  });
+});
+
+describe("sitemap source", () => {
+  it("names only what a shopper can open in this store", async () => {
+    const source = await listSitemapSource(shopA);
+    expect(source.products.map((product) => product.slug).sort()).toEqual([
+      "city-backpack",
+      "classic-leather-tote",
+      "slim-wallet",
+    ]);
+    expect(source.categories.map((category) => category.slug).sort()).toEqual([
+      "accessories",
+      "bags",
+      "totes",
+    ]);
+    for (const entry of [...source.products, ...source.categories]) {
+      expect(entry.updatedAt).toBeInstanceOf(Date);
+    }
+    const other = await listSitemapSource(shopB);
+    expect(other.products.map((product) => product.slug)).toEqual(["other-leather-tote"]);
+    expect(other.categories.map((category) => category.slug)).toEqual(["hidden"]);
+    expect((await listSitemapSource(shopA, 1)).products).toHaveLength(1);
   });
 });

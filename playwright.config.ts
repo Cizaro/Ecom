@@ -11,6 +11,8 @@ try {
   // No .env file: variables come from the real environment (CI).
 }
 useTestDatabase(process.env);
+// The browser tests check what a live store tells search engines.
+process.env.ALLOW_SEARCH_INDEXING = "true";
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;

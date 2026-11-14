@@ -54,14 +54,12 @@ function variantPath(product: PublicProduct, variant: PublicVariant): string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { db } = await storefrontDb();
   const product = await publicOrNotFound(getPublicProduct(db, (await params).slug));
-  const origin = await storefrontOrigin();
   const title = product.seoTitle ?? product.name;
   const description = product.seoDescription ?? (product.shortDescription || undefined);
   const image = product.images[0] ? viewOf(product.images[0].image).url : undefined;
   return {
     title,
     description,
-    metadataBase: new URL(origin),
     // Every colour and size is the same page for search engines.
     alternates: { canonical: `/p/${product.slug}` },
     openGraph: {

@@ -9,27 +9,33 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 2.6, storefront SEO and Phase 2 wrap-up
+## Next development task: Milestone 3.1, customers and addresses
 
-See PROJECT_PLAN.md section 4 (Phase 2). Product pages already have a canonical address, link-preview tags and structured data.
+Phase 2 (storefront and catalog) is complete. Phase 3 is checkout and operations: see PROJECT_PLAN.md section 4 and docs/DATA_MODEL.md section 3.
 
-1. `sitemap.xml` per store (home, categories, published products; paged when large) and `robots.txt` (allow the shop; disallow `/admin`, `/cart`, `/search`).
-2. Canonical addresses and link-preview tags for the home, category and all-products pages; filtered and paged lists point at their unfiltered first page or are marked noindex.
-3. The store's name in page titles (today: "Store").
-4. A storefront 404 page inside the shop's shell, with links back to shopping.
-5. Performance pass on a phone profile: image sizes, layout shift, what blocks first paint; record the numbers in docs.
-6. Tests: sitemap lists only published products of the right store; robots rules; canonical tags.
+1. `customers` and `addresses` tables, tenant-scoped with Row-Level Security. A customer belongs to one store's tenant; the same email in two stores is two customers.
+2. Guest checkout is the default path: an order needs contact details and an address, not an account. Accounts (sign-up, sign-in, password reset) reuse the staff authentication pieces but are a separate kind of user with no admin access.
+3. Address form with country-aware fields, validated on the server; saved addresses for signed-in customers.
+4. Link the guest cart to the customer on sign-in and merge carts (decision D50).
+5. Consent records for marketing, kept separate from the order's own necessary communication.
+6. Tests: a customer can never read another customer's addresses or orders, in the same store or another; a customer account opens nothing in the admin.
+
+Before 3.4 (payments) the owner needs to choose a payment provider and supply test keys (open decision Q4). 3.1 to 3.3 do not depend on it.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 3.1 to 3.8 Checkout and operations | 3.4 needs payment provider test keys |
+| 2 | 3.2 to 3.8 Inventory, orders, payments, shipping, admin order screens | 3.4 needs payment provider test keys |
 | 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Launch checklist item: set `ALLOW_SEARCH_INDEXING=true` on the live site only (decision D54), then submit the sitemap in the search engines' webmaster tools.
+- SEO: a sitemap index when a store passes 45,000 pages; a share image for the home page; per-store description text (today a fixed sentence).
+- Performance: measure timings on the deployed site with throttling (docs/PERFORMANCE.md lists what is not measured).
 
 - Cart: worker job to delete carts that expired (they are ignored today, not removed).
 - Cart: link a cart to a signed-in customer and merge the guest cart (with customer accounts, Phase 3).

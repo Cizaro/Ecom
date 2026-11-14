@@ -590,6 +590,30 @@ export async function getPublicProduct(db: TenantDb, slug: string): Promise<Publ
   };
 }
 
+// --- Sitemap -----------------------------------------------------------------
+
+export interface SitemapSource {
+  categories: { slug: string; updatedAt: Date }[];
+  products: { slug: string; updatedAt: Date }[];
+}
+
+/** Every category and every product a shopper can open, most recently changed first. */
+export async function listSitemapSource(db: TenantDb, limit = 45_000): Promise<SitemapSource> {
+  return db.run(async (tx) => ({
+    categories: await tx.category.findMany({
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: 2_000,
+    }),
+    products: await tx.product.findMany({
+      where: { status: "active", variants: { some: { status: "active" } } },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+      take: limit,
+    }),
+  }));
+}
+
 // --- Lists built around one product ------------------------------------------
 
 /** Other products for sale in the same category (and its sub-categories), newest first. */

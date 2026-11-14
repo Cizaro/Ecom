@@ -173,6 +173,12 @@ At most 10 of one item and 50 different items per cart, enforced in the service 
 ### D53. Visitors' server actions are registered separately (2026-11-13)
 Server actions that need no sign-in live under the storefront folder and are listed in `STOREFRONT_ACTIONS`. The unit test requires each to be listed, to take its store from the host name (`storefrontDb()`), and never to call a staff guard; staff actions stay under the admin folder with their own list.
 
+### D54. Search engines are kept out unless indexing is switched on (2026-11-14)
+`ALLOW_SEARCH_INDEXING` is "false" unless set to "true". While it is off, `robots.txt` disallows everything and every page carries `noindex`, so a development, test or staging copy cannot end up in search results by accident. It must be set to "true" on the live site, and only there. The cost of the safe default is that a forgotten setting leaves the live shop unindexed, so it is on the launch checklist.
+
+### D55. One address per list; variations are not indexed (2026-11-14)
+A plain list (a category, all products) and each of its pages is indexed under its own address. A sorted, filtered or searched view points at the plain list (canonical link) and asks not to be indexed, because those views are near-copies without end. The cart, search results and the whole admin are never indexed. `sitemap.xml` is built per store from the same public catalog reads as the pages, so it can only list what a shopper can open; one file holds up to 45,000 addresses.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
