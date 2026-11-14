@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { getEnv } from "@ecom/config";
 import { disconnectDatabase, getAdminPrisma, getAppPrisma, withTenant } from "@ecom/db";
+import { fieldsAndNumbers } from "@ecom/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTenantDb, type TenantDb } from "../access/tenant-db";
 import {
@@ -25,6 +26,7 @@ const admin = getAdminPrisma(env.DATABASE_ADMIN_URL);
 const app = getAppPrisma(env.DATABASE_URL);
 const run = randomUUID().slice(0, 8);
 const tenantIds: string[] = [];
+const COST = 777_123;
 
 let shopA: TenantDb;
 let shopB: TenantDb;
@@ -67,11 +69,19 @@ async function variant(
       color: "Black",
       priceAmount: options.price ?? 2500,
       discountPriceAmount: options.sale ?? null,
-      costAmount: 999,
+      // An amount no price or quantity in these tests uses, so it is recognisable.
+      costAmount: COST,
       currency: options.currency ?? "USD",
       status: options.status ?? "active",
     },
   });
+}
+
+/** No field is named after cost, and the cost amount itself appears nowhere. */
+function expectNoCost(value: unknown, costAmount: number) {
+  const { fields, numbers } = fieldsAndNumbers(value);
+  expect([...fields].filter((field) => /cost/i.test(field))).toEqual([]);
+  expect(numbers.has(costAmount)).toBe(false);
 }
 
 async function expectCartError(work: Promise<unknown>, code: CartErrorCode) {
@@ -117,7 +127,7 @@ describe("adding to a cart", () => {
     expect(stored).not.toContain(added.token);
     expect(stored).toContain(createHash("sha256").update(added.token).digest("hex"));
     // Nothing about cost reaches the cart.
-    expect(JSON.stringify(added.cart)).not.toMatch(/cost|999/i);
+    expectNoCost(added.cart, COST);
   });
 
   it("adds to the same line and holds the quantity at the limit", async () => {

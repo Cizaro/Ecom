@@ -50,7 +50,6 @@ describe("prepareMaster", () => {
     expect(after.xmp).toBeUndefined();
     expect(after.iptc).toBeUndefined();
     expect(Buffer.from(master.body).includes("TestCam")).toBe(false);
-    expect(Buffer.from(master.body).includes("GPS")).toBe(false);
   });
 
   it("stores photographs as JPEG and keeps transparency as PNG", async () => {

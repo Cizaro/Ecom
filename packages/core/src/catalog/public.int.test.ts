@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getEnv } from "@ecom/config";
 import { disconnectDatabase, getAdminPrisma, getAppPrisma } from "@ecom/db";
+import { fieldsAndNumbers } from "@ecom/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { NotFoundError } from "../access/context";
 import { createTenantDb, type TenantDb } from "../access/tenant-db";
@@ -23,6 +24,8 @@ const admin = getAdminPrisma(env.DATABASE_ADMIN_URL);
 const app = getAppPrisma(env.DATABASE_URL);
 const run = randomUUID().slice(0, 8);
 const tenantIds: string[] = [];
+/** An amount no price in these tests uses, so it is recognisable. */
+const COST = 777_123;
 
 let shopA: TenantDb;
 let shopB: TenantDb;
@@ -73,7 +76,7 @@ async function product(
         priceAmount: variant.price,
         discountPriceAmount: variant.sale ?? null,
         // A cost on every variant: it must never appear in any public result.
-        costAmount: 1234,
+        costAmount: COST,
         currency: "USD",
         status: variant.status ?? "active",
         position,
@@ -81,6 +84,13 @@ async function product(
     });
   }
   return row;
+}
+
+/** No field is named after cost, and the cost amount itself appears nowhere. */
+function expectNoCost(value: unknown, costAmount: number) {
+  const { fields, numbers } = fieldsAndNumbers(value);
+  expect([...fields].filter((field) => /cost/i.test(field))).toEqual([]);
+  expect(numbers.has(costAmount)).toBe(false);
 }
 
 const names = async (db: TenantDb, input: PublicListInput = {}) =>
@@ -165,9 +175,7 @@ describe("what a shopper can see", () => {
       await listPublicProducts(shopA),
       await getPublicProduct(shopA, "classic-leather-tote"),
     ];
-    const text = JSON.stringify(everything);
-    expect(text).not.toMatch(/cost/i);
-    expect(text).not.toContain("1234");
+    expectNoCost(everything, COST);
   });
 
   it("shows the current price, the regular price when on sale, and the colours for sale", async () => {
@@ -433,7 +441,7 @@ describe("lists built around one product", () => {
       "slim-wallet", // repeated
     ]);
     expect(cards.map((card) => card.name)).toEqual(["Slim Wallet", "Classic Leather Tote"]);
-    expect(JSON.stringify(cards)).not.toMatch(/cost/i);
+    expectNoCost(cards, COST);
     expect(await listPublicProductsBySlug(shopA, [])).toEqual([]);
 
     const many = Array.from({ length: 50 }, (_, index) => `no-such-${index}`);

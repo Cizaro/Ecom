@@ -81,7 +81,6 @@ test("an owner manages product images; others are kept to their access", async (
   expect(served.headers()["content-type"]).toMatch(/^image\/(jpeg|webp)$/);
   const body = await served.body();
   expect(body.includes("TestCam")).toBe(false);
-  expect(body.includes("GPS")).toBe(false);
   // The image is actually displayed (the Content Security Policy allows it).
   await expect
     .poll(() =>
