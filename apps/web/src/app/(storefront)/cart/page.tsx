@@ -125,9 +125,15 @@ export default async function CartPage() {
               </span>
             </div>
             <p className="text-sm text-ink-muted">Shipping and taxes are worked out at checkout.</p>
-            <p className="rounded-control bg-surface-muted px-3 py-2 text-sm text-ink-muted">
-              Checkout is not open yet. Your cart is kept for 30 days.
-            </p>
+            {cart.hasUnavailable || cart.lines.some((line) => line.onlyLeft !== null) ? (
+              <p className="rounded-control bg-surface-muted px-3 py-2 text-sm text-ink-muted">
+                Remove or change the items marked above to check out.
+              </p>
+            ) : (
+              <Link href="/checkout" className={buttonClasses()} data-testid="checkout-link">
+                Check out
+              </Link>
+            )}
             <Link href="/products" className={buttonClasses("secondary")}>
               Continue shopping
             </Link>

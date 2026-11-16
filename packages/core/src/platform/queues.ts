@@ -17,6 +17,8 @@ export const MAINTENANCE_JOBS = {
   mediaSweep: "media-sweep",
   /** Gives back stock held for checkouts that were never finished. */
   stockSweep: "stock-sweep",
+  /** Cancels orders not paid in time and gives their stock back. */
+  orderSweep: "order-sweep",
 } as const;
 
 export const MEDIA_JOBS = {

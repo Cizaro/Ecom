@@ -85,7 +85,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       </Card>
 
       <Card title="Orders">
-        <p className="text-sm text-ink-muted">Your orders will appear here once checkout opens.</p>
+        <p className="text-sm text-ink-muted">Orders you place while signed in.</p>
+        <div>
+          <Link href="/account/orders" className={buttonClasses("secondary")}>
+            See your orders
+          </Link>
+        </div>
       </Card>
 
       <ButtonForm action={signOutAction} label="Sign out" />

@@ -265,6 +265,8 @@ export {
   listStock,
   releaseExpiredReservations,
   releaseReservations,
+  reserveStockIn,
+  settleReservationsIn,
   reserveStock,
   setDefaultLocation,
   setTracking,
@@ -285,3 +287,47 @@ export type {
   VariantStock,
 } from "./inventory/stock";
 export { listTenantsWithExpiredReservations } from "./platform/stock-sweep";
+export { checkoutCartIn, convertCartIn } from "./cart/cart";
+export {
+  createMockPaymentProvider,
+  MOCK_SIGNATURE_HEADER,
+  WebhookError,
+} from "./payments/provider";
+export type {
+  CreatedPayment,
+  CreatePaymentRequest,
+  MockOutcome,
+  MockPaymentProvider,
+  PaymentNotification,
+  PaymentProvider,
+} from "./payments/provider";
+export {
+  cancelUnpaidOrder,
+  expireUnpaidOrders,
+  fulfilOrder,
+  getOrderForShopper,
+  getOrderForStaff,
+  getPaymentForPayPage,
+  handlePaymentNotification,
+  listCustomerOrders,
+  listOrders,
+  ORDER_PAGE_SIZE,
+  ORDER_STATUSES,
+  orderConfirmationEmail,
+  OrderError,
+  PAY_WITHIN_MINUTES,
+  placeOrder,
+  startPayment,
+} from "./orders/orders";
+export type {
+  HandledNotification,
+  NotificationOutcome,
+  OrderErrorCode,
+  OrderStatusValue,
+  OrderSummary,
+  OrderView,
+  PlacedOrder,
+  PlaceOrderInput,
+  StaffOrderView,
+} from "./orders/orders";
+export { findPaymentTenant, listTenantsWithExpiredOrders } from "./platform/payment-lookup";

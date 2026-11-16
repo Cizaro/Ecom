@@ -70,6 +70,8 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/inventory", access: INVENTORY_READ },
   { path: "/admin/inventory/[variantId]", access: INVENTORY_READ },
   { path: "/admin/inventory/locations", access: INVENTORY_READ },
+  { path: "/admin/orders", access: { level: "permission", permission: "orders.read" } },
+  { path: "/admin/orders/[id]", access: { level: "permission", permission: "orders.read" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -107,6 +109,15 @@ const INVENTORY_ACTION_ENTRIES: readonly ActionEntry[] = [
   "setDefaultLocationAction",
 ].map((name) => ({ id: `${INVENTORY_ACTIONS}#${name}`, access: INVENTORY_ADJUST }));
 
+const ORDER_ACTIONS = "(admin)/admin/(protected)/orders/actions.ts";
+
+const ORDER_ACTION_ENTRIES: readonly ActionEntry[] = ["fulfilOrderAction", "cancelOrderAction"].map(
+  (name) => ({
+    id: `${ORDER_ACTIONS}#${name}`,
+    access: { level: "permission", permission: "orders.manage" } as const,
+  }),
+);
+
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 
 export const ADMIN_ACTIONS: readonly ActionEntry[] = [
@@ -126,6 +137,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   },
   ...CATALOG_ACTION_ENTRIES,
   ...INVENTORY_ACTION_ENTRIES,
+  ...ORDER_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [
@@ -141,6 +153,7 @@ const CART_ACTIONS = "(storefront)/cart/actions.ts";
  * cart tests check the second.
  */
 const ACCOUNT_ACTIONS = "(storefront)/account/actions.ts";
+const CHECKOUT_ACTIONS = "(storefront)/checkout/actions.ts";
 
 export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
   ...["addToCartAction", "updateCartItemAction", "removeCartItemAction"].map((name) => ({
@@ -163,6 +176,13 @@ export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
     "deleteAddressAction",
     "setDefaultAddressAction",
   ].map((name) => ({ id: `${ACCOUNT_ACTIONS}#${name}`, access: { level: "public" } as const })),
+  // Checkout: the order is built from the shopper's own cart on the server;
+  // paying again needs the order's key or its owner's session; the mock
+  // provider's buttons go through the same verified path as the webhook.
+  ...["placeOrderAction", "retryPaymentAction", "mockPayAction"].map((name) => ({
+    id: `${CHECKOUT_ACTIONS}#${name}`,
+    access: { level: "public" } as const,
+  })),
 ];
 
 /** The call every storefront action's source must contain. */

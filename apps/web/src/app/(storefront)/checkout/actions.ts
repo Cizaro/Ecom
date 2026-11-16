@@ -1,0 +1,160 @@
+"use server";
+
+import {
+  createAddress,
+  CustomerError,
+  getOrderForShopper,
+  NotFoundError,
+  OrderError,
+  placeOrder,
+  startPayment,
+} from "@ecom/core";
+import { notFound, redirect } from "next/navigation";
+import { tooManyCartChanges } from "@/server/cart";
+import { cartOwner, getCurrentCustomer, safeReturnPath } from "@/server/customer";
+import { deliverPaymentNotification, getMockProvider, getPaymentProvider } from "@/server/payments";
+import { storefrontDb } from "@/server/storefront";
+import type { AccountFormState } from "../account/actions";
+
+// Checkout actions for shoppers. The store comes from the host name
+// (storefrontDb), the cart from the shopper's own session or cookie, and the
+// customer (if any) from their session. The form supplies only contact and
+// address details; every amount is worked out on the server. Next.js rejects
+// cross-site POSTs to server actions, which is the CSRF protection here.
+
+const text = (formData: FormData, name: string): string => {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : "";
+};
+
+const ADDRESS_FIELDS = [
+  "fullName",
+  "phone",
+  "line1",
+  "line2",
+  "city",
+  "region",
+  "postalCode",
+  "country",
+] as const;
+
+/** Where the shopper lands after paying: their account, or the guest's keyed link. */
+const returnPathFor = (orderId: string, accessKey: string | null) =>
+  accessKey
+    ? `/order/${orderId}?key=${encodeURIComponent(accessKey)}`
+    : `/account/orders/${orderId}`;
+
+export async function placeOrderAction(
+  _previous: AccountFormState,
+  formData: FormData,
+): Promise<AccountFormState> {
+  const { store, db } = await storefrontDb();
+  const values = Object.fromEntries(
+    [...ADDRESS_FIELDS, "email", "saveAddress"].map((name) => [name, text(formData, name)]),
+  );
+  if (await tooManyCartChanges(store.tenantId)) {
+    return { error: "Too many attempts in a short time. Please wait a minute.", values };
+  }
+  const customer = await getCurrentCustomer();
+  const address = {
+    fullName: text(formData, "fullName"),
+    phone: text(formData, "phone"),
+    line1: text(formData, "line1"),
+    line2: text(formData, "line2"),
+    city: text(formData, "city"),
+    region: text(formData, "region"),
+    postalCode: text(formData, "postalCode"),
+    country: text(formData, "country"),
+  };
+  const expected = Number(text(formData, "expectedTotal"));
+
+  let payUrl: string;
+  try {
+    const placed = await placeOrder(db, {
+      owner: await cartOwner(),
+      customer: customer ? { id: customer.id, email: customer.email } : null,
+      email: text(formData, "email"),
+      address,
+      expectedTotal: Number.isInteger(expected) ? expected : undefined,
+    });
+    if (customer && formData.get("saveAddress") === "on") {
+      // Saving is a convenience: a full address book does not stop the order.
+      await createAddress(db, customer.id, address).catch((error: unknown) => {
+        if (!(error instanceof CustomerError)) throw error;
+      });
+    }
+    ({ payUrl } = await startPayment(
+      db,
+      getPaymentProvider(),
+      placed.orderId,
+      returnPathFor(placed.orderId, customer ? null : placed.accessKey),
+    ));
+  } catch (error) {
+    if (error instanceof OrderError) return { error: error.message, values };
+    throw error;
+  }
+  redirect(payUrl);
+}
+
+/** Pays again for an order that is still waiting (after a decline, or a closed page). */
+export async function retryPaymentAction(
+  _previous: AccountFormState,
+  formData: FormData,
+): Promise<AccountFormState> {
+  const { db } = await storefrontDb();
+  const customer = await getCurrentCustomer();
+  const orderId = text(formData, "orderId");
+  const accessKey = text(formData, "key") || null;
+  let payUrl: string;
+  try {
+    // Only someone who may see the order may pay for it.
+    const order = await getOrderForShopper(db, orderId, {
+      customerId: customer?.id ?? null,
+      accessKey,
+    });
+    ({ payUrl } = await startPayment(
+      db,
+      getPaymentProvider(),
+      order.id,
+      returnPathFor(order.id, order.customerId ? null : accessKey),
+    ));
+  } catch (error) {
+    if (error instanceof OrderError) return { error: error.message };
+    if (error instanceof NotFoundError) notFound();
+    throw error;
+  }
+  redirect(payUrl);
+}
+
+/**
+ * The mock provider's "pay" and "decline" buttons. They produce the signed
+ * notification a real provider would send and deliver it along the same path
+ * as the webhook, so nothing here can mark an order paid any other way.
+ */
+export async function mockPayAction(
+  _previous: AccountFormState,
+  formData: FormData,
+): Promise<AccountFormState> {
+  // Only for this store's payments: the lookup below runs inside its tenant.
+  const { db } = await storefrontDb();
+  const providerPaymentId = text(formData, "payment");
+  const outcome = text(formData, "outcome") === "decline" ? "decline" : "succeed";
+  const payment = await db.run((tx) =>
+    tx.payment.findUnique({
+      where: { providerPaymentId },
+      select: { amount: true, currency: true, status: true },
+    }),
+  );
+  if (!payment) notFound();
+  if (payment.status !== "pending") {
+    return { error: "This payment has already been completed or replaced." };
+  }
+  const { body, headers } = getMockProvider().notificationFor({
+    outcome,
+    providerPaymentId,
+    amount: payment.amount,
+    currency: payment.currency,
+  });
+  await deliverPaymentNotification(body, headers);
+  redirect(safeReturnPath(text(formData, "return"), "/"));
+}

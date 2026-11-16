@@ -72,6 +72,12 @@ model Tenant {
   inventoryLevels         InventoryLevel[]
   stockMovements          StockMovement[]
   stockReservations       StockReservation[]
+  orders                  Order[]
+  orderItems              OrderItem[]
+  orderEvents             OrderEvent[]
+  payments                Payment[]
+  paymentEvents           PaymentEvent[]
+  orderCounter            OrderCounter?
 
   @@map("tenants")
 }
@@ -633,6 +639,7 @@ model ProductVariant {
   inventoryLevels   InventoryLevel[]
   stockMovements    StockMovement[]
   stockReservations StockReservation[]
+  orderItems        OrderItem[]
 
   @@unique([tenantId, sku])
   @@index([productId, position])
@@ -766,6 +773,7 @@ model Cart {
   tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
   items    CartItem[]
+  orders   Order[]
 
   @@index([tenantId, status, expiresAt])
   @@index([customerId])
@@ -829,6 +837,7 @@ model Customer {
   tokens    CustomerToken[]
   addresses Address[]
   carts     Cart[]
+  orders    Order[]
 
   @@unique([tenantId, email])
   @@index([tenantId, createdAt])
@@ -1034,4 +1043,176 @@ model StockReservation {
   @@index([status, expiresAt])
   @@index([tenantId])
   @@map("stock_reservations")
+}
+
+// ---------------------------------------------------------------------------
+// Orders and payments. An order copies everything it needs (names, SKUs,
+// prices, addresses) at the moment it is placed, so later changes to the
+// catalog or to a saved address never alter it. Its status moves only along
+// allowed steps, enforced by a database trigger as well as the services.
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  /// Placed; stock is held while the shopper pays.
+  pending_payment
+  paid
+  fulfilled
+  cancelled
+  refunded
+
+  @@map("order_status")
+}
+
+/// Gives each store its own order numbers, starting at 1001.
+model OrderCounter {
+  tenantId   String @id @map("tenant_id") @db.Uuid
+  nextNumber Int    @default(1001) @map("next_number")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("order_counters")
+}
+
+model Order {
+  id              String      @id @default(uuid(7)) @db.Uuid
+  tenantId        String      @map("tenant_id") @db.Uuid
+  number          Int
+  status          OrderStatus @default(pending_payment)
+  /// Set only when a signed-in customer placed it. Guest orders belong to no account.
+  customerId      String?     @map("customer_id") @db.Uuid
+  /// The cart it came from; emptied when payment succeeds.
+  cartId          String?     @map("cart_id") @db.Uuid
+  email           String
+  /// SHA-256 of the key in the confirmation link (the only way a guest can view the order).
+  accessKeyHash   String      @unique @map("access_key_hash")
+  currency        String      @db.Char(3)
+  subtotalAmount  Int         @map("subtotal_amount")
+  shippingAmount  Int         @default(0) @map("shipping_amount")
+  taxAmount       Int         @default(0) @map("tax_amount")
+  discountAmount  Int         @default(0) @map("discount_amount")
+  totalAmount     Int         @map("total_amount")
+  /// The delivery address as it was when the order was placed.
+  shippingAddress Json        @map("shipping_address")
+  /// Stock is held until then; an unpaid order is cancelled after it.
+  payBy           DateTime    @map("pay_by") @db.Timestamptz(3)
+  placedAt        DateTime    @default(now()) @map("placed_at") @db.Timestamptz(3)
+  paidAt          DateTime?   @map("paid_at") @db.Timestamptz(3)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  cart     Cart?        @relation(fields: [cartId], references: [id], onDelete: SetNull)
+  items    OrderItem[]
+  events   OrderEvent[]
+  payments Payment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, placedAt])
+  @@index([customerId, placedAt])
+  @@index([status, payBy])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  /// Kept for reports; null if the variant is later deleted. The copies below stay.
+  variantId       String?  @map("variant_id") @db.Uuid
+  productName     String   @map("product_name")
+  sku             String
+  color           String?
+  size            String?
+  quantity        Int
+  unitPriceAmount Int      @map("unit_price_amount")
+  lineTotalAmount Int      @map("line_total_amount")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([tenantId])
+  @@map("order_items")
+}
+
+/// The order's history: every status change and note, newest last.
+model OrderEvent {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  tenantId    String       @map("tenant_id") @db.Uuid
+  orderId     String       @map("order_id") @db.Uuid
+  type        String
+  fromStatus  OrderStatus? @map("from_status")
+  toStatus    OrderStatus? @map("to_status")
+  /// "customer", "staff", "payment_provider" or "system".
+  actorType   String       @map("actor_type")
+  actorUserId String?      @map("actor_user_id") @db.Uuid
+  note        String?
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_events")
+}
+
+enum PaymentStatus {
+  /// Created; the shopper has not finished paying.
+  pending
+  succeeded
+  failed
+  /// Given up (the order was cancelled before payment finished).
+  cancelled
+
+  @@map("payment_status")
+}
+
+model Payment {
+  id                String        @id @default(uuid(7)) @db.Uuid
+  tenantId          String        @map("tenant_id") @db.Uuid
+  orderId           String        @map("order_id") @db.Uuid
+  provider          String
+  /// The provider's own reference. Card details never reach this application.
+  providerPaymentId String        @unique @map("provider_payment_id")
+  status            PaymentStatus @default(pending)
+  amount            Int
+  currency          String        @db.Char(3)
+  /// Only what the provider reports for display, e.g. "Visa" and "4242". Never a full number.
+  methodBrand       String?       @map("method_brand")
+  methodLast4       String?       @map("method_last4")
+  failureMessage    String?       @map("failure_message")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  events PaymentEvent[]
+
+  @@index([orderId])
+  @@index([tenantId])
+  @@map("payments")
+}
+
+/// Every notification received from a payment provider, once each.
+model PaymentEvent {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  paymentId         String   @map("payment_id") @db.Uuid
+  provider          String
+  /// The provider's ID for the notification; a repeat with the same ID is ignored.
+  providerEventId   String   @map("provider_event_id")
+  type              String
+  payload           Json
+  signatureVerified Boolean  @map("signature_verified")
+  processedAt       DateTime @default(now()) @map("processed_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerEventId])
+  @@index([paymentId])
+  @@map("payment_events")
 }

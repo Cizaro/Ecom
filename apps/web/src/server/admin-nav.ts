@@ -9,6 +9,7 @@ export interface NavItem {
 /** Admin navigation, in display order. Each path must be in ADMIN_PAGES. */
 export const ADMIN_NAV: readonly NavItem[] = [
   { label: "Home", path: "/admin" },
+  { label: "Orders", path: "/admin/orders" },
   { label: "Products", path: "/admin/catalog/products" },
   { label: "Categories", path: "/admin/catalog/categories" },
   { label: "Brands", path: "/admin/catalog/brands" },

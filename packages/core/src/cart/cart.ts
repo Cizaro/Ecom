@@ -500,3 +500,26 @@ export async function claimCartForCustomer(
     await tx.cart.update({ where: { id: mine.id }, data: { expiresAt: expiry() } });
   });
 }
+
+// --- For checkout ------------------------------------------------------------
+
+/**
+ * The cart a checkout is for, read inside the checkout's own transaction so
+ * the order is built from exactly what is shown. Null when there is no cart.
+ */
+export async function checkoutCartIn(
+  tx: AppTransaction,
+  owner: CartOwner,
+): Promise<{ id: string; view: CartView } | null> {
+  const cart = await findCart(tx, owner);
+  if (!cart) return null;
+  return { id: cart.id, view: await loadView(tx, cart) };
+}
+
+/** Closes a cart once its order is paid: it no longer opens for anyone. */
+export async function convertCartIn(tx: AppTransaction, cartId: string): Promise<void> {
+  await tx.cart.updateMany({
+    where: { id: cartId, status: "active" },
+    data: { status: "converted" },
+  });
+}

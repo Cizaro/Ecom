@@ -40,6 +40,22 @@ const envSchema = z.object({
     .default("false")
     .transform((value) => value === "true"),
 
+  /** Who takes payments. Only the mock exists so far (Milestone 3.4 adds a real one). */
+  PAYMENT_PROVIDER: z.enum(["mock"]).default("mock"),
+  /** Signs the mock provider's notifications to the webhook. */
+  MOCK_PAYMENT_WEBHOOK_SECRET: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    secret.optional(),
+  ),
+  /**
+   * The mock provider lets anyone "pay" without money. It is refused in
+   * production unless this is "true", which only the automated tests set.
+   */
+  ALLOW_MOCK_PAYMENTS_IN_PRODUCTION: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
   S3_ENDPOINT: z.url(),
   S3_REGION: z.string().min(1),
   S3_BUCKET: z.string().min(1),
@@ -88,6 +104,20 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   const env = result.data;
   if (env.EMAIL_PROVIDER === "smtp" && (!env.SMTP_HOST || !env.SMTP_PORT)) {
     throw new EnvValidationError(["SMTP_HOST and SMTP_PORT: required when EMAIL_PROVIDER is smtp"]);
+  }
+  if (env.PAYMENT_PROVIDER === "mock" && !env.MOCK_PAYMENT_WEBHOOK_SECRET) {
+    throw new EnvValidationError([
+      "MOCK_PAYMENT_WEBHOOK_SECRET: required when PAYMENT_PROVIDER is mock",
+    ]);
+  }
+  if (
+    env.NODE_ENV === "production" &&
+    env.PAYMENT_PROVIDER === "mock" &&
+    !env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION
+  ) {
+    throw new EnvValidationError([
+      "PAYMENT_PROVIDER: the mock provider takes no money and cannot run in production",
+    ]);
   }
   if (env.NODE_ENV === "production") {
     const placeholders = PRODUCTION_SECRETS.filter((key) =>

@@ -5,6 +5,8 @@ import {
   createTenantDb,
   closeQueues,
   enqueueMediaProcessing,
+  expireUnpaidOrders,
+  listTenantsWithExpiredOrders,
   listTenantsWithExpiredReservations,
   listUnprocessedMedia,
   MAINTENANCE_JOBS,
@@ -56,6 +58,13 @@ const maintenanceWorker = new Worker(
         }
         if (released > 0) logger.info({ released }, "stock sweep released expired holds");
         return { released };
+      }
+      case MAINTENANCE_JOBS.orderSweep: {
+        const tenants = await listTenantsWithExpiredOrders(env.DATABASE_ADMIN_URL);
+        let cancelled = 0;
+        for (const tenantId of tenants) cancelled += await expireUnpaidOrders(tenantDb(tenantId));
+        if (cancelled > 0) logger.info({ cancelled }, "order sweep cancelled unpaid orders");
+        return { cancelled };
       }
       default:
         throw new Error(`Unknown maintenance job: ${job.name}`);
@@ -114,6 +123,12 @@ await maintenanceQueue.upsertJobScheduler(
   MAINTENANCE_JOBS.stockSweep,
   { every: 60_000 },
   { name: MAINTENANCE_JOBS.stockSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.orderSweep,
+  { every: 60_000 },
+  { name: MAINTENANCE_JOBS.orderSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
 logger.info({ queues: Object.values(QUEUES) }, "worker started");

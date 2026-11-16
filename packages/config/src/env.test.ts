@@ -15,6 +15,7 @@ const valid = {
   S3_ACCESS_KEY_ID: "key",
   S3_SECRET_ACCESS_KEY: "secret",
   S3_PUBLIC_URL: "http://localhost:9000/ecommerce-media",
+  MOCK_PAYMENT_WEBHOOK_SECRET: "m".repeat(32),
 };
 
 describe("parseEnv", () => {
@@ -70,7 +71,33 @@ describe("parseEnv", () => {
   it("rejects example placeholders in production", () => {
     const placeholder = "CHANGE_ME_GENERATE_32_RANDOM_BYTES";
     expect(() =>
-      parseEnv({ ...valid, NODE_ENV: "production", ENCRYPTION_KEY: placeholder }),
+      parseEnv({
+        ...valid,
+        NODE_ENV: "production",
+        // Past the mock-payments check, so this test reaches the placeholder check.
+        ALLOW_MOCK_PAYMENTS_IN_PRODUCTION: "true",
+        ENCRYPTION_KEY: placeholder,
+      }),
     ).toThrow(/ENCRYPTION_KEY/);
+  });
+
+  it("needs a signing secret for the mock payment provider", () => {
+    expect(() => parseEnv({ ...valid, MOCK_PAYMENT_WEBHOOK_SECRET: undefined })).toThrow(
+      /MOCK_PAYMENT_WEBHOOK_SECRET/,
+    );
+    expect(() => parseEnv({ ...valid, MOCK_PAYMENT_WEBHOOK_SECRET: "short" })).toThrow(
+      EnvValidationError,
+    );
+  });
+
+  it("refuses the mock payment provider in production unless explicitly allowed", () => {
+    const production = { ...valid, NODE_ENV: "production" };
+    expect(() => parseEnv(production)).toThrow(/mock provider takes no money/);
+    expect(
+      parseEnv({ ...production, ALLOW_MOCK_PAYMENTS_IN_PRODUCTION: "true" }).PAYMENT_PROVIDER,
+    ).toBe("mock");
+    expect(() => parseEnv({ ...valid, PAYMENT_PROVIDER: "free-money" })).toThrow(
+      EnvValidationError,
+    );
   });
 });

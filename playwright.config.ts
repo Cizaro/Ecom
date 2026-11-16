@@ -13,6 +13,8 @@ try {
 useTestDatabase(process.env);
 // The browser tests check what a live store tells search engines.
 process.env.ALLOW_SEARCH_INDEXING = "true";
+// The browser tests run the production build and pay with the mock provider.
+process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION = "true";
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;

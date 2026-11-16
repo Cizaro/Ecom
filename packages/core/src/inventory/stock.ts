@@ -732,6 +732,18 @@ export async function reserveStock(
   db: TenantDb,
   request: ReservationRequest,
 ): Promise<{ reservationIds: string[] }> {
+  return db.run((tx) => reserveStockIn(tx, db.tenantId, request));
+}
+
+/**
+ * The same, inside a transaction the caller already has open, so the hold
+ * and whatever it is for (an order) are made or undone together.
+ */
+export async function reserveStockIn(
+  tx: AppTransaction,
+  tenantId: string,
+  request: ReservationRequest,
+): Promise<{ reservationIds: string[] }> {
   assertUuid(request.referenceId, "reference");
   const minutes = request.holdMinutes ?? DEFAULT_HOLD_MINUTES;
   const merged = new Map<string, number>();
@@ -741,7 +753,7 @@ export async function reserveStock(
     merged.set(item.variantId, (merged.get(item.variantId) ?? 0) + item.quantity);
   }
 
-  return db.run(async (tx) => {
+  {
     const tracking = await tx.productVariant.findMany({
       where: { id: { in: [...merged.keys()] } },
       select: { id: true, trackInventory: true },
@@ -782,7 +794,7 @@ export async function reserveStock(
       }
       const reservation = await tx.stockReservation.create({
         data: {
-          tenantId: db.tenantId,
+          tenantId: tenantId,
           variantId,
           locationId: takenFrom,
           quantity,
@@ -794,7 +806,7 @@ export async function reserveStock(
       });
       await tx.stockMovement.create({
         data: {
-          tenantId: db.tenantId,
+          tenantId: tenantId,
           variantId,
           locationId: takenFrom,
           quantityDelta: quantity,
@@ -807,10 +819,11 @@ export async function reserveStock(
       ids.push(reservation.id);
     }
     return { reservationIds: ids };
-  });
+  }
 }
 
-async function settle(
+/** Releases or commits holds inside a transaction the caller already has open. */
+export async function settleReservationsIn(
   tx: AppTransaction,
   tenantId: string,
   where: { referenceType?: string; referenceId?: string; expiredBefore?: Date },
@@ -862,7 +875,9 @@ export async function releaseReservations(
   referenceId: string,
 ): Promise<number> {
   assertUuid(referenceId, "reference");
-  return db.run((tx) => settle(tx, db.tenantId, { referenceType, referenceId }, "release"));
+  return db.run((tx) =>
+    settleReservationsIn(tx, db.tenantId, { referenceType, referenceId }, "release"),
+  );
 }
 
 /** Turns what is held for this reference into a sale: the items leave on hand. */
@@ -872,10 +887,12 @@ export async function commitReservations(
   referenceId: string,
 ): Promise<number> {
   assertUuid(referenceId, "reference");
-  return db.run((tx) => settle(tx, db.tenantId, { referenceType, referenceId }, "commit"));
+  return db.run((tx) =>
+    settleReservationsIn(tx, db.tenantId, { referenceType, referenceId }, "commit"),
+  );
 }
 
 /** Gives back every hold in this tenant whose time has run out. Run by the worker. */
 export async function releaseExpiredReservations(db: TenantDb, now = new Date()): Promise<number> {
-  return db.run((tx) => settle(tx, db.tenantId, { expiredBefore: now }, "release"));
+  return db.run((tx) => settleReservationsIn(tx, db.tenantId, { expiredBefore: now }, "release"));
 }
