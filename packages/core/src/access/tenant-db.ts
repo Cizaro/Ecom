@@ -10,7 +10,7 @@ import type { RequestContext } from "./context";
  */
 export interface TenantDb {
   readonly tenantId: string;
-  run<T>(work: (tx: AppTransaction) => Promise<T>): Promise<T>;
+  run<T>(work: (tx: AppTransaction) => Promise<T>, options?: { timeoutMs?: number }): Promise<T>;
 }
 
 export function createTenantDb(
@@ -21,7 +21,7 @@ export function createTenantDb(
   const binding = { tenantId: context.tenantId, userId: context.userId };
   return {
     tenantId: context.tenantId,
-    run: (work) => withTenant(prisma, binding, work),
+    run: (work, options) => withTenant(prisma, binding, work, options),
   };
 }
 

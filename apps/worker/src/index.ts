@@ -11,6 +11,8 @@ import {
   listTenantsWithExpiredOrders,
   listTenantsWithExpiredReservations,
   listTenantsWithPendingEmails,
+  listTenantsWithPendingImportImages,
+  processImportImages,
   listUnprocessedMedia,
   MAINTENANCE_JOBS,
   markMediaAssetFailed,
@@ -86,6 +88,22 @@ const maintenanceWorker = new Worker(
         if (sent > 0 || failed > 0) logger.info({ sent, failed }, "email sweep");
         return { sent, failed };
       }
+      case MAINTENANCE_JOBS.importImagesSweep: {
+        const tenants = await listTenantsWithPendingImportImages(env.DATABASE_ADMIN_URL);
+        let done = 0;
+        let failed = 0;
+        for (const tenantId of tenants) {
+          const result = await processImportImages(
+            tenantDb(tenantId),
+            { storage, enqueueProcessing: (item) => enqueueMediaProcessing(env.REDIS_URL, item) },
+            { limit: 20, allowPrivateHosts: env.IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS },
+          );
+          done += result.done;
+          failed += result.failed;
+        }
+        if (done > 0 || failed > 0) logger.info({ done, failed }, "import pictures sweep");
+        return { done, failed };
+      }
       default:
         throw new Error(`Unknown maintenance job: ${job.name}`);
     }
@@ -149,6 +167,12 @@ await maintenanceQueue.upsertJobScheduler(
   MAINTENANCE_JOBS.orderSweep,
   { every: 60_000 },
   { name: MAINTENANCE_JOBS.orderSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.importImagesSweep,
+  { every: 30_000 },
+  { name: MAINTENANCE_JOBS.importImagesSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
 await maintenanceQueue.upsertJobScheduler(

@@ -86,6 +86,8 @@ model Tenant {
   orderReturnItems        OrderReturnItem[]
   discountCodes           DiscountCode[]
   discountRedemptions     DiscountRedemption[]
+  productImports          ProductImport[]
+  productImportImages     ProductImportImage[]
 
   @@map("tenants")
 }
@@ -599,6 +601,8 @@ model Product {
   variants   ProductVariant[]
   attributes ProductAttribute[]
   images     ProductImage[]
+
+  importImages ProductImportImage[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status, createdAt])
@@ -1225,6 +1229,58 @@ model ShippingZone {
   @@unique([tenantId, name])
   @@index([tenantId, position])
   @@map("shipping_zones")
+}
+
+/// A spreadsheet of new products: checked first, then imported on request.
+model ProductImport {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  fileName        String    @map("file_name")
+  /// checked (waiting for staff to import), imported, or discarded.
+  status          String    @default("checked")
+  /// The checked products, ready to create (see catalog/import.ts).
+  data            Json
+  /// Problems found, one per row and column; an import with problems cannot run.
+  problems        Json      @default("[]")
+  productCount    Int       @map("product_count")
+  variantCount    Int       @map("variant_count")
+  imageCount      Int       @map("image_count")
+  publish         Boolean   @default(false)
+  importedAt      DateTime? @map("imported_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  images ProductImportImage[]
+
+  @@index([tenantId, createdAt])
+  @@map("product_imports")
+}
+
+/// A picture link from an import, downloaded in the background.
+model ProductImportImage {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  importId    String    @map("import_id") @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  url         String
+  position    Int
+  /// pending, done or failed.
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  error       String?
+  lockedUntil DateTime? @map("locked_until") @db.Timestamptz(3)
+  availableAt DateTime  @default(now()) @map("available_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  import  ProductImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+  product Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+  @@index([status, availableAt])
+  @@map("product_import_images")
 }
 
 /// A code shoppers type at checkout for money off or free delivery.

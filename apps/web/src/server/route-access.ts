@@ -67,6 +67,8 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/catalog/categories/[id]", access: CATALOG_WRITE },
   { path: "/admin/catalog/brands", access: CATALOG_READ },
   { path: "/admin/catalog/brands/[id]", access: CATALOG_WRITE },
+  { path: "/admin/catalog/import", access: CATALOG_WRITE },
+  { path: "/admin/catalog/import/[id]", access: CATALOG_WRITE },
   { path: "/admin/customers", access: { level: "permission", permission: "customers.read" } },
   { path: "/admin/inventory", access: INVENTORY_READ },
   { path: "/admin/inventory/[variantId]", access: INVENTORY_READ },
@@ -102,6 +104,15 @@ const CATALOG_ACTION_ENTRIES: readonly ActionEntry[] = [
   "setBrandLogoAction",
   "removeBrandLogoAction",
 ].map((name) => ({ id: `${CATALOG_ACTIONS}#${name}`, access: CATALOG_WRITE }));
+
+const IMPORT_ACTIONS = "(admin)/admin/(protected)/catalog/import/actions.ts";
+
+// Opening stock in an import also needs inventory.adjust, which the service checks.
+const IMPORT_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "checkImportAction",
+  "runImportAction",
+  "discardImportAction",
+].map((name) => ({ id: `${IMPORT_ACTIONS}#${name}`, access: CATALOG_WRITE }));
 
 const INVENTORY_ACTIONS = "(admin)/admin/(protected)/inventory/actions.ts";
 
@@ -174,6 +185,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
     access: { level: "session" },
   },
   ...CATALOG_ACTION_ENTRIES,
+  ...IMPORT_ACTION_ENTRIES,
   ...INVENTORY_ACTION_ENTRIES,
   ...ORDER_ACTION_ENTRIES,
   ...RETURN_ACTION_ENTRIES,
@@ -183,6 +195,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
 
 export const ADMIN_API: readonly ApiEntry[] = [
   { path: "/api/v1/admin/me", method: "GET", access: { level: "tenant" } },
+  { path: "/api/v1/admin/catalog/import-template", method: "GET", access: CATALOG_WRITE },
   // Holds customers' contact details, so it needs customers.export (the
   // service also checks orders.read).
   {

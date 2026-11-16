@@ -21,6 +21,8 @@ export const MAINTENANCE_JOBS = {
   orderSweep: "order-sweep",
   /** Sends store emails left over or failed (most are sent by the request that saved them). */
   emailSweep: "email-sweep",
+  /** Downloads picture links from product imports that are still waiting. */
+  importImagesSweep: "import-images-sweep",
 } as const;
 
 export const MEDIA_JOBS = {

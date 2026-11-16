@@ -60,6 +60,16 @@ const envSchema = z.object({
     .default("false")
     .transform((value) => value === "true"),
 
+  /**
+   * Product import downloads picture links only from public internet
+   * addresses. "true" also allows private ones (a local test server); only
+   * the automated tests set it. Never set it on a live site.
+   */
+  IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
   S3_ENDPOINT: z.url(),
   S3_REGION: z.string().min(1),
   S3_BUCKET: z.string().min(1),

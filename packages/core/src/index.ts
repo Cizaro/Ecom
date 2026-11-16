@@ -441,3 +441,30 @@ export type {
   DiscountInput,
   DiscountKind,
 } from "./promotions/discounts";
+
+export {
+  checkProductImport,
+  discardProductImport,
+  getProductImport,
+  ImportError,
+  importTemplateFor,
+  listProductImports,
+  MAX_PICTURES_PER_PRODUCT,
+  processImportImages,
+  runProductImport,
+  splitPictureLinks,
+} from "./catalog/import";
+export type { ImportProblem, ImportSummary } from "./catalog/import";
+export {
+  buildImportTemplate,
+  IMPORT_COLUMNS,
+  ImportFileError,
+  MAX_IMPORT_FILE_BYTES,
+  MAX_IMPORT_ROWS,
+  parseCsv,
+  readImportFile,
+  zipUnpackedSize,
+} from "./catalog/import-file";
+export type { SheetRow } from "./catalog/import-file";
+export { fetchImageFromUrl, ImageFetchError, isPublicAddress } from "./media/fetch-image";
+export { listTenantsWithPendingImportImages } from "./platform/import-lookup";

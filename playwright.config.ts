@@ -15,6 +15,8 @@ useTestDatabase(process.env);
 process.env.ALLOW_SEARCH_INDEXING = "true";
 // The browser tests run the production build and pay with the mock provider.
 process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION = "true";
+// The import test serves its picture from a local server, which is a private address.
+process.env.IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS = "true";
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;

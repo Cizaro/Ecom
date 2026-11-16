@@ -68,9 +68,14 @@ export default async function ProductsPage({
         description={`${result.total} ${result.total === 1 ? "product" : "products"}${filtered ? " match" : ""} in ${context.tenantName}.`}
         actions={
           canWrite ? (
-            <Link href="/admin/catalog/products/new" className={buttonClasses()}>
-              Add product
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/admin/catalog/import" className={buttonClasses("secondary")}>
+                Import from a spreadsheet
+              </Link>
+              <Link href="/admin/catalog/products/new" className={buttonClasses()}>
+                Add product
+              </Link>
+            </div>
           ) : null
         }
       />

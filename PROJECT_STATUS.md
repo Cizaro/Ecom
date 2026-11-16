@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: bulk product import from a spreadsheet (owner request). The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. Next: Phase 4, to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -157,6 +157,11 @@ Last updated: 2026-11-12
 - **Milestone 3.8, discount codes:**
   - Admin page **Discount codes** (`promotions.write`, audited): percent off, amount off or free delivery; optional minimum order, first and last day, total uses and uses per customer; switch on or off; delete only if never used. The list shows how many orders used each code.
   - Checkout: a **Discount code** box with **Apply** that shows the new total straight away; the code is checked again, locked, when the order is placed. The order, its emails, the admin order page and the CSV export show the code and the money off.
+
+- **Bulk product import (owner request):**
+  - Products page: **Import from a spreadsheet**. Download an Excel template for the store (Category and Brand are dropdowns of its own lists), fill it in, upload it (.xlsx or .csv).
+  - Every row is checked first and problems are listed by row and column; nothing is added until **Import**, and then all products are added together, as drafts or published.
+  - Picture links are downloaded safely (public addresses only, size and time limits, real images only) by the request and then the worker; failures are listed per link.
 
 ## In progress
 
@@ -345,24 +350,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 3.8, on the first computer)
+## Checks run this session (bulk product import, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 247 tests (new: discounts in pricing, free delivery, tax after discount) |
-| `pnpm test:int` | Pass, 245 tests, on the separate test database (6 new: staff codes and permissions, codes at checkout and their refusals, free delivery, last use taken once under a race and given back on cancel, per-customer limit, records kept and store separation) |
+| `pnpm test` | Pass, 263 tests (new: CSV and Excel reading, the template dropdowns, unpacked-size check, picture link checks and private-address refusals) |
+| `pnpm test:int` | Pass, 249 tests, on the separate test database (4 new: problems listed by row and nothing created, import with variants, stock and pictures from a local server, private addresses refused, store separation and permissions). Also fixed: emails and imported pictures are now sent and added oldest first |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 101 tests (37 skipped by design), including a code made by staff and applied by a shopper |
-| `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
+| `pnpm test:e2e` | Pass, 106 tests (40 skipped by design), including an import fixed after a problem and published with its picture |
+| `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged; exceljs's old uuid overridden) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
 | CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Bulk product import from a spreadsheet, as the owner asked (details to agree first).
+Phase 4, to agree with the owner (store settings, policy pages, Arabic, launch hardening).
 
 ## Session log
 
@@ -392,5 +397,6 @@ Bulk product import from a spreadsheet, as the owner asked (details to agree fir
 | 2026-11-17 | Milestone 3.6: store emails through the outbox (confirmed, on its way, payment received, cancelled; staff new order and low stock), worker email sweep, Store emails admin page; owner: delivery $4 flat, Lebanon only (area added to the demo store) |
 | 2026-11-17 | Milestone 3.7: dashboard, order filters and CSV export, staff-recorded returns with refunds, return email; demo store time zone set to Asia/Beirut |
 | 2026-11-18 | Milestone 3.8: discount codes (percent, amount, free delivery; limits and dates), checkout Apply with live total, locked check when ordering, uses counted from orders |
+| 2026-11-18 | Bulk product import: store template with category and brand dropdowns, check then import, safe picture downloads by request and worker |
 
 Commit hashes: `git log --oneline`.

@@ -420,3 +420,33 @@ export const removeBrandLogo = (
   deps: MediaDeps,
   id: string,
 ) => removeOwnerImage(db, context, deps, "brand", id);
+
+/**
+ * Adds a downloaded picture to a product (product import). Runs in the
+ * background without a signed-in user: the staff member's catalog.write was
+ * checked when they started the import. Throws CatalogError when the file is
+ * not an acceptable image or the product already has the most pictures.
+ */
+export async function attachImportedImage(
+  db: TenantDb,
+  deps: MediaDeps,
+  input: { productId: string; bytes: Uint8Array; userId: string | null },
+): Promise<{ assetId: string }> {
+  await db.run((tx) => assertRoomForImage(tx, input.productId));
+  const upload = await storeImage(db, deps, input.bytes);
+  const created = await withUpload(db, deps, upload, async (tx) => {
+    const position = await assertRoomForImage(tx, input.productId);
+    const asset = await insertAsset(tx, db.tenantId, input.userId, upload);
+    await tx.productImage.create({
+      data: {
+        tenantId: db.tenantId,
+        productId: input.productId,
+        mediaAssetId: asset.id,
+        position,
+      },
+    });
+    return { assetId: asset.id };
+  });
+  await requestProcessing(deps, { tenantId: db.tenantId, assetId: created.assetId });
+  return created;
+}

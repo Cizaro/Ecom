@@ -987,3 +987,25 @@ export async function restockReturnedIn(
   });
   return true;
 }
+
+/**
+ * Opening stock for a new product (product import), inside the caller's
+ * transaction: added to the default location and recorded as received.
+ * The caller checks inventory.adjust.
+ */
+export async function receiveOpeningStockIn(
+  tx: AppTransaction,
+  tenantId: string,
+  input: { variantId: string; quantity: number; actorUserId: string | null; note: string },
+): Promise<void> {
+  if (input.quantity <= 0) return;
+  const location = await defaultLocation(tx, tenantId);
+  const level = await lockLevel(tx, tenantId, input.variantId, location.id);
+  await applyChanges(
+    tx,
+    tenantId,
+    { ...level, variantId: input.variantId, locationId: location.id },
+    [{ bucket: "on_hand", delta: input.quantity }],
+    { reason: "purchase", actorUserId: input.actorUserId, note: input.note },
+  );
+}

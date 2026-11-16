@@ -65,6 +65,7 @@ interface ClaimedEvent {
   type: string;
   payload: EmailPayload;
   attempts: number;
+  created_at: Date;
 }
 
 /** What to send for one saved event, or null when there is nothing to send any more. */
@@ -145,12 +146,17 @@ export async function deliverPendingEmails(
             AND available_at <= now()
             AND (locked_until IS NULL OR locked_until < now())
             AND attempts < ${MAX_EMAIL_ATTEMPTS}
-          ORDER BY created_at
+          ORDER BY created_at, id
           LIMIT ${limit}
           FOR UPDATE SKIP LOCKED)
-      RETURNING id, type, payload, attempts`,
+      RETURNING id, type, payload, attempts, created_at`,
   );
 
+  // RETURNING does not keep the subquery's order: send oldest first, so an
+  // order's emails arrive in the order things happened.
+  claimed.sort(
+    (a, b) => a.created_at.getTime() - b.created_at.getTime() || a.id.localeCompare(b.id),
+  );
   let sent = 0;
   let failed = 0;
   for (const event of claimed) {

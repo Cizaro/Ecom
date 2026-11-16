@@ -19,6 +19,8 @@ export async function withTenant<T>(
   prisma: AppPrismaClient,
   context: TenantContext,
   work: (tx: AppTransaction) => Promise<T>,
+  /** For long work such as a product import; the default is Prisma's 5 seconds. */
+  options: { timeoutMs?: number } = {},
 ): Promise<T> {
   if (!UUID.test(context.tenantId)) {
     throw new Error("withTenant: tenantId is not a UUID");
@@ -27,10 +29,13 @@ export async function withTenant<T>(
     throw new Error("withTenant: userId is not a UUID");
   }
 
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`
       SELECT set_config('app.tenant_id', ${context.tenantId}, true),
              set_config('app.user_id', ${context.userId ?? ""}, true)`;
-    return work(tx);
-  });
+      return work(tx);
+    },
+    options.timeoutMs ? { timeout: options.timeoutMs, maxWait: 10_000 } : undefined,
+  );
 }

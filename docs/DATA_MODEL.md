@@ -60,6 +60,9 @@ erDiagram
 | order_returns, order_return_items | Own tenant | Own tenant, add only |
 | discount_codes | Own tenant | Own tenant |
 | discount_redemptions | Own tenant | Own tenant, add only |
+| product_imports, product_import_images | Own tenant | Own tenant, no delete |
+
+**Product imports (2026-11-18, decisions D84 and D85):** `product_imports` (file name, checked rows as JSON, problems, counts, status checked, imported or discarded) and `product_import_images` (one picture link per row, its product, and download status, attempts and error).
 
 **Discount codes (2026-11-18, decision D83):** `discount_codes` (code unique per store, kind percent, fixed or free_delivery, value, minimum, first and last moment, total and per-customer limits, on or off) and `discount_redemptions` (one per order: code, email, amount; add-only). Orders gain `discount_code`, frozen with `discount_amount`.
 
