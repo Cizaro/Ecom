@@ -78,9 +78,18 @@ export default async function CartPage() {
                         </p>
                       ) : null}
                     </div>
-                    {!line.available ? (
+                    {line.outOfStock ? (
+                      <Alert tone="error" testId="line-out-of-stock">
+                        This item has sold out since you added it. It is not included in the total.
+                      </Alert>
+                    ) : !line.available ? (
                       <Alert tone="error" testId="line-unavailable">
                         This item is no longer available. It is not included in the total.
+                      </Alert>
+                    ) : line.onlyLeft !== null ? (
+                      <Alert tone="warning" testId="line-only-left">
+                        Only {line.onlyLeft} left. Lower the quantity to {line.onlyLeft} or fewer to
+                        buy this item.
                       </Alert>
                     ) : line.priceWas !== null ? (
                       <Alert tone="info" testId="line-price-changed">

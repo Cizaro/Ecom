@@ -155,7 +155,7 @@ On a product page, colour and size choices are links to the same page with `?col
 ### D47. Pictures follow the variant (2026-11-13)
 The gallery shows the chosen variant's own pictures first, then pictures not tied to any variant; pictures of other variants are left out. If neither kind exists, all pictures are shown. The gallery is a native scroll-snap strip (swipe, trackpad, arrow keys) with thumbnail links, so it needs no script to be usable.
 
-### D48. Nothing is said about stock until stock is tracked (2026-11-13)
+### D48. Nothing is said about stock until stock is tracked (2026-11-13; superseded by D65)
 The product page shows no "in stock", "only N left" or delivery promise, and the data given to search engines has no availability field, because inventory does not exist yet (Milestone 3.2). There is also no add-to-cart button until the cart exists (Milestone 2.5), rather than a button that does nothing.
 
 ### D49. "Recently viewed" is a first-party cookie of product URL names (2026-11-13)
@@ -196,6 +196,18 @@ On sign-in, a guest cart on that browser is claimed by the account; if the accou
 
 ### D61. Addresses are checked against each country's rules, generously (2026-11-16)
 An address needs a name, a street line, a city and a country from the ISO list. Where a country has firm rules they are enforced (for example United States: state and a five-digit ZIP code; United Kingdom, Canada, Australia and several European countries: a postcode in the national format; United Arab Emirates: an emirate and no postal code). Everywhere else a postal code and a region are accepted but not demanded: refusing a real address is worse than accepting an unusual one. The same check will be used at checkout. Up to 10 saved addresses; one default for delivery and one for billing, enforced by the database.
+
+### D62. Stock levels change only through recorded movements (2026-11-16)
+Each variant has a level per location: on hand, reserved (held for checkouts) and damaged; available = on hand - reserved - damaged. A level is never edited on its own: every change is written together with a movement row (reason, quantity, who, note, what caused it) in one transaction. The runtime database role may add and read movements but never change or delete them, so the history always explains the numbers. The database also refuses impossible numbers: nothing negative, and reserved plus damaged never more than on hand.
+
+### D63. Taking stock is one conditional update (2026-11-16)
+Holding stock for a checkout is a single `UPDATE ... SET reserved = reserved + n WHERE ... available >= n`. Under concurrent checkouts the second waits for the first's row lock and then finds nothing left, so two shoppers can never both get the last item (tested with eight at once). A hold covers every tracked item of the request or none. Each item is taken from one location, the default first. Holds expire (15 minutes by default) and the worker gives expired holds back every minute. Committing a hold turns it into a sale (the items leave on hand); releasing it returns them.
+
+### D64. Stock tracking is per variant; existing variants were left untracked (2026-11-16)
+New variants count stock from the start, so a new item shows as out of stock until stock is received (the add-variant form has an "Opening stock" field for staff with `inventory.adjust`). Variants that existed before this milestone were being sold without any count; the migration switched tracking off for them so the live catalog did not suddenly sell out. Staff can switch tracking on per variant on its stock page; it starts at zero. An untracked variant is sold without a stock check and nothing is claimed about its availability anywhere.
+
+### D65. Shoppers see stock in words, never as a number (2026-11-16)
+The product page says "In stock", "Only a few left" (at or below the variant's low-stock level, 3 when not set) or shows a sold-out message instead of the buy button. Cards show "Sold out" when every variant is out. The quantity list stops at what can be had, and the cart refuses more than is left, saying how many there are. The cart does not hold stock (checkout does); lines that ran low or sold out after being added are flagged, and sold-out lines are left out of the total. Search engines get availability only when every variant's stock is counted. This supersedes D48.
 
 ## Open decisions for the owner
 

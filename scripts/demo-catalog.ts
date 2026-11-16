@@ -12,6 +12,7 @@ import { parseEnv } from "@ecom/config";
 import {
   addProductImage,
   addVariant,
+  changeStock,
   createBrand,
   createProduct,
   createS3Storage,
@@ -19,6 +20,7 @@ import {
   DEMO_TENANT_SLUG,
   listBrands,
   listCategories,
+  listLocations,
   processMediaAsset,
   setCategoryImage,
   setProductStatus,
@@ -282,6 +284,7 @@ try {
     categoryImages += 1;
   }
 
+  const location = (await listLocations(db, context)).find((candidate) => candidate.isDefault)!;
   let created = 0;
   let skipped = 0;
   for (const sample of SAMPLES) {
@@ -318,6 +321,14 @@ try {
         color: variant.color,
         priceAmount: variant.price,
         discountPriceAmount: variant.sale ?? null,
+      });
+      // A little stock each, and one sample that is nearly gone, to show the wording.
+      await changeStock(db, context, {
+        variantId: added.id,
+        locationId: location.id,
+        operation: "receive",
+        quantity: sample.name.includes("Signet") ? 2 : 12,
+        note: "Sample stock",
       });
       const image = await addProductImage(db, context, deps, product.id, {
         bytes: await picture(sample.shape, variant.fill, BG),

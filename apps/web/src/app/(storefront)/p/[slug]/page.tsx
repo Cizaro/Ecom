@@ -3,8 +3,8 @@ import {
   getPublicProduct,
   listPublicProductsBySlug,
   listRelatedProducts,
-  MAX_LINE_QUANTITY,
   selectVariant,
+  type StockStatus,
   type PublicProduct,
   type PublicVariant,
 } from "@ecom/core";
@@ -28,10 +28,24 @@ import { addToCartAction } from "../../cart/actions";
 
 // The product page. The chosen colour and size are in the page address
 // (?color=tan&size=m), so choosing works without JavaScript and a link to a
-// particular variant can be shared. Nothing is said about stock until stock
-// is tracked (Milestone 3.2).
+// particular variant can be shared. Stock is described in words ("only a few
+// left"), never as a number, and only for items whose stock is counted.
 
 type Params = Record<string, string | string[] | undefined>;
+
+/** What a shopper is told about stock. Nothing for items whose stock is not counted. */
+function StockNote({ status }: { status: StockStatus }) {
+  if (status === "untracked" || status === "out_of_stock") return null;
+  return (
+    <p className="text-sm font-medium" data-testid="stock-note">
+      {status === "low" ? (
+        <span className="text-warning-ink">Only a few left</span>
+      ) : (
+        <span className="text-success-ink">In stock</span>
+      )}
+    </p>
+  );
+}
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -128,6 +142,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         priceAmount: item.priceAmount,
         currency: item.currency,
         url: `${origin}${variantPath(product, item)}`,
+        stock: item.stock,
       })),
       currencyExponent: currencyExponent(variant.currency),
     }),
@@ -191,13 +206,25 @@ export default async function ProductPage({ params, searchParams }: Props) {
               hrefFor={hrefFor}
               selectedColor={variant.color}
             />
-            {/* A new key per variant clears the "added" message of the previous one. */}
-            <AddToCartForm
-              key={variant.id}
-              action={addToCartAction}
-              variantId={variant.id}
-              maxQuantity={MAX_LINE_QUANTITY}
-            />
+            <StockNote status={variant.stock} />
+            {variant.maxQuantity > 0 ? (
+              // A new key per variant clears the "added" message of the previous one.
+              <AddToCartForm
+                key={variant.id}
+                action={addToCartAction}
+                variantId={variant.id}
+                maxQuantity={variant.maxQuantity}
+              />
+            ) : (
+              <p
+                className="rounded-control bg-surface-muted px-3 py-2 text-sm"
+                data-testid="sold-out"
+              >
+                {selection.colors.length > 1 || selection.sizes.length > 1
+                  ? "This choice is sold out. Another colour or size may be available."
+                  : "Sold out for now."}
+              </p>
+            )}
             <p className="text-sm text-ink-muted" data-testid="sku">
               SKU: {variant.sku}
             </p>

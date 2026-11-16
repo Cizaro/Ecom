@@ -83,8 +83,26 @@ describe("structured data", () => {
       },
     });
     const text = JSON.stringify(data);
-    // No stock claim, rating or review: the store has none to report.
+    // Stock is not counted for these variants, and the store has no reviews: nothing claimed.
     expect(text).not.toMatch(/availability|InStock|aggregateRating|review/i);
+  });
+
+  it("states availability only when every variant's stock is counted", () => {
+    const withStock = (...stocks: ("in_stock" | "low" | "out_of_stock" | "untracked")[]) =>
+      productStructuredData({
+        ...product,
+        variants: stocks.map((stock, index) => ({ ...product.variants[index % 2]!, stock })),
+      }).offers as Record<string, unknown>;
+    expect(withStock("out_of_stock", "in_stock").availability).toBe("https://schema.org/InStock");
+    expect(withStock("out_of_stock", "low").availability).toBe(
+      "https://schema.org/LimitedAvailability",
+    );
+    expect(withStock("out_of_stock", "out_of_stock").availability).toBe(
+      "https://schema.org/OutOfStock",
+    );
+    expect(withStock("in_stock", "untracked")).not.toHaveProperty("availability");
+    expect(withStock("low").availability).toBe("https://schema.org/LimitedAvailability");
+    expect(withStock("untracked")).not.toHaveProperty("availability");
   });
 
   it("describes a single variant as one offer and leaves out what is missing", () => {

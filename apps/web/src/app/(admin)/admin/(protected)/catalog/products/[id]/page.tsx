@@ -1,5 +1,6 @@
 import {
   formatMoney,
+  getAvailability,
   getProduct,
   hasPermission,
   listBrands,
@@ -67,10 +68,17 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const db = tenantDb(context);
   const product = await orNotFound(getProduct(db, context, id));
-  const [categories, brands, images] = await Promise.all([
+  const canSeeStock = hasPermission(context, "inventory.read");
+  const [categories, brands, images, stock] = await Promise.all([
     listCategories(db, context),
     listBrands(db, context),
     listProductImages(db, context, id),
+    canSeeStock
+      ? getAvailability(
+          db,
+          product.variants.map((variant) => variant.id),
+        )
+      : new Map(),
   ]);
   const canWrite = hasPermission(context, "catalog.write");
 
@@ -150,6 +158,18 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                   )}
                   {variant.status === "inactive" ? (
                     <Badge tone="warning">Not for sale</Badge>
+                  ) : null}
+                  {canSeeStock ? (
+                    <Link
+                      href={`/admin/inventory/${variant.id}`}
+                      className="underline underline-offset-4"
+                      data-testid="variant-stock-link"
+                    >
+                      {stock.get(variant.id)?.tracked
+                        ? `${stock.get(variant.id)?.available ?? 0} in stock`
+                        : "Stock not counted"}
+                      <span className="sr-only"> for {variant.sku}</span>
+                    </Link>
                   ) : null}
                   {canWrite ? (
                     <Link

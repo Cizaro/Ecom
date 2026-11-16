@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations) started: Milestone 3.1 complete.** Phases 1 and 2 are complete. Next: Milestone 3.2 (inventory).
+**Phase 3 (checkout and operations): Milestones 3.1 and 3.2 complete.** Phases 1 and 2 are complete. Next: Milestone 3.3 (checkout and orders).
 
 ## Completed
 
@@ -53,7 +53,7 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. There is no checkout yet. There are no stock levels, orders or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. Product pages say whether an item is in stock, nearly gone or sold out, and the cart never holds more than there is. There is no checkout yet. There are no stock levels, orders or dashboard yet.
 
 - **Milestone 2.2, product media:**
   - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
@@ -110,6 +110,15 @@ Last updated: 2026-11-12
   - Admin: a read-only Customers list with search (`customers.read`), with no password material ever loaded.
   - Visitors' account actions registered and checked like the cart actions.
 
+- **Milestone 3.2, inventory:**
+  - Tables `inventory_locations`, `inventory_levels`, `stock_movements` and `stock_reservations`, plus `product_variants.track_inventory`; tenant-scoped with Row-Level Security and same-tenant triggers.
+  - Every stock change is a recorded movement with reason, quantity, who and note; the history cannot be edited or deleted by the application; the database refuses impossible numbers.
+  - Stock services in `packages/core/src/inventory`: receive, count (with a reason), mark damaged, remove damaged; locations with one default.
+  - Holds for checkout that can never double-sell the last item (eight simultaneous attempts, one wins), all-or-nothing per request, expiring after 15 minutes; commit (sale) and release. The worker gives expired holds back every minute.
+  - Admin: Stock list (fewest first, low-stock filter), an item's stock page with levels per location, the change form and its history, Locations, stock on the product page, and "Opening stock" when adding a variant. View with `inventory.read`, change with `inventory.adjust`.
+  - Storefront: "In stock" or "Only a few left" on the product page, a sold-out message instead of the buy button, "Sold out" on cards, the quantity list limited to what there is, availability for search engines when counted.
+  - Cart: refuses more than is left and says how many there are; flags lines that ran low or sold out; sold-out lines are not in the total.
+
 ## In progress
 
 Nothing.
@@ -126,7 +135,10 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 - **Staff can list customers but not open, disable or delete one** from the admin yet (Milestone 3.7). Disabling is possible in the database.
 - **Expired customer sessions and used links stay in the database** (ignored, not deleted) until a cleanup job exists.
 - **Account pages and emails are English only.**
-- **The product page says nothing about stock or delivery** (decision D48); the cart does not reserve stock.
+- **Products that existed before stock tracking are not counted** (they keep selling without a stock check) until staff switch counting on for each variant (decision D64). New variants are counted from the start and show as out of stock until stock is received.
+- **The cart does not hold stock.** Stock is held only at checkout (Milestone 3.3), so an item can sell out between adding it and checking out; the cart then says so.
+- **No transfers between locations, suppliers or purchase orders yet**, and each item in a checkout is taken from a single location.
+- **Delivery times are not shown** anywhere (they come with shipping, Milestone 3.5).
 - **Expired carts stay in the database** (ignored, not deleted) until a cleanup job exists.
 - **"Recently viewed" sets a preference cookie without asking**, because there is no consent banner yet (decision D49). Must be gated before launch in regions that require consent.
 - **Gallery has no zoom and no previous/next buttons**; thumbnails, swipe and arrow keys work.
@@ -288,24 +300,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 3.1, on the first computer)
+## Checks run this session (Milestone 3.2, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 174 tests |
-| `pnpm test:int` | Pass, 184 tests, on the separate test database (28 for customers: other customers, other stores, enumeration, lockout, tokens, addresses, cart merging) |
+| `pnpm test` | Pass, 183 tests |
+| `pnpm test:int` | Pass, 202 tests, on the separate test database (14 for stock, including eight simultaneous checkouts for one item and a new store racing to create its first location; 4 for stock in the cart) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 74 tests (27 skipped by design) |
+| `pnpm test:e2e` | Pass, 79 tests (27 skipped by design) |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Sign-up page at phone width (no sideways scrolling, marketing box unticked, not indexed); signed-out visit to addresses goes to sign-in |
-| CI on GitHub | Milestone 2.6 commit passed; see the Actions tab for the Milestone 3.1 commit |
+| Looked at in a browser | Covered by the browser tests on desktop and phone (stock journey from staff and shopper sides) |
+| CI on GitHub | Milestone 3.1 commit passed; see the Actions tab for the Milestone 3.2 commit |
 
 ## Recommended next task
 
-Milestone 3.2: inventory. Details in NEXT_STEPS.md.
+Milestone 3.3: checkout and orders. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -328,5 +340,6 @@ Milestone 3.2: inventory. Details in NEXT_STEPS.md.
 | 2026-11-14 | Test fix: cost-leak checks look at fields, not text (CI failed once by chance) |
 | 2026-11-14 | Milestone 2.6: indexing switch, robots.txt, sitemap.xml, store-name titles, canonical addresses, in-shop 404, performance budgets. Phase 2 complete |
 | 2026-11-16 | Milestone 3.1: customer accounts with email confirmation, password reset, profile and consent; saved addresses with country rules; cart follows the account; admin customer list |
+| 2026-11-16 | Milestone 3.2: stock locations, levels, recorded movements, race-safe checkout holds, admin stock screens, storefront and cart stock checks |
 
 Commit hashes: `git log --oneline`.

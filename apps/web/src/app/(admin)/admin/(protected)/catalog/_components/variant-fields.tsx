@@ -75,7 +75,7 @@ export function VariantFields({
           label="Low-stock level"
           name="lowStockThreshold"
           inputMode="numeric"
-          hint="Optional. Used for low-stock alerts once inventory is set up."
+          hint="Optional. At this many or fewer, shoppers are told only a few are left, and the item shows as low in Stock. Empty means 3."
           defaultValue={variant?.lowStockThreshold?.toString() ?? ""}
         />
         <SelectField

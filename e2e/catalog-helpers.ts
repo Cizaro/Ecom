@@ -23,6 +23,8 @@ export interface NewProduct {
   size?: string;
   price: string;
   salePrice?: string;
+  /** Opening stock at the default location; "" for none. Defaults to 25. */
+  stock?: string;
   withImage?: boolean;
   publish: boolean;
 }
@@ -42,6 +44,7 @@ export async function createProduct(page: Page, product: NewProduct): Promise<st
   if (product.size) await page.getByLabel("Size", exact).fill(product.size);
   await page.getByLabel("Price (USD)", exact).fill(product.price);
   if (product.salePrice) await page.getByLabel("Sale price (USD)", exact).fill(product.salePrice);
+  await page.getByLabel("Opening stock", exact).fill(product.stock ?? "25");
   await page.getByRole("button", { name: "Add variant" }).click();
   await expect(page).toHaveURL(productUrl);
 
@@ -70,7 +73,15 @@ export async function createProduct(page: Page, product: NewProduct): Promise<st
 export async function addVariant(
   page: Page,
   productUrl: string,
-  variant: { sku: string; color: string; size?: string; price: string; salePrice?: string },
+  variant: {
+    sku: string;
+    color: string;
+    size?: string;
+    price: string;
+    salePrice?: string;
+    /** Opening stock at the default location; "" for none. Defaults to 25. */
+    stock?: string;
+  },
 ) {
   await page.goto(`${productUrl}/variants/new`);
   await page.getByLabel("SKU", exact).fill(variant.sku);
@@ -78,6 +89,7 @@ export async function addVariant(
   if (variant.size) await page.getByLabel("Size", exact).fill(variant.size);
   await page.getByLabel("Price (USD)", exact).fill(variant.price);
   if (variant.salePrice) await page.getByLabel("Sale price (USD)", exact).fill(variant.salePrice);
+  await page.getByLabel("Opening stock", exact).fill(variant.stock ?? "25");
   await page.getByRole("button", { name: "Add variant" }).click();
   await expect(page).toHaveURL(productUrl);
 }

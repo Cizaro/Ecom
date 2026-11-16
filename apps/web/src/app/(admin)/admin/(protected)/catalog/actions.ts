@@ -3,6 +3,7 @@
 import {
   addProductImage,
   addVariant,
+  changeStock,
   createBrand,
   createCategory,
   createProduct,
@@ -11,7 +12,9 @@ import {
   deleteVariant,
   getCatalogCurrency,
   getVariant,
+  hasPermission,
   IMAGE_MOVES,
+  listLocations,
   moveProductImage,
   PRODUCT_STATUSES,
   removeBrandLogo,
@@ -312,6 +315,14 @@ export async function addVariantAction(
   const { context } = await requirePermission("catalog.write");
   const productId = field(formData, "productId");
   const db = tenantDb(context);
+  const opening = field(formData, "openingStock").trim();
+  const openingStock = opening === "" ? 0 : /^\d{1,6}$/.test(opening) ? Number(opening) : NaN;
+  if (Number.isNaN(openingStock)) {
+    return {
+      error: "Opening stock must be a whole number.",
+      values: echo(formData, [...VARIANT_FIELDS, "openingStock"]),
+    };
+  }
   const result = await attempt(
     async () =>
       addVariant(
@@ -320,9 +331,20 @@ export async function addVariantAction(
         productId,
         variantInput(formData, await getCatalogCurrency(db, context)),
       ),
-    echo(formData, VARIANT_FIELDS),
+    echo(formData, [...VARIANT_FIELDS, "openingStock"]),
   );
   if (!result.ok) return result.state;
+  // Receiving stock needs its own permission; without it the field is not shown.
+  if (openingStock > 0 && hasPermission(context, "inventory.adjust")) {
+    const locations = await listLocations(db, context);
+    await changeStock(db, context, {
+      variantId: result.value.id,
+      locationId: locations.find((location) => location.isDefault)!.id,
+      operation: "receive",
+      quantity: openingStock,
+      note: "Opening stock",
+    });
+  }
   revalidatePath(`${PRODUCTS}/${productId}`);
   redirect(`${PRODUCTS}/${productId}`);
 }

@@ -106,8 +106,9 @@ test("a visitor chooses a variant and sees related and recently viewed products"
   );
   await expect(slides).toHaveCount(1);
   await expect(slides.locator("img")).toHaveAttribute("alt", "Satchel overview");
-  // Nothing is claimed about stock, and there is nothing to buy with yet.
-  await expect(visitor.getByText(/in stock|out of stock|only \d+ left/i)).toHaveCount(0);
+  // Stock is described in words, never as a number.
+  await expect(visitor.getByTestId("stock-note")).toHaveText("In stock");
+  await expect(visitor.getByText(/\d+ left|\d+ in stock/i)).toHaveCount(0);
 
   // Choosing size M keeps the colour and changes price and SKU; the choice is in the address.
   await sizes.getByRole("link", { name: "M", ...exact }).click();
@@ -166,7 +167,9 @@ test("a visitor chooses a variant and sees related and recently viewed products"
     },
   });
   expect(productData.image).toHaveLength(2);
-  expect(JSON.stringify(blocks)).not.toMatch(/availability|aggregateRating|review|cost/i);
+  // Every variant's stock is counted, so availability is stated; nothing else is invented.
+  expect(productData.offers.availability).toBe("https://schema.org/InStock");
+  expect(JSON.stringify(blocks)).not.toMatch(/aggregateRating|review|cost/i);
   expect(blocks.some((block) => block["@type"] === "BreadcrumbList")).toBe(true);
   await expect(visitor.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",

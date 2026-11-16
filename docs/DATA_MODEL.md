@@ -50,7 +50,8 @@ erDiagram
 | --- | --- | --- |
 | tenants | Own row | Update own row; no create or delete |
 | stores, consent_records, notification_preferences, idempotency_keys, outbox_events, jobs | Own tenant | Own tenant |
-| store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items, customers, customer_sessions, customer_tokens, addresses | Own tenant | Own tenant |
+| store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items, customers, customer_sessions, customer_tokens, addresses, inventory_locations, inventory_levels, stock_reservations | Own tenant | Own tenant |
+| stock_movements | Own tenant | Own tenant, insert only (no update or delete) |
 | user_tenant_memberships | Own tenant, plus the signed-in user's own memberships elsewhere | Own tenant |
 | users | Self and members of the current tenant; never `password_hash` or `is_platform_admin` | Own `name` only |
 | roles | System roles and own tenant's | Own tenant's non-system roles |
@@ -122,7 +123,9 @@ erDiagram
 
 **Search (Milestone 2.3):** `products.search_vector` (type `tsvector`, GIN index) is filled by the trigger `products_search_vector` on insert and whenever the name, descriptions, material or audience tags change (decision D42). A partial index on `(tenant_id, created_at DESC) WHERE status = 'active'` serves storefront lists.
 
-Not yet built from this section: video (`duration_ms`), and the supplier, purchase-order and inventory tables (Milestone 3.2).
+**Inventory (Milestone 3.2):** `inventory_locations` (one default per tenant), `inventory_levels` (unique per variant and location; check constraints keep every number non-negative and reserved plus damaged within on hand), `stock_movements` (non-zero delta, bucket, reason, reference, actor; insert and select only for the runtime role) and `stock_reservations` (holds for checkout with quantity, reference, expiry and status active, committed or released). `product_variants.track_inventory` says whether stock is counted. All tenant-scoped with Row-Level Security and same-tenant triggers (decisions D62 to D65).
+
+Not yet built from this section: video (`duration_ms`), suppliers and purchase orders.
 
 ## 3. Commerce
 

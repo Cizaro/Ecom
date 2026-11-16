@@ -41,7 +41,13 @@ export function ProductCard({
   product: PublicProductCard;
   priority?: boolean;
 }) {
-  const label = product.regularPriceAmount !== null ? "Sale" : product.isNewArrival ? "New" : null;
+  const label = product.soldOut
+    ? "Sold out"
+    : product.regularPriceAmount !== null
+      ? "Sale"
+      : product.isNewArrival
+        ? "New"
+        : null;
   return (
     <article data-testid="product-card" className="group relative flex min-w-0 flex-col gap-2">
       <div className="relative aspect-[4/5] overflow-hidden rounded-card bg-surface-muted">

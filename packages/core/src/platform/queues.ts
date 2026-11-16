@@ -15,6 +15,8 @@ export const MAINTENANCE_JOBS = {
   heartbeat: "heartbeat",
   /** Finds uploads whose resized versions were never made and queues them. */
   mediaSweep: "media-sweep",
+  /** Gives back stock held for checkouts that were never finished. */
+  stockSweep: "stock-sweep",
 } as const;
 
 export const MEDIA_JOBS = {

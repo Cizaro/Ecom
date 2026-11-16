@@ -5,6 +5,7 @@ import {
   createTenantDb,
   closeQueues,
   enqueueMediaProcessing,
+  listTenantsWithExpiredReservations,
   listUnprocessedMedia,
   MAINTENANCE_JOBS,
   markMediaAssetFailed,
@@ -12,6 +13,7 @@ import {
   processMediaAsset,
   QUEUES,
   redisConnectionOptions,
+  releaseExpiredReservations,
   type MediaProcessingJob,
 } from "@ecom/core";
 import { disconnectDatabase, getAppPrisma } from "@ecom/db";
@@ -45,6 +47,15 @@ const maintenanceWorker = new Worker(
         for (const item of waiting) await enqueueMediaProcessing(env.REDIS_URL, item);
         if (waiting.length > 0) logger.info({ count: waiting.length }, "media sweep queued assets");
         return { queued: waiting.length };
+      }
+      case MAINTENANCE_JOBS.stockSweep: {
+        const tenants = await listTenantsWithExpiredReservations(env.DATABASE_ADMIN_URL);
+        let released = 0;
+        for (const tenantId of tenants) {
+          released += await releaseExpiredReservations(tenantDb(tenantId));
+        }
+        if (released > 0) logger.info({ released }, "stock sweep released expired holds");
+        return { released };
       }
       default:
         throw new Error(`Unknown maintenance job: ${job.name}`);
@@ -97,6 +108,12 @@ await maintenanceQueue.upsertJobScheduler(
   MAINTENANCE_JOBS.mediaSweep,
   { every: 60_000 },
   { name: MAINTENANCE_JOBS.mediaSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.stockSweep,
+  { every: 60_000 },
+  { name: MAINTENANCE_JOBS.stockSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
 logger.info({ queues: Object.values(QUEUES) }, "worker started");

@@ -80,6 +80,7 @@ async function product(
         costAmount: COST,
         currency: "USD",
         status: variant.status ?? "active",
+        trackInventory: false,
         position,
       },
     });

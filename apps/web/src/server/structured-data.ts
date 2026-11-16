@@ -1,7 +1,7 @@
 // Machine-readable descriptions of a page (schema.org JSON-LD) for search
 // engines and link previews. Everything here is derived from what the page
-// already shows; nothing is added that the page does not say (no ratings, no
-// stock claim until stock is tracked).
+// already shows; nothing is added that the page does not say (no ratings, and
+// availability only for items whose stock is counted).
 
 export interface ProductData {
   name: string;
@@ -10,7 +10,14 @@ export interface ProductData {
   images: string[];
   brandName: string | null;
   categoryName: string | null;
-  variants: { sku: string; priceAmount: number; currency: string; url: string }[];
+  variants: {
+    sku: string;
+    priceAmount: number;
+    currency: string;
+    url: string;
+    /** Leave out, or "untracked", when stock is not counted: nothing is claimed then. */
+    stock?: "untracked" | "in_stock" | "low" | "out_of_stock";
+  }[];
   /** Digits after the decimal point for the currency (2 for USD, 0 for JPY). */
   currencyExponent: number;
 }
@@ -20,6 +27,23 @@ export function decimalAmount(amount: number, exponent: number): string {
   if (exponent === 0) return String(amount);
   const digits = String(amount).padStart(exponent + 1, "0");
   return `${digits.slice(0, -exponent)}.${digits.slice(-exponent)}`;
+}
+
+const AVAILABILITY = {
+  in_stock: "https://schema.org/InStock",
+  low: "https://schema.org/LimitedAvailability",
+  out_of_stock: "https://schema.org/OutOfStock",
+} as const;
+
+/** For several variants: in stock if any is; claimed only when every variant is counted. */
+function availabilityOf(stocks: ProductData["variants"][number]["stock"][]) {
+  if (stocks.length === 0 || stocks.some((stock) => !stock || stock === "untracked")) return {};
+  const status = stocks.includes("in_stock")
+    ? "in_stock"
+    : stocks.includes("low")
+      ? "low"
+      : "out_of_stock";
+  return { availability: AVAILABILITY[status] };
 }
 
 export function productStructuredData(product: ProductData): Record<string, unknown> {
@@ -34,6 +58,7 @@ export function productStructuredData(product: ProductData): Record<string, unkn
           sku: product.variants[0]!.sku,
           price: price(prices[0]!),
           priceCurrency: currency,
+          ...availabilityOf([product.variants[0]!.stock]),
         }
       : {
           "@type": "AggregateOffer",
@@ -42,6 +67,7 @@ export function productStructuredData(product: ProductData): Record<string, unkn
           highPrice: price(Math.max(...prices)),
           priceCurrency: currency,
           offerCount: product.variants.length,
+          ...availabilityOf(product.variants.map((variant) => variant.stock)),
         };
   return {
     "@context": "https://schema.org",

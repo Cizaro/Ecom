@@ -1,6 +1,8 @@
 import { Prisma, type AppTransaction } from "@ecom/db";
 import { NotFoundError } from "../access/context";
 import type { TenantDb } from "../access/tenant-db";
+import { MAX_LINE_QUANTITY } from "../cart/limits";
+import { availabilityIn, type StockStatus } from "../inventory/stock";
 import { ASSET_SELECT, toStoredImage, type StoredImage } from "../media/assets";
 import { isSlug } from "./slug";
 
@@ -40,6 +42,8 @@ export interface PublicProductCard {
   isNewArrival: boolean;
   isBestSeller: boolean;
   colors: string[];
+  /** Every variant's stock is counted and none is left. */
+  soldOut: boolean;
   image: (StoredImage & { altText: string }) | null;
 }
 
@@ -341,7 +345,13 @@ async function loadCards(tx: AppTransaction, ids: readonly string[]): Promise<Pu
       brand: { select: { name: true } },
       variants: {
         where: { status: "active" },
-        select: { priceAmount: true, discountPriceAmount: true, currency: true, color: true },
+        select: {
+          id: true,
+          priceAmount: true,
+          discountPriceAmount: true,
+          currency: true,
+          color: true,
+        },
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       },
       images: {
@@ -352,6 +362,10 @@ async function loadCards(tx: AppTransaction, ids: readonly string[]): Promise<Pu
     },
   });
   const byId = new Map(rows.map((row) => [row.id, row]));
+  const stock = await availabilityIn(
+    tx,
+    rows.flatMap((row) => row.variants.map((variant) => variant.id)),
+  );
   const cards: PublicProductCard[] = [];
   for (const id of ids) {
     const row = byId.get(id);
@@ -385,6 +399,7 @@ async function loadCards(tx: AppTransaction, ids: readonly string[]): Promise<Pu
       isNewArrival: row.isNewArrival,
       isBestSeller: row.isBestSeller,
       colors,
+      soldOut: row.variants.every((variant) => stock.get(variant.id)?.status === "out_of_stock"),
       image: image ? { ...toStoredImage(image.asset), altText: image.altText } : null,
     });
   }
@@ -495,6 +510,10 @@ export interface PublicVariant {
   /** Regular price when the variant is on sale; null otherwise. */
   regularPriceAmount: number | null;
   currency: string;
+  /** Never a count: "low" means a few are left, below the store's low-stock level. */
+  stock: StockStatus;
+  /** The most that can go in the cart at once: 0 when out of stock. */
+  maxQuantity: number;
 }
 
 export interface PublicProduct {
@@ -514,6 +533,16 @@ export interface PublicProduct {
   attributes: { key: string; value: string }[];
   variants: PublicVariant[];
   images: { altText: string; variantId: string | null; image: StoredImage }[];
+}
+
+function stockFields(
+  level: { tracked: boolean; available: number | null; status: StockStatus } | undefined,
+) {
+  if (!level?.tracked) return { stock: "untracked" as const, maxQuantity: MAX_LINE_QUANTITY };
+  return {
+    stock: level.status,
+    maxQuantity: Math.max(0, Math.min(MAX_LINE_QUANTITY, level.available ?? 0)),
+  };
 }
 
 /** A published product by its URL name. Drafts and archived products are "not found". */
@@ -558,6 +587,12 @@ export async function getPublicProduct(db: TenantDb, slug: string): Promise<Publ
     }),
   );
   if (!row) throw new NotFoundError("product");
+  const stock = await db.run((tx) =>
+    availabilityIn(
+      tx,
+      row.variants.map((variant) => variant.id),
+    ),
+  );
   return {
     id: row.id,
     slug: row.slug,
@@ -581,6 +616,7 @@ export async function getPublicProduct(db: TenantDb, slug: string): Promise<Publ
       priceAmount: variant.discountPriceAmount ?? variant.priceAmount,
       regularPriceAmount: variant.discountPriceAmount !== null ? variant.priceAmount : null,
       currency: variant.currency,
+      ...stockFields(stock.get(variant.id)),
     })),
     images: row.images.map((image) => ({
       altText: image.altText,

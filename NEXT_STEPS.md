@@ -9,29 +9,35 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 3.2, inventory
+## Next development task: Milestone 3.3, checkout and orders
 
-See PROJECT_PLAN.md section 4 (Phase 3) and docs/DATA_MODEL.md section 2 (InventoryLocation, InventoryLevel, StockMovement).
+See PROJECT_PLAN.md section 4 (Phase 3) and docs/DATA_MODEL.md section 3.
 
-1. `inventory_locations`, `inventory_levels` and `stock_movements` tables, tenant-scoped with Row-Level Security. Every change to a level is a movement row with a reason, so the history explains every number; levels are never edited directly.
-2. Stock services: receive, adjust (with a reason), mark damaged; reserve and release (used by checkout in 3.3). Concurrency-safe: two checkouts cannot both take the last item.
-3. Admin: stock per variant and location on the product page, a movement history, low-stock list using the variant's threshold.
-4. Storefront: honest availability ("In stock", "Only a few left" below the threshold, "Out of stock"), never an invented number (decision D48 is then superseded). Add to cart refuses what cannot be sold; the cart flags lines that ran out.
-5. Structured data gains availability once it is real.
-6. Tests: concurrent reservations of the last item; another tenant cannot read or move stock; the storefront wording follows the levels.
+1. `orders`, `order_items`, `order_addresses` and `payments` tables, tenant-scoped with Row-Level Security. Order lines copy the name, SKU and price at the moment of purchase, so later catalog changes never alter an order.
+2. An order state machine (pending payment, paid, fulfilled, cancelled, refunded), with every transition recorded and only allowed transitions possible.
+3. Checkout for guests and signed-in customers: contact email, delivery address (reusing `validateAddress` and saved addresses), a review step; stock held with `reserveStock` for the checkout and committed when payment succeeds, released when it fails or times out.
+4. A `PaymentProvider` interface with the mock provider only: card details never reach this application; the mock simulates success, decline and delayed confirmation. Webhook handling with signature checks and idempotency keys, so a repeated notification never charges or fulfils twice.
+5. Order confirmation page and email; the order in the customer's account; a basic order list in the admin.
+6. Tests: two shoppers checking out the last item; a repeated webhook; a customer can never see another's order; prices cannot be changed from the browser.
 
-Owner decision needed before 3.4 (payments): which payment provider, and its test keys (open decision Q4). 3.2 and 3.3 do not depend on it.
+Owner decision needed before 3.4: which payment provider, and its test keys (open decision Q4).
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 3.3 to 3.8 Checkout and orders, payments, shipping, notifications, admin order screens, promotions | 3.4 needs payment provider test keys |
+| 2 | 3.4 to 3.8 Real payments, shipping and tax, notifications, admin order screens, promotions | 3.4 needs payment provider test keys |
 | 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Stock: transfers between locations, suppliers and purchase orders (receive against an order), CSV import of counts.
+- Stock: a low-stock email to staff (with notifications, Milestone 3.6).
+- Stock: "notify me when back in stock" for shoppers (needs consent; Phase 4).
+- Stock: splitting one item across locations when no single location has enough (today each item comes from one location).
+- Stock: a worker job to delete old released and committed holds (they are kept, not removed).
 
 - Customers: staff screens to view one customer, disable or re-enable them, and handle data export and deletion requests (with admin customers, Milestone 3.7).
 - Customers: worker job to delete expired customer sessions and used or expired emailed links (they are ignored, not removed).

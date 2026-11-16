@@ -251,3 +251,37 @@ export {
   isCountryCode,
 } from "./customers/countries";
 export type { AddressRules } from "./customers/countries";
+export {
+  availabilityIn,
+  changeStock,
+  commitReservations,
+  createLocation,
+  DEFAULT_HOLD_MINUTES,
+  DEFAULT_LOW_STOCK,
+  getAvailability,
+  getVariantStock,
+  InventoryError,
+  listLocations,
+  listStock,
+  releaseExpiredReservations,
+  releaseReservations,
+  reserveStock,
+  setDefaultLocation,
+  setTracking,
+  STOCK_OPERATIONS,
+  STOCK_PAGE_SIZE,
+  stockStatus,
+  updateLocation,
+} from "./inventory/stock";
+export type {
+  Availability,
+  InventoryErrorCode,
+  LocationSummary,
+  ReservationRequest,
+  StockChangeInput,
+  StockOperation,
+  StockRow,
+  StockStatus,
+  VariantStock,
+} from "./inventory/stock";
+export { listTenantsWithExpiredReservations } from "./platform/stock-sweep";

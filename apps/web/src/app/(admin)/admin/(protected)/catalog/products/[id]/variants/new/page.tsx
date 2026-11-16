@@ -1,10 +1,10 @@
-import { getCatalogCurrency, getProduct } from "@ecom/core";
+import { getCatalogCurrency, getProduct, hasPermission } from "@ecom/core";
 import { Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
 import { orNotFound } from "@/server/catalog-forms";
-import { ActionForm } from "../../../../../../_components/form";
+import { ActionForm, TextField } from "../../../../../../_components/form";
 import { VariantFields } from "../../../../_components/variant-fields";
 import { addVariantAction } from "../../../../actions";
 
@@ -37,6 +37,18 @@ export default async function NewVariantPage({ params }: { params: Promise<{ id:
         <ActionForm action={addVariantAction} submitLabel="Add variant">
           <input type="hidden" name="productId" value={product.id} />
           <VariantFields currency={currency} />
+          {hasPermission(context, "inventory.adjust") ? (
+            <TextField
+              label="Opening stock"
+              name="openingStock"
+              inputMode="numeric"
+              hint="How many you have now, at the default location. Leave empty for none: shoppers will see it as out of stock until stock is received."
+            />
+          ) : (
+            <p className="text-sm text-ink-muted">
+              Stock for this variant is counted. Someone with stock access can receive it.
+            </p>
+          )}
         </ActionForm>
       </Card>
     </div>

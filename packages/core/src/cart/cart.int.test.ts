@@ -50,6 +50,8 @@ async function variant(
     productStatus?: "draft" | "active" | "archived";
     status?: "active" | "inactive";
     currency?: string;
+    /** Count stock and start with this many at the default location. */
+    stock?: number;
   } = {},
 ) {
   const tag = randomUUID().slice(0, 8);
@@ -61,20 +63,35 @@ async function variant(
       status: options.productStatus ?? "active",
     },
   });
-  return admin.productVariant.create({
-    data: {
-      tenantId,
-      productId: product.id,
-      sku: `SKU-${tag}`,
-      color: "Black",
-      priceAmount: options.price ?? 2500,
-      discountPriceAmount: options.sale ?? null,
-      // An amount no price or quantity in these tests uses, so it is recognisable.
-      costAmount: COST,
-      currency: options.currency ?? "USD",
-      status: options.status ?? "active",
-    },
-  });
+  return admin.productVariant
+    .create({
+      data: {
+        tenantId,
+        productId: product.id,
+        sku: `SKU-${tag}`,
+        color: "Black",
+        priceAmount: options.price ?? 2500,
+        discountPriceAmount: options.sale ?? null,
+        // An amount no price or quantity in these tests uses, so it is recognisable.
+        costAmount: COST,
+        currency: options.currency ?? "USD",
+        status: options.status ?? "active",
+        trackInventory: options.stock !== undefined,
+      },
+    })
+    .then(async (created) => {
+      if (options.stock !== undefined && options.stock > 0) {
+        const location =
+          (await admin.inventoryLocation.findFirst({ where: { tenantId, isDefault: true } })) ??
+          (await admin.inventoryLocation.create({
+            data: { tenantId, name: "Main location", isDefault: true },
+          }));
+        await admin.inventoryLevel.create({
+          data: { tenantId, variantId: created.id, locationId: location.id, onHand: options.stock },
+        });
+      }
+      return created;
+    });
 }
 
 /** No field is named after cost, and the cost amount itself appears nowhere. */
@@ -206,6 +223,7 @@ describe("adding to a cart", () => {
         sku: `MANY-${tag}-${index}`,
         priceAmount: 100,
         currency: "USD",
+        trackInventory: false,
       })),
     });
     const variants = await admin.productVariant.findMany({ where: { productId: product.id } });
@@ -382,5 +400,62 @@ describe("changing a cart", () => {
     await expect(
       admin.cartItem.update({ where: { id: cart.lines[0]!.id }, data: { quantity: 1000 } }),
     ).rejects.toThrow();
+  });
+});
+
+describe("stock", () => {
+  it("adds only what can be had, and says how many are left", async () => {
+    const item = await variant(tenantA, { stock: 3 });
+    const { token } = await addToCart(shopA, null, { variantId: item.id, quantity: 2 });
+    const error = await addToCart(shopA, token, { variantId: item.id, quantity: 2 }).catch(
+      (reason: unknown) => reason,
+    );
+    expect(error).toBeInstanceOf(CartError);
+    expect((error as CartError).code).toBe("not_enough_stock");
+    expect((error as CartError).message).toBe("Only 3 of this item are left.");
+    // Nothing changed.
+    expect((await getCart(shopA, token)).lines[0]!.quantity).toBe(2);
+    await addToCart(shopA, token, { variantId: item.id, quantity: 1 });
+    expect((await getCart(shopA, token)).lines[0]!.quantity).toBe(3);
+  });
+
+  it("refuses an item that is out of stock", async () => {
+    const item = await variant(tenantA, { stock: 0 });
+    await expectCartError(
+      addToCart(shopA, null, { variantId: item.id, quantity: 1 }),
+      "out_of_stock",
+    );
+  });
+
+  it("lets a quantity go down but not up past the stock", async () => {
+    const item = await variant(tenantA, { stock: 4 });
+    const { token, cart } = await addToCart(shopA, null, { variantId: item.id, quantity: 4 });
+    const line = cart.lines[0]!.id;
+    await expectCartError(setCartItemQuantity(shopA, token, line, 5), "not_enough_stock");
+    expect((await setCartItemQuantity(shopA, token, line, 1)).lines[0]!.quantity).toBe(1);
+  });
+
+  it("flags lines that ran out or ran low after they were added", async () => {
+    const runsOut = await variant(tenantA, { stock: 2, price: 1000 });
+    const runsLow = await variant(tenantA, { stock: 5, price: 500 });
+    const { token } = await addToCart(shopA, null, { variantId: runsOut.id, quantity: 2 });
+    await addToCart(shopA, token, { variantId: runsLow.id, quantity: 4 });
+
+    await admin.inventoryLevel.updateMany({
+      where: { variantId: runsOut.id },
+      data: { onHand: 0 },
+    });
+    await admin.inventoryLevel.updateMany({
+      where: { variantId: runsLow.id },
+      data: { onHand: 1 },
+    });
+    const cart = await getCart(shopA, token);
+    const out = cart.lines.find((line) => line.variantId === runsOut.id)!;
+    const low = cart.lines.find((line) => line.variantId === runsLow.id)!;
+    expect(out).toMatchObject({ available: false, outOfStock: true, onlyLeft: null });
+    expect(low).toMatchObject({ available: true, outOfStock: false, onlyLeft: 1 });
+    // The item that ran out is not in the total.
+    expect(cart.subtotalAmount).toBe(2000);
+    expect(cart.hasUnavailable).toBe(true);
   });
 });

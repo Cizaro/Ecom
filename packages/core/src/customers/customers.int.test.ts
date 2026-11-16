@@ -621,6 +621,7 @@ describe("a cart that follows the customer", () => {
         sku: `SKU-${tag}`,
         priceAmount: price,
         currency: "USD",
+        trackInventory: false,
       },
     });
   }

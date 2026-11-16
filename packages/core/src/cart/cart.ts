@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { AppTransaction } from "@ecom/db";
 import type { TenantDb } from "../access/tenant-db";
+import { availabilityIn } from "../inventory/stock";
 import { ASSET_SELECT, toStoredImage, type StoredImage } from "../media/assets";
 
 // The shopping cart. A visitor needs no account: their cart is found by a
@@ -18,15 +19,25 @@ import { ASSET_SELECT, toStoredImage, type StoredImage } from "../media/assets";
 // - Prices are read from the catalog every time. Nothing the browser sends
 //   can set a price, and totals are computed here in whole minor units.
 // - Only variants a shopper could see on the storefront can be added.
+// - For items whose stock is counted, the cart never holds more than can be
+//   had right now. It does not hold stock: that happens at checkout.
 
-export const MAX_LINE_QUANTITY = 10;
-export const MAX_CART_LINES = 50;
-export const CART_LIFETIME_DAYS = 30;
+import { CART_LIFETIME_DAYS, MAX_CART_LINES, MAX_LINE_QUANTITY } from "./limits";
 
-export type CartErrorCode = "unavailable" | "invalid_quantity" | "cart_full" | "not_found";
+export { CART_LIFETIME_DAYS, MAX_CART_LINES, MAX_LINE_QUANTITY };
+
+export type CartErrorCode =
+  | "unavailable"
+  | "invalid_quantity"
+  | "cart_full"
+  | "not_found"
+  | "out_of_stock"
+  | "not_enough_stock";
 
 const MESSAGES: Record<CartErrorCode, string> = {
   unavailable: "This item is not available.",
+  out_of_stock: "This item is out of stock.",
+  not_enough_stock: "There are not that many of this item left.",
   invalid_quantity: `Choose a quantity from 1 to ${MAX_LINE_QUANTITY}.`,
   cart_full: `A cart can hold ${MAX_CART_LINES} different items at most.`,
   not_found: "That item is no longer in your cart.",
@@ -34,9 +45,28 @@ const MESSAGES: Record<CartErrorCode, string> = {
 
 /** A cart request refused for a reason the shopper can understand. The message is safe to show. */
 export class CartError extends Error {
-  constructor(readonly code: CartErrorCode) {
-    super(MESSAGES[code]);
+  constructor(
+    readonly code: CartErrorCode,
+    message?: string,
+  ) {
+    super(message ?? MESSAGES[code]);
     this.name = "CartError";
+  }
+}
+
+/** Refuses a quantity beyond what can be had; says how many there are. */
+function assertInStock(
+  stock: { tracked: boolean; available: number | null } | undefined,
+  wanted: number,
+) {
+  if (!stock?.tracked) return;
+  const available = stock.available ?? 0;
+  if (available <= 0) throw new CartError("out_of_stock");
+  if (wanted > available) {
+    throw new CartError(
+      "not_enough_stock",
+      available === 1 ? "Only 1 of this item is left." : `Only ${available} of this item are left.`,
+    );
   }
 }
 
@@ -74,8 +104,12 @@ export interface CartLine {
   /** The regular price when the variant is on sale; null otherwise. */
   regularPriceAmount: number | null;
   lineTotalAmount: number;
-  /** False when the product or variant is no longer for sale. Not counted in the total. */
+  /** False when the item is no longer for sale or is out of stock. Not counted in the total. */
   available: boolean;
+  /** True when it is for sale but none are left right now. */
+  outOfStock: boolean;
+  /** How many can be had, when stock is counted and fewer than the cart holds; otherwise null. */
+  onlyLeft: number | null;
   /** Set when the price is different from when the item was added. */
   priceWas: number | null;
   image: (StoredImage & { altText: string }) | null;
@@ -168,14 +202,23 @@ async function loadView(
     },
   });
 
+  const stock = await availabilityIn(
+    tx,
+    items.map((item) => item.variant.id),
+  );
+
   const lines = items.map((item): CartLine => {
     const { variant } = item;
     const { product } = variant;
     const current = variant.discountPriceAmount ?? variant.priceAmount;
-    const available =
+    const forSale =
       variant.status === "active" &&
       product.status === "active" &&
       variant.currency === cart.currency;
+    const level = stock.get(variant.id);
+    const left = level?.tracked ? Math.max(0, level.available ?? 0) : null;
+    const outOfStock = forSale && left === 0;
+    const available = forSale && !outOfStock;
     // The variant's own picture if it has one, else a general one, else any.
     const image =
       product.images.find((candidate) => candidate.variantId === variant.id) ??
@@ -194,6 +237,8 @@ async function loadView(
       regularPriceAmount: variant.discountPriceAmount !== null ? variant.priceAmount : null,
       lineTotalAmount: current * item.quantity,
       available,
+      outOfStock,
+      onlyLeft: available && left !== null && left < item.quantity ? left : null,
       priceWas: available && item.unitPriceAmount !== current ? item.unitPriceAmount : null,
       image: image ? { ...toStoredImage(image.asset), altText: image.altText } : null,
     };
@@ -309,15 +354,18 @@ export async function addToCart(
       where: { cartId_variantId: { cartId: cart.id, variantId: variant.id } },
       select: { id: true, quantity: true },
     });
+    const stock = (await availabilityIn(tx, [variant.id])).get(variant.id);
     let capped = false;
     if (existing) {
       const quantity = Math.min(MAX_LINE_QUANTITY, existing.quantity + input.quantity);
       capped = quantity < existing.quantity + input.quantity;
+      assertInStock(stock, quantity);
       await tx.cartItem.update({
         where: { id: existing.id },
         data: { quantity, unitPriceAmount: price },
       });
     } else {
+      assertInStock(stock, input.quantity);
       if ((await tx.cartItem.count({ where: { cartId: cart.id } })) >= MAX_CART_LINES) {
         throw new CartError("cart_full");
       }
@@ -358,10 +406,15 @@ export async function setCartItemQuantity(
       where: { id: itemId, cartId: cart.id },
       select: {
         id: true,
-        variant: { select: { priceAmount: true, discountPriceAmount: true } },
+        quantity: true,
+        variant: { select: { id: true, priceAmount: true, discountPriceAmount: true } },
       },
     });
     if (!item) throw new CartError("not_found");
+    // Lowering a quantity is always allowed; raising it needs the stock.
+    if (quantity > item.quantity) {
+      assertInStock((await availabilityIn(tx, [item.variant.id])).get(item.variant.id), quantity);
+    }
 
     if (quantity === 0) {
       await tx.cartItem.delete({ where: { id: item.id } });

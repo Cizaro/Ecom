@@ -68,6 +68,10 @@ model Tenant {
   customerSessions        CustomerSession[]
   customerTokens          CustomerToken[]
   addresses               Address[]
+  inventoryLocations      InventoryLocation[]
+  inventoryLevels         InventoryLevel[]
+  stockMovements          StockMovement[]
+  stockReservations       StockReservation[]
 
   @@map("tenants")
 }
@@ -140,11 +144,12 @@ model User {
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  memberships   UserTenantMembership[]
-  sessions      Session[]
-  accounts      Account[]
-  twoFactors    TwoFactor[]
-  uploadedMedia MediaAsset[]
+  memberships    UserTenantMembership[]
+  sessions       Session[]
+  accounts       Account[]
+  twoFactors     TwoFactor[]
+  uploadedMedia  MediaAsset[]
+  stockMovements StockMovement[]
 
   @@map("users")
 }
@@ -616,13 +621,18 @@ model ProductVariant {
   lowStockThreshold   Int?          @map("low_stock_threshold")
   position            Int           @default(0)
   status              VariantStatus @default(active)
+  /// When false the store does not count this item: it is sold without a stock check.
+  trackInventory      Boolean       @default(true) @map("track_inventory")
   createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  images    ProductImage[]
-  cartItems CartItem[]
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images            ProductImage[]
+  cartItems         CartItem[]
+  inventoryLevels   InventoryLevel[]
+  stockMovements    StockMovement[]
+  stockReservations StockReservation[]
 
   @@unique([tenantId, sku])
   @@index([productId, position])
@@ -893,4 +903,135 @@ model Address {
   @@index([customerId])
   @@index([tenantId])
   @@map("addresses")
+}
+
+// ---------------------------------------------------------------------------
+// Inventory. A level is never edited on its own: every change is written
+// together with a movement row that says why, so the history explains every
+// number. Movements are append-only for the runtime role.
+// ---------------------------------------------------------------------------
+
+model InventoryLocation {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  address   String?
+  /// Stock is taken from the default location first.
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  levels       InventoryLevel[]
+  movements    StockMovement[]
+  reservations StockReservation[]
+
+  @@unique([tenantId, name])
+  @@map("inventory_locations")
+}
+
+/// How many of one variant are at one location. available = on_hand - reserved - damaged.
+model InventoryLevel {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  variantId  String   @map("variant_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  /// Physically there, including reserved and damaged items.
+  onHand     Int      @default(0) @map("on_hand")
+  /// Promised to checkouts in progress or orders not yet shipped.
+  reserved   Int      @default(0)
+  /// There but not sellable.
+  damaged    Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  variant  ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  location InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@unique([variantId, locationId])
+  @@index([tenantId])
+  @@index([locationId])
+  @@map("inventory_levels")
+}
+
+enum StockBucket {
+  on_hand
+  reserved
+  damaged
+
+  @@map("stock_bucket")
+}
+
+enum StockReason {
+  purchase
+  sale
+  return
+  adjustment
+  damage
+  reservation
+  release
+
+  @@map("stock_reason")
+}
+
+model StockMovement {
+  id            String      @id @default(uuid(7)) @db.Uuid
+  tenantId      String      @map("tenant_id") @db.Uuid
+  variantId     String      @map("variant_id") @db.Uuid
+  locationId    String      @map("location_id") @db.Uuid
+  /// Never zero. Positive adds to the bucket, negative takes from it.
+  quantityDelta Int         @map("quantity_delta")
+  bucket        StockBucket
+  reason        StockReason
+  /// What caused it, for example ("reservation", <id>) or ("order", <id>).
+  referenceType String?     @map("reference_type")
+  referenceId   String?     @map("reference_id") @db.Uuid
+  actorUserId   String?     @map("actor_user_id") @db.Uuid
+  note          String?
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  variant  ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  location InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  actor    User?             @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([variantId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("stock_movements")
+}
+
+enum ReservationStatus {
+  active
+  /// Turned into a sale: the items left on_hand.
+  committed
+  /// Given back, by the shopper, the checkout, or by expiring.
+  released
+
+  @@map("reservation_status")
+}
+
+/// Items held for a checkout so two shoppers cannot buy the last one.
+model StockReservation {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  tenantId      String            @map("tenant_id") @db.Uuid
+  variantId     String            @map("variant_id") @db.Uuid
+  locationId    String            @map("location_id") @db.Uuid
+  quantity      Int
+  status        ReservationStatus @default(active)
+  /// What the hold is for, for example ("checkout", <id>).
+  referenceType String            @map("reference_type")
+  referenceId   String            @map("reference_id") @db.Uuid
+  expiresAt     DateTime          @map("expires_at") @db.Timestamptz(3)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  variant  ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  location InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  @@index([referenceType, referenceId])
+  @@index([status, expiresAt])
+  @@index([tenantId])
+  @@map("stock_reservations")
 }
