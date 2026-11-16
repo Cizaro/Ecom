@@ -125,7 +125,7 @@ describe("adding to a cart", () => {
     const rows = await admin.cart.findMany({ where: { tenantId: tenantA } });
     const stored = JSON.stringify(rows);
     expect(stored).not.toContain(added.token);
-    expect(stored).toContain(createHash("sha256").update(added.token).digest("hex"));
+    expect(stored).toContain(createHash("sha256").update(added.token!).digest("hex"));
     // Nothing about cost reaches the cart.
     expectNoCost(added.cart, COST);
   });
@@ -232,7 +232,7 @@ describe("whose cart it is", () => {
     expect((await getCart(shopA, theirs.token)).itemCount).toBe(1);
 
     // No token, a malformed one, a well-formed wrong one, or the stored hash: nothing.
-    const hash = createHash("sha256").update(mine.token).digest("hex");
+    const hash = createHash("sha256").update(mine.token!).digest("hex");
     for (const token of [null, undefined, "", "abc", "x".repeat(43), hash, `${mine.token}x`]) {
       expect((await getCart(shopA, token)).lines).toEqual([]);
       expect(await getCartCount(shopA, token)).toBe(0);
@@ -363,7 +363,7 @@ describe("changing a cart", () => {
     const item = await variant(tenantA);
     const old = await addToCart(shopA, null, { variantId: item.id, quantity: 1 });
     await admin.cart.updateMany({
-      where: { tokenHash: createHash("sha256").update(old.token).digest("hex") },
+      where: { tokenHash: createHash("sha256").update(old.token!).digest("hex") },
       data: { expiresAt: new Date(Date.now() - 1000) },
     });
     expect((await getCart(shopA, old.token)).lines).toEqual([]);

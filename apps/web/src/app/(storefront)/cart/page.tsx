@@ -3,7 +3,7 @@ import { Alert, buttonClasses, EmptyState } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MediaImage } from "@/components/media-image";
-import { readCartToken } from "@/server/cart";
+import { cartOwner } from "@/server/customer";
 import { viewOf } from "@/server/media";
 import { storefrontDb } from "@/server/storefront";
 import { Breadcrumbs } from "../_components/breadcrumbs";
@@ -24,7 +24,7 @@ function linePath(line: { productSlug: string; color: string | null; size: strin
 
 export default async function CartPage() {
   const { db } = await storefrontDb();
-  const cart = await getCart(db, await readCartToken());
+  const cart = await getCart(db, await cartOwner());
   const currency = cart.currency ?? "USD";
 
   return (
@@ -117,7 +117,7 @@ export default async function CartPage() {
             </div>
             <p className="text-sm text-ink-muted">Shipping and taxes are worked out at checkout.</p>
             <p className="rounded-control bg-surface-muted px-3 py-2 text-sm text-ink-muted">
-              Checkout is not open yet. Your cart is kept on this device for 30 days.
+              Checkout is not open yet. Your cart is kept for 30 days.
             </p>
             <Link href="/products" className={buttonClasses("secondary")}>
               Continue shopping

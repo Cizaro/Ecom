@@ -50,7 +50,7 @@ erDiagram
 | --- | --- | --- |
 | tenants | Own row | Update own row; no create or delete |
 | stores, consent_records, notification_preferences, idempotency_keys, outbox_events, jobs | Own tenant | Own tenant |
-| store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items | Own tenant | Own tenant |
+| store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items, customers, customer_sessions, customer_tokens, addresses | Own tenant | Own tenant |
 | user_tenant_memberships | Own tenant, plus the signed-in user's own memberships elsewhere | Own tenant |
 | users | Self and members of the current tenant; never `password_hash` or `is_platform_admin` | Own `name` only |
 | roles | System roles and own tenant's | Own tenant's non-system roles |
@@ -64,7 +64,9 @@ The four authentication tables follow the shape the Better Auth library requires
 
 Platform administrator is the `is_platform_admin` flag on a user, not a membership. The plan reference on `Tenant` (`plan_id`) arrives in Phase 9.
 
-Staff (`User`) and shoppers (`Customer`) are separate. A shopper with a login has a `CustomerAccount` credential linked to `Customer`; a guest has a `Customer` row with no credential.
+Staff (`User`) and shoppers (`Customer`) are separate. A shopper with a login has a password hash on their `Customer` row; a guest has a `Customer` row with none (decision D56).
+
+**Built (Milestone 3.1):** `customers` (email unique per tenant and stored lowercase, optional `password_hash`, `email_verified_at`, `status` active or disabled), `customer_sessions` and `customer_tokens` (only token hashes; tokens have a purpose, an expiry and a used time), `addresses` (ISO country code, at most one default for delivery and one for billing per customer by partial unique indexes), and `carts.customer_id`. All tenant-scoped with Row-Level Security and same-tenant triggers. Marketing consent uses the existing `consent_records` with `subject_type = customer`.
 
 ## 2. Catalog and inventory
 

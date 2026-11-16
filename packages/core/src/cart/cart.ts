@@ -7,8 +7,12 @@ import { ASSET_SELECT, toStoredImage, type StoredImage } from "../media/assets";
 // random token that the web app keeps in an HttpOnly cookie. Rules that
 // protect it:
 //
-// - Only a hash of the token is stored, and a cart is only ever looked up by
-//   that hash, so a visitor can reach their own cart and no other.
+// - Only a hash of the token is stored, and a guest cart is only ever looked
+//   up by that hash, so a visitor can reach their own cart and no other.
+// - A signed-in customer's cart is found by their customer ID (which comes
+//   from their session, never from a form) and follows them between devices.
+//   Once a cart belongs to a customer its token no longer opens it, so a
+//   browser that was signed out cannot reach it.
 // - Everything runs inside the store's tenant (Row-Level Security), so a
 //   token from one store opens nothing in another.
 // - Prices are read from the catalog every time. Nothing the browser sends
@@ -95,11 +99,35 @@ export const EMPTY_CART: CartView = {
   hasUnavailable: false,
 };
 
-async function findCart(tx: AppTransaction, token: string | null | undefined) {
+/**
+ * Who is asking for a cart: a signed-in customer (by ID, from their session),
+ * a guest (by cookie token), or nobody yet. A bare token string is accepted
+ * as shorthand for a guest.
+ */
+export type CartOwner =
+  { token?: string | null; customerId?: string | null } | string | null | undefined;
+
+const normalizeOwner = (owner: CartOwner) =>
+  typeof owner === "string" || owner === null || owner === undefined
+    ? { token: owner ?? null, customerId: null }
+    : { token: owner.token ?? null, customerId: owner.customerId ?? null };
+
+async function findCart(tx: AppTransaction, owner: CartOwner) {
+  const { token, customerId } = normalizeOwner(owner);
+  const open = { status: "active" as const, expiresAt: { gt: new Date() } };
+  const select = { id: true, currency: true, customerId: true } as const;
+  if (customerId) {
+    return tx.cart.findFirst({
+      where: { customerId, ...open },
+      orderBy: { updatedAt: "desc" },
+      select,
+    });
+  }
   if (!isCartToken(token)) return null;
+  // A cart that belongs to a customer is not a guest cart any more.
   return tx.cart.findFirst({
-    where: { tokenHash: hashToken(token), status: "active", expiresAt: { gt: new Date() } },
-    select: { id: true, currency: true },
+    where: { tokenHash: hashToken(token), customerId: null, ...open },
+    select,
   });
 }
 
@@ -185,22 +213,21 @@ async function loadView(
 // --- Reading -----------------------------------------------------------------
 
 /** The cart this token opens. A missing, malformed, expired or foreign token gives an empty cart. */
-export async function getCart(db: TenantDb, token: string | null | undefined): Promise<CartView> {
-  if (!isCartToken(token)) return EMPTY_CART;
+export async function getCart(db: TenantDb, owner: CartOwner): Promise<CartView> {
+  const { token, customerId } = normalizeOwner(owner);
+  if (!customerId && !isCartToken(token)) return EMPTY_CART;
   return db.run(async (tx) => {
-    const cart = await findCart(tx, token);
+    const cart = await findCart(tx, owner);
     return cart ? loadView(tx, cart) : EMPTY_CART;
   });
 }
 
 /** How many things are in the cart, for the header. One small query. */
-export async function getCartCount(
-  db: TenantDb,
-  token: string | null | undefined,
-): Promise<number> {
-  if (!isCartToken(token)) return 0;
+export async function getCartCount(db: TenantDb, owner: CartOwner): Promise<number> {
+  const { token, customerId } = normalizeOwner(owner);
+  if (!customerId && !isCartToken(token)) return 0;
   return db.run(async (tx) => {
-    const cart = await findCart(tx, token);
+    const cart = await findCart(tx, owner);
     if (!cart) return 0;
     const total = await tx.cartItem.aggregate({
       where: { cartId: cart.id },
@@ -224,8 +251,8 @@ function assertQuantity(quantity: unknown, min: number): asserts quantity is num
 }
 
 export interface AddToCartResult {
-  /** The token of the cart that now holds the item. */
-  token: string;
+  /** The token of the guest cart that now holds the item; null for a customer's cart. */
+  token: string | null;
   /** True when a new cart was started and the token must be given to the browser. */
   tokenIsNew: boolean;
   /** True when the quantity was held at the most allowed for one item. */
@@ -240,7 +267,7 @@ export interface AddToCartResult {
  */
 export async function addToCart(
   db: TenantDb,
-  token: string | null | undefined,
+  owner: CartOwner,
   input: { variantId: string; quantity: number },
 ): Promise<AddToCartResult> {
   assertQuantity(input.quantity, 1);
@@ -256,19 +283,23 @@ export async function addToCart(
     if (!variant) throw new CartError("unavailable");
     const price = variant.discountPriceAmount ?? variant.priceAmount;
 
-    let cart = await findCart(tx, token);
-    let cartToken = token as string;
-    const tokenIsNew = cart === null;
+    const { token, customerId } = normalizeOwner(owner);
+    let cart = await findCart(tx, owner);
+    let cartToken: string | null = customerId ? null : token;
+    const tokenIsNew = cart === null && !customerId;
     if (!cart) {
-      cartToken = newCartToken();
+      // Every cart has a token hash; a customer's cart is never opened by it.
+      const fresh = newCartToken();
+      if (!customerId) cartToken = fresh;
       cart = await tx.cart.create({
         data: {
           tenantId: db.tenantId,
-          tokenHash: hashToken(cartToken),
+          tokenHash: hashToken(fresh),
+          customerId,
           currency: variant.currency,
           expiresAt: expiry(),
         },
-        select: { id: true, currency: true },
+        select: { id: true, currency: true, customerId: true },
       });
     }
     // One currency per cart (and per store today).
@@ -313,7 +344,7 @@ export async function addToCart(
  */
 export async function setCartItemQuantity(
   db: TenantDb,
-  token: string | null | undefined,
+  owner: CartOwner,
   itemId: string,
   quantity: number,
 ): Promise<CartView> {
@@ -321,7 +352,7 @@ export async function setCartItemQuantity(
   if (typeof itemId !== "string" || !UUID.test(itemId)) throw new CartError("not_found");
 
   return db.run(async (tx) => {
-    const cart = await findCart(tx, token);
+    const cart = await findCart(tx, owner);
     if (!cart) throw new CartError("not_found");
     const item = await tx.cartItem.findFirst({
       where: { id: itemId, cartId: cart.id },
@@ -349,10 +380,70 @@ export async function setCartItemQuantity(
   });
 }
 
-export function removeCartItem(
+export function removeCartItem(db: TenantDb, owner: CartOwner, itemId: string): Promise<CartView> {
+  return setCartItemQuantity(db, owner, itemId, 0);
+}
+
+/**
+ * Called when a customer signs in: whatever they put in the cart as a guest
+ * on this browser becomes theirs. If they already had a cart (from another
+ * device), the guest items are added to it, each held at the usual limit,
+ * and the guest cart is removed. A guest cart is only ever claimed by the
+ * token that opens it.
+ */
+export async function claimCartForCustomer(
   db: TenantDb,
   token: string | null | undefined,
-  itemId: string,
-): Promise<CartView> {
-  return setCartItemQuantity(db, token, itemId, 0);
+  customerId: string,
+): Promise<void> {
+  if (!UUID.test(customerId)) return;
+  await db.run(async (tx) => {
+    const guest = await findCart(tx, { token });
+    if (!guest) return;
+    const mine = await findCart(tx, { customerId });
+    if (!mine) {
+      await tx.cart.update({
+        where: { id: guest.id },
+        data: { customerId, expiresAt: expiry() },
+      });
+      return;
+    }
+    if (mine.currency === guest.currency) {
+      const [mineItems, guestItems] = await Promise.all([
+        tx.cartItem.findMany({
+          where: { cartId: mine.id },
+          select: { id: true, variantId: true, quantity: true },
+        }),
+        tx.cartItem.findMany({
+          where: { cartId: guest.id },
+          select: { variantId: true, quantity: true, unitPriceAmount: true },
+          orderBy: { createdAt: "asc" },
+        }),
+      ]);
+      const byVariant = new Map(mineItems.map((item) => [item.variantId, item]));
+      let lines = mineItems.length;
+      for (const item of guestItems) {
+        const existing = byVariant.get(item.variantId);
+        if (existing) {
+          await tx.cartItem.update({
+            where: { id: existing.id },
+            data: { quantity: Math.min(MAX_LINE_QUANTITY, existing.quantity + item.quantity) },
+          });
+        } else if (lines < MAX_CART_LINES) {
+          await tx.cartItem.create({
+            data: {
+              tenantId: db.tenantId,
+              cartId: mine.id,
+              variantId: item.variantId,
+              quantity: item.quantity,
+              unitPriceAmount: item.unitPriceAmount,
+            },
+          });
+          lines += 1;
+        }
+      }
+    }
+    await tx.cart.delete({ where: { id: guest.id } });
+    await tx.cart.update({ where: { id: mine.id }, data: { expiresAt: expiry() } });
+  });
 }

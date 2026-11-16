@@ -9,29 +9,36 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 3.1, customers and addresses
+## Next development task: Milestone 3.2, inventory
 
-Phase 2 (storefront and catalog) is complete. Phase 3 is checkout and operations: see PROJECT_PLAN.md section 4 and docs/DATA_MODEL.md section 3.
+See PROJECT_PLAN.md section 4 (Phase 3) and docs/DATA_MODEL.md section 2 (InventoryLocation, InventoryLevel, StockMovement).
 
-1. `customers` and `addresses` tables, tenant-scoped with Row-Level Security. A customer belongs to one store's tenant; the same email in two stores is two customers.
-2. Guest checkout is the default path: an order needs contact details and an address, not an account. Accounts (sign-up, sign-in, password reset) reuse the staff authentication pieces but are a separate kind of user with no admin access.
-3. Address form with country-aware fields, validated on the server; saved addresses for signed-in customers.
-4. Link the guest cart to the customer on sign-in and merge carts (decision D50).
-5. Consent records for marketing, kept separate from the order's own necessary communication.
-6. Tests: a customer can never read another customer's addresses or orders, in the same store or another; a customer account opens nothing in the admin.
+1. `inventory_locations`, `inventory_levels` and `stock_movements` tables, tenant-scoped with Row-Level Security. Every change to a level is a movement row with a reason, so the history explains every number; levels are never edited directly.
+2. Stock services: receive, adjust (with a reason), mark damaged; reserve and release (used by checkout in 3.3). Concurrency-safe: two checkouts cannot both take the last item.
+3. Admin: stock per variant and location on the product page, a movement history, low-stock list using the variant's threshold.
+4. Storefront: honest availability ("In stock", "Only a few left" below the threshold, "Out of stock"), never an invented number (decision D48 is then superseded). Add to cart refuses what cannot be sold; the cart flags lines that ran out.
+5. Structured data gains availability once it is real.
+6. Tests: concurrent reservations of the last item; another tenant cannot read or move stock; the storefront wording follows the levels.
 
-Before 3.4 (payments) the owner needs to choose a payment provider and supply test keys (open decision Q4). 3.1 to 3.3 do not depend on it.
+Owner decision needed before 3.4 (payments): which payment provider, and its test keys (open decision Q4). 3.2 and 3.3 do not depend on it.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 3.2 to 3.8 Inventory, orders, payments, shipping, admin order screens | 3.4 needs payment provider test keys |
+| 2 | 3.3 to 3.8 Checkout and orders, payments, shipping, notifications, admin order screens, promotions | 3.4 needs payment provider test keys |
 | 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Customers: staff screens to view one customer, disable or re-enable them, and handle data export and deletion requests (with admin customers, Milestone 3.7).
+- Customers: worker job to delete expired customer sessions and used or expired emailed links (they are ignored, not removed).
+- Customers: "change email address" and "change password while signed in" (today only through the reset link).
+- Customers: sign in with Google or Apple, if the owner wants it (open decision).
+- Addresses: country-specific region drop-downs and labels that change with the chosen country (the server already applies each country's rules).
+- Translate account pages and emails when store languages are decided.
 
 - Launch checklist item: set `ALLOW_SEARCH_INDEXING=true` on the live site only (decision D54), then submit the sitemap in the search engines' webmaster tools.
 - SEO: a sitemap index when a store passes 45,000 pages; a share image for the home page; per-store description text (today a fixed sentence).

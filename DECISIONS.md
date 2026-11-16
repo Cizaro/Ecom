@@ -179,6 +179,24 @@ Server actions that need no sign-in live under the storefront folder and are lis
 ### D55. One address per list; variations are not indexed (2026-11-14)
 A plain list (a category, all products) and each of its pages is indexed under its own address. A sorted, filtered or searched view points at the plain list (canonical link) and asks not to be indexed, because those views are near-copies without end. The cart, search results and the whole admin are never indexed. `sitemap.xml` is built per store from the same public catalog reads as the pages, so it can only list what a shopper can open; one file holds up to 45,000 addresses.
 
+### D56. Customers are separate from staff, and belong to one store (2026-11-16)
+Shoppers have their own tables (`customers`, `customer_sessions`, `customer_tokens`, `addresses`), their own session cookie (`customer_session`) and their own sign-in pages under `/account`. Nothing a customer session carries is checked by the admin guards, so a customer account opens nothing in the admin. A customer belongs to one tenant: the same email address in two stores is two unrelated customers with separate passwords. Customer authentication runs on the runtime database role inside the store's tenant (Row-Level Security), not on the admin connection that staff sign-in uses. This supersedes the earlier sketch of a separate `CustomerAccount` credential table in docs/DATA_MODEL.md: the password hash sits on the customer row.
+
+### D57. A customer account needs a confirmed email address (2026-11-16)
+After signing up, the customer must open an emailed link before they can sign in. This stops anyone creating an account in someone else's name and keeps marketing consent tied to a real mailbox. Opening the link shows a button; the confirmation happens on pressing it, because mail scanners and link previews open links automatically and would otherwise use up the single-use link. Choosing a new password through the emailed reset link also confirms the address.
+
+### D58. Nobody can learn from the site whether an email address has an account (2026-11-16)
+Sign-up always answers "we have sent an email", and "forgot password" always answers "if that address has an account". What differs is the email sent to the address itself (a confirmation link, or "you already have an account"). Sign-in gives one message for every kind of failure, and a missing account costs the same time as a wrong password. Limits: 5 failed sign-ins per email and 30 per address in 15 minutes; 10 sign-ups per address an hour; 3 account emails per mailbox an hour; 10 reset requests per address an hour.
+
+### D59. Customer sessions and emailed links are random tokens stored as hashes (2026-11-16)
+Same pattern as the cart (D50): 256-bit tokens, only their SHA-256 stored, looked up inside the store's tenant. Sessions last 30 days; confirmation links 24 hours; reset links 60 minutes and once. A new link replaces any earlier unused link of the same kind. Resetting the password signs the customer out everywhere.
+
+### D60. A signed-in customer's cart belongs to the account (2026-11-16)
+On sign-in, a guest cart on that browser is claimed by the account; if the account already had a cart, the guest items are merged into it (each held at the usual limit) and the guest cart is removed. A cart owned by a customer is found by the customer ID from their session and no longer by its cookie token, so a browser that has signed out cannot reach it, and the cart follows the customer to another device.
+
+### D61. Addresses are checked against each country's rules, generously (2026-11-16)
+An address needs a name, a street line, a city and a country from the ISO list. Where a country has firm rules they are enforced (for example United States: state and a five-digit ZIP code; United Kingdom, Canada, Australia and several European countries: a postcode in the national format; United Arab Emirates: an emirate and no postal code). Everywhere else a postal code and a region are accepted but not demanded: refusing a real address is worse than accepting an unusual one. The same check will be used at checkout. Up to 10 saved addresses; one default for delivery and one for billing, enforced by the database.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

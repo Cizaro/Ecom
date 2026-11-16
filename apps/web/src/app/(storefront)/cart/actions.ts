@@ -2,11 +2,13 @@
 
 import { addToCart, CartError, setCartItemQuantity } from "@ecom/core";
 import { revalidatePath } from "next/cache";
-import { readCartToken, tooManyCartChanges, writeCartToken } from "@/server/cart";
+import { tooManyCartChanges, writeCartToken } from "@/server/cart";
+import { cartOwner } from "@/server/customer";
 import { storefrontDb } from "@/server/storefront";
 
-// Cart actions for visitors. No sign-in: the store comes from the host name
-// (storefrontDb) and the cart from the visitor's own cookie token. The form
+// Cart actions for visitors. No sign-in needed: the store comes from the host
+// name (storefrontDb) and the cart from the signed-in customer's session or,
+// for a guest, the visitor's own cookie token (cartOwner). The form
 // supplies only which variant or line and how many; prices are read from the
 // catalog by the cart service. Next.js rejects cross-site POSTs to server
 // actions, which is the CSRF protection for these forms.
@@ -48,11 +50,11 @@ export async function addToCartAction(
   const { store, db } = await storefrontDb();
   if (await tooManyCartChanges(store.tenantId)) return { error: TOO_MANY };
   return attempt(async () => {
-    const result = await addToCart(db, await readCartToken(), {
+    const result = await addToCart(db, await cartOwner(), {
       variantId: text(formData, "variantId"),
       quantity: wholeNumber(formData, "quantity"),
     });
-    if (result.tokenIsNew) await writeCartToken(result.token);
+    if (result.tokenIsNew && result.token) await writeCartToken(result.token);
     return {
       notice: result.capped
         ? "Added. You now have the most allowed of this item in your cart."
@@ -70,7 +72,7 @@ export async function updateCartItemAction(
   return attempt(async () => {
     await setCartItemQuantity(
       db,
-      await readCartToken(),
+      await cartOwner(),
       text(formData, "itemId"),
       wholeNumber(formData, "quantity"),
     );
@@ -85,7 +87,7 @@ export async function removeCartItemAction(
   const { store, db } = await storefrontDb();
   if (await tooManyCartChanges(store.tenantId)) return { error: TOO_MANY };
   return attempt(async () => {
-    await setCartItemQuantity(db, await readCartToken(), text(formData, "itemId"), 0);
+    await setCartItemQuantity(db, await cartOwner(), text(formData, "itemId"), 0);
     return {};
   });
 }

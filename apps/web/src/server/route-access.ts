@@ -64,6 +64,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/catalog/categories/[id]", access: CATALOG_WRITE },
   { path: "/admin/catalog/brands", access: CATALOG_READ },
   { path: "/admin/catalog/brands/[id]", access: CATALOG_WRITE },
+  { path: "/admin/customers", access: { level: "permission", permission: "customers.read" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -123,11 +124,30 @@ const CART_ACTIONS = "(storefront)/cart/actions.ts";
  * visitor's own cookie identifies; the unit test checks the first and the
  * cart tests check the second.
  */
+const ACCOUNT_ACTIONS = "(storefront)/account/actions.ts";
+
 export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
-  "addToCartAction",
-  "updateCartItemAction",
-  "removeCartItemAction",
-].map((name) => ({ id: `${CART_ACTIONS}#${name}`, access: { level: "public" } }));
+  ...["addToCartAction", "updateCartItemAction", "removeCartItemAction"].map((name) => ({
+    id: `${CART_ACTIONS}#${name}`,
+    access: { level: "public" } as const,
+  })),
+  // Account actions that act on an account take the customer from their own
+  // session (requireCustomer); the customer tests check that one customer
+  // cannot reach another's data.
+  ...[
+    "signUpAction",
+    "verifyEmailAction",
+    "signInAction",
+    "requestPasswordResetAction",
+    "resetPasswordAction",
+    "signOutAction",
+    "updateProfileAction",
+    "createAddressAction",
+    "updateAddressAction",
+    "deleteAddressAction",
+    "setDefaultAddressAction",
+  ].map((name) => ({ id: `${ACCOUNT_ACTIONS}#${name}`, access: { level: "public" } as const })),
+];
 
 /** The call every storefront action's source must contain. */
 export const STOREFRONT_GUARD = "storefrontDb()";

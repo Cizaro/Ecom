@@ -23,6 +23,12 @@ describe("admin navigation", () => {
       "Access",
       "Security",
     ]);
+    expect(labels(visibleNav(context("customers.read")))).toEqual([
+      "Home",
+      "Customers",
+      "Access",
+      "Security",
+    ]);
     expect(labels(visibleNav(context("staff.manage")))).toEqual([
       "Home",
       "Access",

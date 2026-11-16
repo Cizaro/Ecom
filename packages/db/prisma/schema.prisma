@@ -64,6 +64,10 @@ model Tenant {
   productImages           ProductImage[]
   carts                   Cart[]
   cartItems               CartItem[]
+  customers               Customer[]
+  customerSessions        CustomerSession[]
+  customerTokens          CustomerToken[]
+  addresses               Address[]
 
   @@map("tenants")
 }
@@ -736,21 +740,25 @@ enum CartStatus {
 }
 
 model Cart {
-  id        String     @id @default(uuid(7)) @db.Uuid
-  tenantId  String     @map("tenant_id") @db.Uuid
+  id         String     @id @default(uuid(7)) @db.Uuid
+  tenantId   String     @map("tenant_id") @db.Uuid
   /// SHA-256 of the cookie token, in hexadecimal.
-  tokenHash String     @unique @map("token_hash")
-  currency  String     @db.Char(3)
-  status    CartStatus @default(active)
+  tokenHash  String     @unique @map("token_hash")
+  /// Set when a signed-in customer owns the cart, so it follows them between devices.
+  customerId String?    @map("customer_id") @db.Uuid
+  currency   String     @db.Char(3)
+  status     CartStatus @default(active)
   /// Pushed forward on every change; an expired cart is treated as empty.
-  expiresAt DateTime   @map("expires_at") @db.Timestamptz(3)
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  expiresAt  DateTime   @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  items  CartItem[]
+  tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    CartItem[]
 
   @@index([tenantId, status, expiresAt])
+  @@index([customerId])
   @@index([expiresAt])
   @@map("carts")
 }
@@ -775,4 +783,114 @@ model CartItem {
   @@index([tenantId])
   @@index([variantId])
   @@map("cart_items")
+}
+
+// ---------------------------------------------------------------------------
+// Customers. A customer belongs to one tenant: the same email address in two
+// stores is two unrelated customers. Customers are not staff: they have their
+// own tables, their own session cookie, and no way into the admin.
+// ---------------------------------------------------------------------------
+
+enum CustomerStatus {
+  active
+  /// Blocked from signing in by staff. Orders are kept.
+  disabled
+
+  @@map("customer_status")
+}
+
+model Customer {
+  id              String         @id @default(uuid(7)) @db.Uuid
+  tenantId        String         @map("tenant_id") @db.Uuid
+  /// Always stored lowercase (enforced by a check constraint).
+  email           String
+  name            String         @default("")
+  phone           String?
+  /// Null until the customer sets one (guest checkouts create customers without).
+  passwordHash    String?        @map("password_hash")
+  /// When the customer proved they receive mail at this address.
+  emailVerifiedAt DateTime?      @map("email_verified_at") @db.Timestamptz(3)
+  status          CustomerStatus @default(active)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions  CustomerSession[]
+  tokens    CustomerToken[]
+  addresses Address[]
+  carts     Cart[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, createdAt])
+  @@map("customers")
+}
+
+/// A signed-in browser. Only a hash of the cookie token is stored.
+model CustomerSession {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([expiresAt])
+  @@map("customer_sessions")
+}
+
+enum CustomerTokenPurpose {
+  verify_email
+  reset_password
+
+  @@map("customer_token_purpose")
+}
+
+/// A single-use link sent by email. Only a hash of the token is stored.
+model CustomerToken {
+  id         String               @id @default(uuid(7)) @db.Uuid
+  tenantId   String               @map("tenant_id") @db.Uuid
+  customerId String               @map("customer_id") @db.Uuid
+  purpose    CustomerTokenPurpose
+  tokenHash  String               @unique @map("token_hash")
+  expiresAt  DateTime             @map("expires_at") @db.Timestamptz(3)
+  usedAt     DateTime?            @map("used_at") @db.Timestamptz(3)
+  createdAt  DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, purpose])
+  @@index([expiresAt])
+  @@map("customer_tokens")
+}
+
+model Address {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  customerId        String   @map("customer_id") @db.Uuid
+  fullName          String   @map("full_name")
+  phone             String?
+  line1             String
+  line2             String?
+  city              String
+  /// State, province, governorate or emirate, where the country uses one.
+  region            String?
+  postalCode        String?  @map("postal_code")
+  /// ISO 3166-1 alpha-2, uppercase.
+  country           String   @db.Char(2)
+  isDefaultShipping Boolean  @default(false) @map("is_default_shipping")
+  isDefaultBilling  Boolean  @default(false) @map("is_default_billing")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([tenantId])
+  @@map("addresses")
 }

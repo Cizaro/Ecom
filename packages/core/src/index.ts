@@ -195,6 +195,7 @@ export {
   addToCart,
   CART_LIFETIME_DAYS,
   CartError,
+  claimCartForCustomer,
   EMPTY_CART,
   getCart,
   getCartCount,
@@ -204,4 +205,49 @@ export {
   removeCartItem,
   setCartItemQuantity,
 } from "./cart/cart";
-export type { AddToCartResult, CartErrorCode, CartLine, CartView } from "./cart/cart";
+export type { AddToCartResult, CartErrorCode, CartLine, CartOwner, CartView } from "./cart/cart";
+export {
+  CUSTOMER_SESSION_DAYS,
+  CustomerError,
+  getMarketingConsent,
+  getSessionCustomer,
+  listCustomers,
+  normalizeEmail,
+  requestPasswordReset,
+  resetPassword,
+  setMarketingConsent,
+  signIn as signInCustomer,
+  signOut as signOutCustomer,
+  signUp as signUpCustomer,
+  updateProfile as updateCustomerProfile,
+  verifyEmail as verifyCustomerEmail,
+} from "./customers/accounts";
+export type {
+  CustomerDeps,
+  CustomerErrorCode,
+  CustomerList,
+  CustomerProfile,
+  CustomerRequest,
+  CustomerSummary,
+  SignUpInput,
+} from "./customers/accounts";
+export {
+  createAddress,
+  deleteAddress,
+  formatAddress,
+  getAddress,
+  listAddresses,
+  MAX_ADDRESSES,
+  setDefaultAddress,
+  updateAddress,
+  validateAddress,
+} from "./customers/addresses";
+export type { AddressInput, AddressUse, SavedAddress, ValidAddress } from "./customers/addresses";
+export {
+  addressRules,
+  COUNTRY_CODES,
+  countryName,
+  countryOptions,
+  isCountryCode,
+} from "./customers/countries";
+export type { AddressRules } from "./customers/countries";

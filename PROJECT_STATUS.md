@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 2 (storefront and catalog) complete: Milestones 2.1 to 2.6.** Phase 1 (foundation, Milestones 1.1 to 1.5) is complete. Next: Phase 3 (checkout and operations), starting with Milestone 3.1 (customers and addresses).
+**Phase 3 (checkout and operations) started: Milestone 3.1 complete.** Phases 1 and 2 are complete. Next: Milestone 3.2 (inventory).
 
 ## Completed
 
@@ -53,7 +53,7 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines. There is no checkout yet. There are no stock levels, orders or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. There is no checkout yet. There are no stock levels, orders or dashboard yet.
 
 - **Milestone 2.2, product media:**
   - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
@@ -99,6 +99,17 @@ Last updated: 2026-11-12
   - A "not found" page inside the shop's header and footer, still answering 404.
   - Page-weight and layout-shift budgets enforced by a browser test; first measurements in docs/PERFORMANCE.md.
 
+- **Milestone 3.1, customers and addresses:**
+  - Tables `customers`, `customer_sessions`, `customer_tokens` and `addresses`, plus `carts.customer_id`; all tenant-scoped with Row-Level Security and same-tenant triggers. A customer belongs to one store.
+  - Customer accounts in `packages/core/src/customers`: sign up, confirm email (required before sign-in), sign in, sign out, forgotten password, profile, marketing consent as a history of decisions.
+  - Nothing tells a stranger whether an email has an account; one message for every failed sign-in; rate limits on sign-in, sign-up and account emails.
+  - Sessions and emailed links are random tokens stored only as hashes; resetting the password signs out everywhere.
+  - Saved addresses with each country's rules (for example US ZIP code and state, UK postcode, no postal code in the UAE), one default for delivery and one for billing.
+  - The guest cart joins the account on sign-in and merges with any cart the account already had.
+  - Storefront pages under `/account`: sign up, confirm, sign in, forgotten and new password, account details, addresses. "Sign in" / "Account" in the header. All kept out of search engines.
+  - Admin: a read-only Customers list with search (`customers.read`), with no password material ever loaded.
+  - Visitors' account actions registered and checked like the cart actions.
+
 ## In progress
 
 Nothing.
@@ -111,7 +122,10 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 
 - **Products have no stock levels** (Milestone 3.2), so the storefront says nothing about availability yet.
 - **No checkout yet** (Phase 3). The cart page says so and offers no pay button. The subtotal has no shipping, tax or discounts.
-- **Carts are for guests only**, on one device. Customer accounts and cart merging come in Phase 3.
+- **Customers cannot yet change their email address or change their password while signed in** (only through the reset link).
+- **Staff can list customers but not open, disable or delete one** from the admin yet (Milestone 3.7). Disabling is possible in the database.
+- **Expired customer sessions and used links stay in the database** (ignored, not deleted) until a cleanup job exists.
+- **Account pages and emails are English only.**
 - **The product page says nothing about stock or delivery** (decision D48); the cart does not reserve stock.
 - **Expired carts stay in the database** (ignored, not deleted) until a cleanup job exists.
 - **"Recently viewed" sets a preference cookie without asking**, because there is no consent banner yet (decision D49). Must be gated before launch in regions that require consent.
@@ -274,24 +288,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 2.6, on the first computer)
+## Checks run this session (Milestone 3.1, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 162 tests |
-| `pnpm test:int` | Pass, 156 tests, on the separate test database |
+| `pnpm test` | Pass, 174 tests |
+| `pnpm test:int` | Pass, 184 tests, on the separate test database (28 for customers: other customers, other stores, enumeration, lockout, tokens, addresses, cart merging) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 71 tests (27 skipped by design: phone duplicates of the isolation matrix, desktop duplicates of the performance budgets) |
+| `pnpm test:e2e` | Pass, 74 tests (27 skipped by design) |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Category title and canonical address, the in-shop "not found" page, robots.txt with indexing off |
-| CI on GitHub | The Milestone 2.5 commit failed on a chance-based test assertion (a random ID contained "999"); fixed in the next commit. See the Actions tab for the Milestone 2.6 commit |
+| Looked at in a browser | Sign-up page at phone width (no sideways scrolling, marketing box unticked, not indexed); signed-out visit to addresses goes to sign-in |
+| CI on GitHub | Milestone 2.6 commit passed; see the Actions tab for the Milestone 3.1 commit |
 
 ## Recommended next task
 
-Milestone 3.1: customers and addresses. Details in NEXT_STEPS.md.
+Milestone 3.2: inventory. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -313,5 +327,6 @@ Milestone 3.1: customers and addresses. Details in NEXT_STEPS.md.
 | 2026-11-13 | Milestone 2.5: guest cart with hashed token, cart services, add to cart, cart page, header count |
 | 2026-11-14 | Test fix: cost-leak checks look at fields, not text (CI failed once by chance) |
 | 2026-11-14 | Milestone 2.6: indexing switch, robots.txt, sitemap.xml, store-name titles, canonical addresses, in-shop 404, performance budgets. Phase 2 complete |
+| 2026-11-16 | Milestone 3.1: customer accounts with email confirmation, password reset, profile and consent; saved addresses with country rules; cart follows the account; admin customer list |
 
 Commit hashes: `git log --oneline`.

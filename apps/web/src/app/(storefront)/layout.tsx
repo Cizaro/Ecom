@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { readCartToken } from "@/server/cart";
+import { getCurrentCustomer } from "@/server/customer";
 import { storefrontDb, storefrontOrigin } from "@/server/storefront";
 
 /**
@@ -28,11 +29,15 @@ export async function generateMetadata(): Promise<Metadata> {
 // The store comes from the host name.
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   const { store, db } = await storefrontDb();
-  const cartToken = await readCartToken();
+  const [cartToken, customer] = await Promise.all([readCartToken(), getCurrentCustomer()]);
   const [categories, cartCount] = await Promise.all([
     listTopCategories(db),
-    // No cookie, no query: most visitors never have a cart.
-    cartToken ? getCartCount(db, cartToken) : 0,
+    customer
+      ? getCartCount(db, { customerId: customer.id })
+      : // No cookie, no query: most visitors never have a cart.
+        cartToken
+        ? getCartCount(db, { token: cartToken })
+        : 0,
   ]);
 
   return (
@@ -69,6 +74,13 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
               Search
             </button>
           </form>
+          <Link
+            href={customer ? "/account" : "/account/sign-in"}
+            className="order-2 flex min-h-11 items-center rounded-control px-3 text-sm font-medium hover:bg-surface-muted sm:order-3"
+            data-testid="account-link"
+          >
+            {customer ? "Account" : "Sign in"}
+          </Link>
           <Link
             href="/cart"
             // Beside the store name on phones, after the search box on wider screens.
