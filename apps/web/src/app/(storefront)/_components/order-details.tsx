@@ -5,6 +5,7 @@ import { retryPaymentAction } from "../checkout/actions";
 
 const STATUS: Record<OrderView["status"], { label: string; tone: BadgeTone }> = {
   pending_payment: { label: "Waiting for payment", tone: "warning" },
+  confirmed: { label: "Confirmed", tone: "success" },
   paid: { label: "Paid", tone: "success" },
   fulfilled: { label: "Sent", tone: "success" },
   cancelled: { label: "Cancelled", tone: "neutral" },
@@ -19,6 +20,8 @@ export function OrderStatusBadge({ status }: { status: OrderView["status"] }) {
 export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey?: string }) {
   const money = (amount: number) => formatMoney(amount, order.currency);
   const lastPayment = order.payments[0];
+  const cod = order.paymentMethod === "cash_on_delivery";
+  const paid = order.payments.some((payment) => payment.status === "succeeded");
   const payable = order.status === "pending_payment" && order.payBy > new Date();
   const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
@@ -31,9 +34,18 @@ export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey
         </span>
       </div>
 
-      {order.status === "paid" || order.status === "fulfilled" ? (
+      {cod && (order.status === "confirmed" || (order.status === "fulfilled" && !paid)) ? (
         <Alert tone="success" testId="order-message">
-          Thank you. We have received your payment and sent a confirmation to {order.email}.
+          {order.status === "confirmed"
+            ? "Thank you. Your order is confirmed and we have sent a confirmation to "
+            : "Your order is on its way. We sent the confirmation to "}
+          {order.email}. Pay {money(order.totalAmount)} in cash to the courier when it arrives.
+        </Alert>
+      ) : order.status === "paid" || order.status === "fulfilled" ? (
+        <Alert tone="success" testId="order-message">
+          {cod
+            ? "Thank you. Your order was delivered and paid."
+            : `Thank you. We have received your payment and sent a confirmation to ${order.email}.`}
         </Alert>
       ) : order.status === "pending_payment" ? (
         <div className="flex flex-col gap-3" data-testid="order-message">
@@ -62,7 +74,7 @@ export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey
         </div>
       ) : order.status === "cancelled" ? (
         <Alert tone="info" testId="order-message">
-          This order was cancelled and nothing was charged.
+          This order was cancelled{paid ? "." : " and nothing was charged."}
         </Alert>
       ) : null}
 
@@ -103,6 +115,14 @@ export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey
             <dt>Total</dt>
             <dd data-testid="order-total">{money(order.totalAmount)}</dd>
           </div>
+          {cod ? (
+            <div className="flex justify-between text-ink-muted">
+              <dt>Payment</dt>
+              <dd data-testid="payment-method">
+                {paid ? "Paid in cash on delivery" : "Cash on delivery"}
+              </dd>
+            </div>
+          ) : null}
           {lastPayment?.status === "succeeded" && lastPayment.methodLast4 ? (
             <div className="flex justify-between text-ink-muted">
               <dt>Paid with</dt>

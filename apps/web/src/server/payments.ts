@@ -38,8 +38,9 @@ export function getMockProvider(): MockPaymentProvider {
   return globals.__paymentProvider;
 }
 
-export function getPaymentProvider(): PaymentProvider {
-  return getMockProvider();
+/** The online payment provider, or null when the store takes cash on delivery only. */
+export function getPaymentProvider(): PaymentProvider | null {
+  return getEnv().PAYMENT_PROVIDER === "mock" ? getMockProvider() : null;
 }
 
 /**
@@ -78,6 +79,7 @@ export async function deliverPaymentNotification(
   const env = getEnv();
   const logger = createLogger("web", env.LOG_LEVEL);
   const provider = getPaymentProvider();
+  if (!provider) return { outcome: "rejected" };
   let notification;
   try {
     notification = provider.verifyNotification(rawBody, headers);
@@ -112,7 +114,8 @@ export async function deliverPaymentNotification(
   return { outcome: result.outcome };
 }
 
-async function sendConfirmation(db: TenantDb, order: OrderView) {
+/** Sends an order's confirmation email (paid online, or placed for cash on delivery). */
+export async function sendConfirmation(db: TenantDb, order: OrderView) {
   const env = getEnv();
   globals.__orderEmail ??= createEmailProvider(env, createLogger("web", env.LOG_LEVEL));
   const store = await storeLinks(db);

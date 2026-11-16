@@ -224,6 +224,15 @@ Until a real provider is chosen (open decision Q4), `PAYMENT_PROVIDER=mock` show
 ### D70. Guest orders belong to no account; a private link opens them (2026-11-16)
 An order placed while signed in belongs to that customer and appears in their account. A guest's order belongs to no account, even if the email matches one, so nobody can put an order into someone else's account by typing their address. A guest opens their order with the key in its link (shown after paying and in the confirmation email). The key is derived from the order ID with a server secret (`ENCRYPTION_KEY`), so the email sent later can carry it again; only its hash is stored, and changing the secret makes old links stop working. The order page asks browsers not to pass its address on to other sites.
 
+### D71. The store is in Lebanon: no Stripe; a local card gateway later (2026-11-17)
+The owner is based in Lebanon. Stripe does not list Lebanon as a supported country, PayPal is reported unavailable to Lebanese merchants, and Tap Payments' own help centre says it is not accepting new merchants from Lebanon. The card gateway will be a Lebanese provider such as areeba (or NetCommerce), added behind the existing `PaymentProvider` interface once the owner has a merchant account and test credentials (approval reportedly takes 3 to 6 weeks). No integration code is written for a provider until its documentation and test access exist. This replaces the earlier assumption of Stripe in open decision Q4.
+
+### D72. Cash on delivery is a payment method of the order (2026-11-17)
+Cash on delivery is the main way Lebanese shoppers pay online orders, so it is always offered and chosen by default at checkout. An order records its `payment_method` (online or cash_on_delivery), fixed once placed. A cash order starts as `confirmed` (new status) with its stock held (30 days at most); a phone number is required for the courier. Marking it sent commits the stock (it leaves the shelf). Staff then record "cash received" (a payment row from `cash_on_delivery`, one per order, and the paid time set) or "delivery refused" (the order is cancelled and the items go back on the shelf as "return" movements, once). Allowed status steps gain confirmed to fulfilled or cancelled, and fulfilled to cancelled; the service allows the latter only for a cash order with no money recorded. A database check keeps online orders out of `confirmed` and cash orders out of waiting-for-payment and paid. The order confirmation email is sent when a cash order is placed and tells the shopper how much to pay the courier.
+
+### D73. Online payments can be switched off (2026-11-17)
+`PAYMENT_PROVIDER=none` offers cash on delivery only and needs no payment secrets, so the live store can open before a card gateway exists (the mock provider remains refused in production). The checkout then shows no card option, and the mock webhook refuses every notification.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
@@ -233,7 +242,7 @@ Until answered, the assumption shown is used and kept configurable. Items marked
 | Q1 | Which country or countries does the store operate in? | Unspecified; tax and policies configurable | Tax setup, giveaway legality, 3.4 |
 | Q2 | Currency? | USD | |
 | Q3 | Languages? | English, with multi-language and right-to-left support built in | |
-| Q4 | Payment provider? | Mock, then Stripe test mode | **3.4** |
+| Q4 | Card payment provider? | A Lebanese gateway (areeba or NetCommerce); Stripe and Tap are not available (D71). Cash on delivery is built. | **3.4**, waits on the merchant account |
 | Q5 | Countries served? | Same as operating country | Shipping zones |
 | Q6 | Shipping method? | Flat rate by zone, manual tracking numbers | 3.5 |
 | Q7 | Inventory owned, wholesale or dropshipped? | Owned, one location | 3.2 design detail |

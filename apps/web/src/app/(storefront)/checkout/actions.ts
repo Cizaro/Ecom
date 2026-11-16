@@ -14,7 +14,12 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { tooManyCartChanges } from "@/server/cart";
 import { cartOwner, getCurrentCustomer, safeReturnPath } from "@/server/customer";
-import { deliverPaymentNotification, getMockProvider, getPaymentProvider } from "@/server/payments";
+import {
+  deliverPaymentNotification,
+  getMockProvider,
+  getPaymentProvider,
+  sendConfirmation,
+} from "@/server/payments";
 import { storefrontDb } from "@/server/storefront";
 import type { AccountFormState } from "../account/actions";
 
@@ -52,7 +57,10 @@ export async function placeOrderAction(
 ): Promise<AccountFormState> {
   const { store, db } = await storefrontDb();
   const values = Object.fromEntries(
-    [...ADDRESS_FIELDS, "email", "saveAddress"].map((name) => [name, text(formData, name)]),
+    [...ADDRESS_FIELDS, "email", "saveAddress", "paymentMethod"].map((name) => [
+      name,
+      text(formData, name),
+    ]),
   );
   if (await tooManyCartChanges(store.tenantId)) {
     return { error: "Too many attempts in a short time. Please wait a minute.", values };
@@ -69,8 +77,14 @@ export async function placeOrderAction(
     country: text(formData, "country"),
   };
   const expected = Number(text(formData, "expectedTotal"));
+  const provider = getPaymentProvider();
+  const paymentMethod =
+    text(formData, "paymentMethod") === "online" ? "online" : "cash_on_delivery";
+  if (paymentMethod === "online" && !provider) {
+    return { error: "Paying online is not available. Choose cash on delivery.", values };
+  }
 
-  let payUrl: string;
+  let next: string;
   try {
     const placed = await placeOrder(db, {
       owner: await cartOwner(),
@@ -79,6 +93,7 @@ export async function placeOrderAction(
       address,
       expectedTotal: Number.isInteger(expected) ? expected : undefined,
       accessSecret: getEnv().ENCRYPTION_KEY,
+      paymentMethod,
     });
     if (customer && formData.get("saveAddress") === "on") {
       // Saving is a convenience: a full address book does not stop the order.
@@ -86,17 +101,22 @@ export async function placeOrderAction(
         if (!(error instanceof CustomerError)) throw error;
       });
     }
-    ({ payUrl } = await startPayment(
-      db,
-      getPaymentProvider(),
-      placed.orderId,
-      returnPathFor(placed.orderId, customer ? null : placed.accessKey),
-    ));
+    const returnPath = returnPathFor(placed.orderId, customer ? null : placed.accessKey);
+    if (placed.order) {
+      // Cash on delivery: nothing to pay now. Confirm by email and show the order.
+      await sendConfirmation(db, placed.order).catch(() => {
+        // Logged by the email provider; the order stands either way.
+      });
+      next = returnPath;
+    } else {
+      ({ payUrl: next } = await startPayment(db, provider!, placed.orderId, returnPath));
+    }
   } catch (error) {
     if (error instanceof OrderError) return { error: error.message, values };
     throw error;
   }
-  redirect(payUrl);
+  revalidatePath("/", "layout");
+  redirect(next);
 }
 
 /** Pays again for an order that is still waiting (after a decline, or a closed page). */
@@ -115,9 +135,11 @@ export async function retryPaymentAction(
       customerId: customer?.id ?? null,
       accessKey,
     });
+    const provider = getPaymentProvider();
+    if (!provider) return { error: "Paying online is not available." };
     ({ payUrl } = await startPayment(
       db,
-      getPaymentProvider(),
+      provider,
       order.id,
       returnPathFor(order.id, order.customerId ? null : accessKey),
     ));

@@ -896,3 +896,46 @@ export async function commitReservations(
 export async function releaseExpiredReservations(db: TenantDb, now = new Date()): Promise<number> {
   return db.run((tx) => settleReservationsIn(tx, db.tenantId, { expiredBefore: now }, "release"));
 }
+
+/**
+ * Puts back on the shelf what was sold for this reference: a parcel that came
+ * back (for example, refused at the door). Each item returns to the location
+ * it was taken from, recorded as a "return" movement. Acts once per hold.
+ */
+export async function returnCommittedIn(
+  tx: AppTransaction,
+  tenantId: string,
+  referenceType: string,
+  referenceId: string,
+  actorUserId: string | null,
+): Promise<number> {
+  const sold = await tx.stockReservation.findMany({
+    where: { referenceType, referenceId, status: "committed" },
+    select: { id: true, variantId: true, locationId: true, quantity: true },
+  });
+  let returned = 0;
+  for (const reservation of sold) {
+    // Marked "released" so the same items can never be returned twice.
+    const claimed = await tx.stockReservation.updateMany({
+      where: { id: reservation.id, status: "committed" },
+      data: { status: "released" },
+    });
+    if (claimed.count !== 1) continue;
+    const level = await lockLevel(tx, tenantId, reservation.variantId, reservation.locationId);
+    await applyChanges(
+      tx,
+      tenantId,
+      { ...level, variantId: reservation.variantId, locationId: reservation.locationId },
+      [{ bucket: "on_hand", delta: reservation.quantity }],
+      {
+        reason: "return",
+        referenceType: "reservation",
+        referenceId: reservation.id,
+        actorUserId,
+        note: "Parcel came back",
+      },
+    );
+    returned += reservation.quantity;
+  }
+  return returned;
+}

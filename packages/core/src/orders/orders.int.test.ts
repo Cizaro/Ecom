@@ -21,6 +21,8 @@ import {
   orderAccessKey,
   OrderError,
   placeOrder,
+  recordCashCollected,
+  recordDeliveryRefused,
   startPayment,
   type OrderErrorCode,
 } from "./orders";
@@ -595,5 +597,134 @@ describe("the order link key", () => {
         accessKey: orderAccessKey("z".repeat(40), placed.orderId),
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("cash on delivery", () => {
+  async function placeCod(
+    db: TenantDb,
+    token: string,
+    phone: string | undefined = "+961 3 123 456",
+  ) {
+    return placeOrder(db, {
+      owner: { token },
+      customer: null,
+      email: "cod@example.test",
+      address: { ...address, country: "LB", city: "Beirut", phone },
+      paymentMethod: "cash_on_delivery",
+      accessSecret: SECRET,
+    });
+  }
+
+  it("is confirmed at once, holds stock, and needs a phone number for the courier", async () => {
+    const item = await variant(tenantA, 2000, 3);
+    await expectOrderError(placeCod(shopA, await guestCart(shopA, item.id), ""), "invalid");
+    const placed = await placeCod(shopA, await guestCart(shopA, item.id, 2));
+    expect(placed.paymentMethod).toBe("cash_on_delivery");
+    expect(placed.order).toMatchObject({
+      status: "confirmed",
+      paymentMethod: "cash_on_delivery",
+      totalAmount: 4000,
+    });
+    expect((await getAvailability(shopA, [item.id])).get(item.id)!.available).toBe(1);
+    // No payment to wait for, and the 30-minute sweep leaves it alone.
+    await expectOrderError(startPayment(shopA, provider, placed.orderId, "/x"), "not_payable");
+    await expireUnpaidOrders(shopA, new Date(Date.now() + 60 * 60_000));
+    const order = await getOrderForShopper(shopA, placed.orderId, { accessKey: placed.accessKey });
+    expect(order.status).toBe("confirmed");
+    expect(order.payments).toEqual([]);
+  });
+
+  it("leaves the shelf when sent, and is paid when the cash is recorded", async () => {
+    const owner = await staff(tenantA, "store_owner");
+    const item = await variant(tenantA, 1500, 4);
+    const placed = await placeCod(shopA, await guestCart(shopA, item.id, 2));
+    await expectOrderError(
+      recordCashCollected(owner.db, owner.context, placed.orderId),
+      "not_allowed",
+    );
+    await fulfilOrder(owner.db, owner.context, placed.orderId, "Courier Ali");
+    let level = await admin.inventoryLevel.findFirstOrThrow({ where: { variantId: item.id } });
+    expect(level).toMatchObject({ onHand: 2, reserved: 0 });
+
+    await recordCashCollected(owner.db, owner.context, placed.orderId);
+    await expectOrderError(
+      recordCashCollected(owner.db, owner.context, placed.orderId),
+      "not_allowed",
+    );
+    await expectOrderError(
+      recordDeliveryRefused(owner.db, owner.context, placed.orderId),
+      "not_allowed",
+    );
+    const order = await getOrderForStaff(owner.db, owner.context, placed.orderId);
+    expect(order.status).toBe("fulfilled");
+    expect(order.paidAt).toBeInstanceOf(Date);
+    expect(order.payments).toEqual([
+      expect.objectContaining({ status: "succeeded", amount: 3000, methodBrand: "Cash" }),
+    ]);
+    expect(order.events.map((event) => event.type)).toEqual([
+      "placed",
+      "fulfilled",
+      "cash_collected",
+    ]);
+    level = await admin.inventoryLevel.findFirstOrThrow({ where: { variantId: item.id } });
+    expect(level.onHand).toBe(2);
+  });
+
+  it("puts the items back when the parcel is refused, once", async () => {
+    const owner = await staff(tenantA, "store_owner");
+    const item = await variant(tenantA, 1000, 3);
+    const placed = await placeCod(shopA, await guestCart(shopA, item.id, 3));
+    await fulfilOrder(owner.db, owner.context, placed.orderId);
+    expect((await getAvailability(shopA, [item.id])).get(item.id)!.available).toBe(0);
+    await recordDeliveryRefused(owner.db, owner.context, placed.orderId, "Not answering");
+    await expectOrderError(
+      recordDeliveryRefused(owner.db, owner.context, placed.orderId),
+      "not_allowed",
+    );
+    expect((await getAvailability(shopA, [item.id])).get(item.id)!.available).toBe(3);
+    const order = await getOrderForStaff(owner.db, owner.context, placed.orderId);
+    expect(order.status).toBe("cancelled");
+    const movements = await admin.stockMovement.findMany({
+      where: { variantId: item.id },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(movements.map((m) => m.reason)).toEqual(["reservation", "sale", "sale", "return"]);
+  });
+
+  it("can be cancelled before sending, returning the held stock", async () => {
+    const owner = await staff(tenantA, "store_owner");
+    const item = await variant(tenantA, 1000, 2);
+    const placed = await placeCod(shopA, await guestCart(shopA, item.id, 2));
+    await cancelUnpaidOrder(owner.db, owner.context, placed.orderId);
+    expect((await getAvailability(shopA, [item.id])).get(item.id)!.available).toBe(2);
+  });
+
+  it("is kept apart from online orders by the rules", async () => {
+    const owner = await staff(tenantA, "store_owner");
+    const item = await variant(tenantA, 1000);
+    const online = await placeAndStart(shopA, await guestCart(shopA, item.id));
+    await notify(shopA, online.providerPaymentId, "succeed", 1000);
+    await fulfilOrder(owner.db, owner.context, online.orderId);
+    // Cash actions do not apply to an order paid online.
+    await expectOrderError(
+      recordCashCollected(owner.db, owner.context, online.orderId),
+      "not_allowed",
+    );
+    await expectOrderError(
+      recordDeliveryRefused(owner.db, owner.context, online.orderId),
+      "not_allowed",
+    );
+    // The database refuses to switch an order's payment method, or give an online order the cash status.
+    await expect(
+      admin.order.update({
+        where: { id: online.orderId },
+        data: { paymentMethod: "cash_on_delivery" },
+      }),
+    ).rejects.toThrow();
+    const cod = await placeCod(shopA, await guestCart(shopA, item.id));
+    await expect(
+      admin.order.update({ where: { id: cod.orderId }, data: { status: "paid" } }),
+    ).rejects.toThrow();
   });
 });

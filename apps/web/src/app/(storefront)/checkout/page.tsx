@@ -1,3 +1,4 @@
+import { getEnv } from "@ecom/config";
 import { formatMoney, getCart, listAddresses, PAY_WITHIN_MINUTES } from "@ecom/core";
 import { Alert, buttonClasses, Card } from "@ecom/ui";
 import type { Metadata } from "next";
@@ -26,6 +27,8 @@ export default async function CheckoutPage() {
   const blocked = cart.lines.some((line) => !line.available || line.onlyLeft !== null);
   const saved = customer ? await listAddresses(db, customer.id) : [];
   const defaultAddress = saved.find((address) => address.isDefaultShipping);
+  // Cash on delivery is always offered; paying online only when a provider is set up.
+  const online = getEnv().PAYMENT_PROVIDER === "none" ? null : getEnv().PAYMENT_PROVIDER;
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,11 +51,7 @@ export default async function CheckoutPage() {
         </Alert>
       ) : (
         <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
-          <AccountForm
-            action={placeOrderAction}
-            submitLabel="Continue to payment"
-            testId="checkout-form"
-          >
+          <AccountForm action={placeOrderAction} submitLabel="Place order" testId="checkout-form">
             <input type="hidden" name="expectedTotal" value={cart.subtotalAmount} />
             <Card title="Contact">
               {customer ? (
@@ -89,9 +88,45 @@ export default async function CheckoutPage() {
                 <AccountCheckbox label="Save this address to my account" name="saveAddress" />
               ) : null}
             </Card>
-            <p className="text-sm text-ink-muted">
-              Your items are held for {PAY_WITHIN_MINUTES} minutes while you pay.
-            </p>
+            <Card title="Payment">
+              <fieldset className="flex flex-col gap-3" data-testid="payment-methods">
+                <legend className="sr-only">How will you pay?</legend>
+                <label className="flex items-start gap-3 rounded-control border border-line p-3">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cash_on_delivery"
+                    defaultChecked
+                    className="mt-1 size-5 accent-brand"
+                  />
+                  <span>
+                    <span className="font-medium">Cash on delivery</span>
+                    <span className="block text-sm text-ink-muted">
+                      Pay the courier in cash when your order arrives. Add a phone number above so
+                      the courier can reach you.
+                    </span>
+                  </span>
+                </label>
+                {online ? (
+                  <label className="flex items-start gap-3 rounded-control border border-line p-3">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="online"
+                      className="mt-1 size-5 accent-brand"
+                    />
+                    <span>
+                      <span className="font-medium">
+                        Pay online by card{online === "mock" ? " (test mode, no money moves)" : ""}
+                      </span>
+                      <span className="block text-sm text-ink-muted">
+                        Your items are held for {PAY_WITHIN_MINUTES} minutes while you pay.
+                      </span>
+                    </span>
+                  </label>
+                ) : null}
+              </fieldset>
+            </Card>
           </AccountForm>
 
           <section

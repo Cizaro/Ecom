@@ -5,7 +5,12 @@ import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
 import { orNotFound } from "@/server/catalog-forms";
 import { ActionForm, DangerForm, TextField } from "../../../_components/form";
-import { cancelOrderAction, fulfilOrderAction } from "../actions";
+import {
+  cancelOrderAction,
+  cashCollectedAction,
+  deliveryRefusedAction,
+  fulfilOrderAction,
+} from "../actions";
 import { ORDER_LABEL, ORDER_TONE } from "../_components/order-status";
 
 export const metadata: Metadata = { title: "Order" };
@@ -17,6 +22,8 @@ const EVENT_LABEL: Record<string, string> = {
   payment_mismatch: "Payment notification did not match",
   paid_after_cancellation: "Paid after cancellation: refund needed",
   fulfilled: "Marked as sent",
+  cash_collected: "Cash collected",
+  delivery_refused: "Delivery refused, items back in stock",
   cancelled: "Cancelled",
 };
 const ACTOR_LABEL: Record<string, string> = {
@@ -35,6 +42,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const money = (amount: number) => formatMoney(amount, order.currency);
   const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
   const needsRefund = order.events.some((event) => event.type === "paid_after_cancellation");
+  const cod = order.paymentMethod === "cash_on_delivery";
+  const cashTaken = order.payments.some((payment) => payment.status === "succeeded");
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,7 +68,11 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <span data-testid="admin-order-status">
           <Badge tone={ORDER_TONE[order.status]}>{ORDER_LABEL[order.status]}</Badge>
         </span>
-        {canManage && order.status === "paid" ? (
+        <p className="text-sm text-ink-muted" data-testid="admin-payment-method">
+          {cod ? "Cash on delivery" : "Paid online"}
+          {cod && cashTaken ? ": cash collected" : ""}
+        </p>
+        {canManage && (order.status === "paid" || order.status === "confirmed") ? (
           <ActionForm action={fulfilOrderAction} submitLabel="Mark as sent" testId="fulfil-form">
             <input type="hidden" name="id" value={order.id} />
             <TextField
@@ -70,7 +83,24 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             />
           </ActionForm>
         ) : null}
-        {canManage && order.status === "pending_payment" ? (
+        {canManage && cod && order.status === "fulfilled" && !cashTaken ? (
+          <div className="flex flex-col gap-4">
+            <ActionForm action={cashCollectedAction} submitLabel="Cash received" testId="cash-form">
+              <input type="hidden" name="id" value={order.id} />
+              <p className="text-sm text-ink-muted">
+                When the courier has collected {money(order.totalAmount)}.
+              </p>
+            </ActionForm>
+            <DangerForm
+              action={deliveryRefusedAction}
+              submitLabel="Delivery refused"
+              confirmMessage={`Record that order #${order.number} came back unpaid? It is cancelled and its items go back into stock.`}
+            >
+              <input type="hidden" name="id" value={order.id} />
+            </DangerForm>
+          </div>
+        ) : null}
+        {canManage && (order.status === "pending_payment" || order.status === "confirmed") ? (
           <DangerForm
             action={cancelOrderAction}
             submitLabel="Cancel order"

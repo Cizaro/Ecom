@@ -53,6 +53,8 @@ erDiagram
 | store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items, customers, customer_sessions, customer_tokens, addresses, inventory_locations, inventory_levels, stock_reservations | Own tenant | Own tenant |
 | stock_movements | Own tenant | Own tenant, insert only (no update or delete) |
 | order_counters, orders, payments | Own tenant | Own tenant, no delete |
+
+**Cash on delivery (2026-11-17):** `orders.payment_method` (online or cash_on_delivery, fixed after placing), order status `confirmed` for accepted cash orders, and a check that online orders never use `confirmed` and cash orders never wait for payment. Cash collected is a `payments` row with provider `cash_on_delivery` (decision D72).
 | order_items, order_events, payment_events | Own tenant | Own tenant, insert only (no update or delete) |
 | user_tenant_memberships | Own tenant, plus the signed-in user's own memberships elsewhere | Own tenant |
 | users | Self and members of the current tenant; never `password_hash` or `is_platform_admin` | Own `name` only |

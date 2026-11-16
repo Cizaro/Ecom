@@ -10,7 +10,12 @@ import {
   type AddressInput,
   type ValidAddress,
 } from "../customers/addresses";
-import { InventoryError, reserveStockIn, settleReservationsIn } from "../inventory/stock";
+import {
+  InventoryError,
+  reserveStockIn,
+  returnCommittedIn,
+  settleReservationsIn,
+} from "../inventory/stock";
 import { formatMoney } from "../catalog/money";
 import type { EmailMessage } from "../notifications/email";
 import type { PaymentNotification, PaymentProvider } from "../payments/provider";
@@ -33,8 +38,17 @@ import type { PaymentNotification, PaymentProvider } from "../payments/provider"
 export const PAY_WITHIN_MINUTES = 30;
 export const ORDER_PAGE_SIZE = 25;
 
+export const PAYMENT_METHODS = ["online", "cash_on_delivery"] as const;
+export type PaymentMethodValue = (typeof PAYMENT_METHODS)[number];
+/**
+ * How long a cash-on-delivery order keeps its stock held before it is sent.
+ * Holds expire after this; staff should send or cancel long before.
+ */
+export const COD_HOLD_DAYS = 30;
+
 export const ORDER_STATUSES = [
   "pending_payment",
+  "confirmed",
   "paid",
   "fulfilled",
   "cancelled",
@@ -81,6 +95,7 @@ export interface OrderView {
   id: string;
   number: number;
   status: OrderStatusValue;
+  paymentMethod: PaymentMethodValue;
   email: string;
   customerId: string | null;
   currency: string;
@@ -132,6 +147,7 @@ const ORDER_SELECT = {
   id: true,
   number: true,
   status: true,
+  paymentMethod: true,
   email: true,
   customerId: true,
   currency: true,
@@ -191,6 +207,8 @@ export interface PlaceOrderInput {
   expectedTotal?: number;
   /** Server secret the order's link key is derived from (see orderAccessKey). */
   accessSecret: string;
+  /** Defaults to online. Cash on delivery needs a phone number for the courier. */
+  paymentMethod?: PaymentMethodValue;
 }
 
 export interface PlacedOrder {
@@ -198,6 +216,9 @@ export interface PlacedOrder {
   number: number;
   /** For the guest's confirmation link. Shown once; only its hash is stored. */
   accessKey: string;
+  paymentMethod: PaymentMethodValue;
+  /** Set for cash on delivery: the order as placed, for its confirmation email. */
+  order?: OrderView;
 }
 
 async function nextOrderNumber(tx: AppTransaction, tenantId: string): Promise<number> {
@@ -225,6 +246,18 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
     throw new OrderError("invalid", problem.message ?? "Check the address.", problem.field);
   }
 
+  const method: PaymentMethodValue = input.paymentMethod ?? "online";
+  if (!PAYMENT_METHODS.includes(method)) {
+    throw new OrderError("invalid", "Choose how you will pay.", "paymentMethod");
+  }
+  if (method === "cash_on_delivery" && !address.phone) {
+    throw new OrderError(
+      "invalid",
+      "Enter a phone number so the courier can reach you for cash on delivery.",
+      "phone",
+    );
+  }
+  const cod = method === "cash_on_delivery";
   if (typeof input.accessSecret !== "string" || input.accessSecret.length < 32) {
     throw new Error("placeOrder: accessSecret must be at least 32 characters");
   }
@@ -264,7 +297,11 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
           subtotalAmount: view.subtotalAmount,
           totalAmount: view.subtotalAmount,
           shippingAddress: { ...address },
-          payBy: new Date(Date.now() + PAY_WITHIN_MINUTES * 60_000),
+          paymentMethod: method,
+          status: cod ? "confirmed" : "pending_payment",
+          payBy: new Date(
+            Date.now() + (cod ? COD_HOLD_DAYS * 24 * 60 : PAY_WITHIN_MINUTES) * 60_000,
+          ),
         },
         select: { id: true },
       });
@@ -287,7 +324,7 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
           tenantId: db.tenantId,
           orderId: order.id,
           type: "placed",
-          toStatus: "pending_payment",
+          toStatus: cod ? "confirmed" : "pending_payment",
           actorType: input.customer ? "customer" : "guest",
         },
       });
@@ -295,9 +332,14 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
         referenceType: "order",
         referenceId: order.id,
         items: view.lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
-        holdMinutes: PAY_WITHIN_MINUTES,
+        holdMinutes: cod ? COD_HOLD_DAYS * 24 * 60 : PAY_WITHIN_MINUTES,
       });
-      return { orderId: order.id, number, accessKey };
+      const placed = cod
+        ? toView(
+            await tx.order.findUniqueOrThrow({ where: { id: order.id }, select: ORDER_SELECT }),
+          )
+        : undefined;
+      return { orderId: order.id, number, accessKey, paymentMethod: method, order: placed };
     });
   } catch (error) {
     // Rolled back: no order, no hold.
@@ -582,8 +624,12 @@ async function cancelIn(
   orderId: string,
   actor: { type: string; userId?: string | null; note?: string | null },
 ) {
+  const before = await tx.order.findUnique({ where: { id: orderId }, select: { status: true } });
+  if (!before || (before.status !== "pending_payment" && before.status !== "confirmed")) {
+    return false;
+  }
   const updated = await tx.order.updateMany({
-    where: { id: orderId, status: "pending_payment" },
+    where: { id: orderId, status: before.status },
     data: { status: "cancelled" },
   });
   if (updated.count === 0) return false;
@@ -602,7 +648,7 @@ async function cancelIn(
       tenantId,
       orderId,
       type: "cancelled",
-      fromStatus: "pending_payment",
+      fromStatus: before.status,
       toStatus: "cancelled",
       actorType: actor.type,
       actorUserId: actor.userId ?? null,
@@ -716,7 +762,10 @@ export async function getOrderForStaff(
   };
 }
 
-/** Marks a paid order as sent. */
+/**
+ * Marks an order as sent: a paid online order, or a confirmed cash-on-delivery
+ * order (its held stock leaves the shelf now).
+ */
 export async function fulfilOrder(
   db: TenantDb,
   context: RequestContext,
@@ -727,21 +776,38 @@ export async function fulfilOrder(
   assertOrderId(orderId);
   const text = typeof note === "string" && note.trim() ? note.trim().slice(0, 500) : null;
   await db.run(async (tx) => {
+    const before = await tx.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+    if (!before) throw new NotFoundError("order");
+    if (before.status !== "paid" && before.status !== "confirmed") {
+      throw new OrderError(
+        "not_allowed",
+        "Only a paid order, or a confirmed cash-on-delivery order, can be marked as sent.",
+      );
+    }
     const updated = await tx.order.updateMany({
-      where: { id: orderId, status: "paid" },
+      where: { id: orderId, status: before.status },
       data: { status: "fulfilled" },
     });
     if (updated.count === 0) {
-      if (!(await tx.order.findUnique({ where: { id: orderId } })))
-        throw new NotFoundError("order");
-      throw new OrderError("not_allowed", "Only a paid order can be marked as sent.");
+      throw new OrderError("not_allowed", "This order changed meanwhile. Reload and try again.");
+    }
+    if (before.status === "confirmed") {
+      await settleReservationsIn(
+        tx,
+        db.tenantId,
+        { referenceType: "order", referenceId: orderId },
+        "commit",
+      );
     }
     await tx.orderEvent.create({
       data: {
         tenantId: db.tenantId,
         orderId,
         type: "fulfilled",
-        fromStatus: "paid",
+        fromStatus: before.status,
         toStatus: "fulfilled",
         actorType: "staff",
         actorUserId: context.userId,
@@ -753,8 +819,8 @@ export async function fulfilOrder(
 }
 
 /**
- * Cancels an order that has not been paid, giving its stock back. A paid
- * order needs a refund first (Milestone 3.4).
+ * Cancels an order that has not been paid (or a cash-on-delivery order not
+ * yet sent), giving its stock back. A paid order needs a refund first.
  */
 export async function cancelUnpaidOrder(
   db: TenantDb,
@@ -773,7 +839,7 @@ export async function cancelUnpaidOrder(
         throw new NotFoundError("order");
       throw new OrderError(
         "not_allowed",
-        "Only an order that has not been paid can be cancelled here. A paid order needs a refund.",
+        "Only an order that has not been paid or sent can be cancelled here. A paid order needs a refund.",
       );
     }
     await audit(tx, context, "orders.cancelled", { type: "order", id: orderId });
@@ -797,12 +863,16 @@ export function orderConfirmationEmail(
     to: order.email,
     subject: `Order #${order.number} confirmed: ${store.name}`,
     text: [
-      `Thank you for your order. We have received your payment.`,
+      order.paymentMethod === "cash_on_delivery"
+        ? `Thank you for your order. You pay in cash when it arrives.`
+        : `Thank you for your order. We have received your payment.`,
       "",
       `Order #${order.number}`,
       ...lines,
       "",
-      `Total paid: ${money(order.totalAmount)}`,
+      order.paymentMethod === "cash_on_delivery"
+        ? `To pay the courier in cash: ${money(order.totalAmount)}`
+        : `Total paid: ${money(order.totalAmount)}`,
       "",
       "Delivering to:",
       ...formatAddress(order.shippingAddress),
@@ -840,4 +910,106 @@ export async function getPaymentForPayPage(
         orderNumber: payment.order.number,
       }
     : null;
+}
+
+// --- Cash on delivery: after sending ------------------------------------------------
+
+async function sentCashOrder(tx: AppTransaction, orderId: string) {
+  const order = await tx.order.findUnique({
+    where: { id: orderId },
+    select: {
+      status: true,
+      paymentMethod: true,
+      totalAmount: true,
+      currency: true,
+      payments: { where: { status: "succeeded" }, select: { id: true } },
+    },
+  });
+  if (!order) throw new NotFoundError("order");
+  if (order.paymentMethod !== "cash_on_delivery" || order.status !== "fulfilled") {
+    throw new OrderError(
+      "not_allowed",
+      "This applies only to a cash-on-delivery order that has been sent.",
+    );
+  }
+  if (order.payments.length > 0) {
+    throw new OrderError("not_allowed", "The cash for this order has already been recorded.");
+  }
+  return order;
+}
+
+/** Records that the courier collected the cash. The order then counts as paid. */
+export async function recordCashCollected(
+  db: TenantDb,
+  context: RequestContext,
+  orderId: string,
+): Promise<void> {
+  assertPermission(context, "orders.manage");
+  assertOrderId(orderId);
+  await db.run(async (tx) => {
+    const order = await sentCashOrder(tx, orderId);
+    await tx.payment.create({
+      data: {
+        tenantId: db.tenantId,
+        orderId,
+        provider: "cash_on_delivery",
+        // One cash payment per order; the unique column makes a second impossible.
+        providerPaymentId: `cod_${orderId}`,
+        status: "succeeded",
+        amount: order.totalAmount,
+        currency: order.currency,
+        methodBrand: "Cash",
+      },
+    });
+    await tx.order.update({ where: { id: orderId }, data: { paidAt: new Date() } });
+    await tx.orderEvent.create({
+      data: {
+        tenantId: db.tenantId,
+        orderId,
+        type: "cash_collected",
+        actorType: "staff",
+        actorUserId: context.userId,
+      },
+    });
+    await audit(tx, context, "orders.cash_collected", { type: "order", id: orderId });
+  });
+}
+
+/**
+ * The parcel came back unpaid (refused, or nobody there): the order is
+ * cancelled and its items go back on the shelf.
+ */
+export async function recordDeliveryRefused(
+  db: TenantDb,
+  context: RequestContext,
+  orderId: string,
+  note?: unknown,
+): Promise<void> {
+  assertPermission(context, "orders.manage");
+  assertOrderId(orderId);
+  const text = typeof note === "string" && note.trim() ? note.trim().slice(0, 500) : null;
+  await db.run(async (tx) => {
+    await sentCashOrder(tx, orderId);
+    const updated = await tx.order.updateMany({
+      where: { id: orderId, status: "fulfilled" },
+      data: { status: "cancelled" },
+    });
+    if (updated.count === 0) {
+      throw new OrderError("not_allowed", "This order changed meanwhile. Reload and try again.");
+    }
+    await returnCommittedIn(tx, db.tenantId, "order", orderId, context.userId);
+    await tx.orderEvent.create({
+      data: {
+        tenantId: db.tenantId,
+        orderId,
+        type: "delivery_refused",
+        fromStatus: "fulfilled",
+        toStatus: "cancelled",
+        actorType: "staff",
+        actorUserId: context.userId,
+        note: text,
+      },
+    });
+    await audit(tx, context, "orders.delivery_refused", { type: "order", id: orderId });
+  });
 }

@@ -67,13 +67,15 @@ test("a guest pays after a decline; a customer's order lands in their account", 
   // A refused address keeps what was typed.
   await guest.getByTestId("checkout-form").getByLabel("Email", exact).fill(guestEmail);
   await guest.getByTestId("checkout-form").getByLabel("Full name").fill("Sam Shopper");
-  await guest.getByRole("button", { name: "Continue to payment" }).click();
+  await guest.getByLabel(/Pay online by card/).check();
+  await guest.getByRole("button", { name: "Place order" }).click();
   await expect(guest.getByTestId("account-error")).toContainText("country");
   await expect(guest.getByTestId("checkout-form").getByLabel("Email", exact)).toHaveValue(
     guestEmail,
   );
   await fillAddress(guest);
-  await guest.getByRole("button", { name: "Continue to payment" }).click();
+  await guest.getByLabel(/Pay online by card/).check();
+  await guest.getByRole("button", { name: "Place order" }).click();
 
   // The mock provider's page: test mode, the right amount, no card fields.
   await expect(guest).toHaveURL(/\/checkout\/pay\?payment=mock_/);
@@ -191,7 +193,8 @@ test("a guest pays after a decline; a customer's order lands in their account", 
   await expect(member.getByTestId("checkout-email")).toContainText(customerEmail);
   await fillAddress(member);
   await member.getByTestId("checkout-form").getByLabel("Save this address to my account").check();
-  await member.getByRole("button", { name: "Continue to payment" }).click();
+  await member.getByLabel(/Pay online by card/).check();
+  await member.getByRole("button", { name: "Place order" }).click();
   await member.getByRole("button", { name: "Pay (test: succeeds)" }).click();
   await expect(member).toHaveURL(/\/account\/orders\/[0-9a-f-]{36}$/);
   await expect(member.getByTestId("order-status")).toHaveText("Paid");

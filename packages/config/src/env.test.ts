@@ -100,4 +100,14 @@ describe("parseEnv", () => {
       EnvValidationError,
     );
   });
+
+  it("runs without online payments (cash on delivery only), in production too", () => {
+    const env = parseEnv({
+      ...valid,
+      NODE_ENV: "production",
+      PAYMENT_PROVIDER: "none",
+      MOCK_PAYMENT_WEBHOOK_SECRET: undefined,
+    });
+    expect(env.PAYMENT_PROVIDER).toBe("none");
+  });
 });

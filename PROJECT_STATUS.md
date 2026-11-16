@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 complete.** Phases 1 and 2 are complete. Next: Milestone 3.4 (a real payment provider), which needs the owner's choice of provider.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.5 (shipping and tax). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -128,6 +128,13 @@ Last updated: 2026-11-12
   - Admin: Orders list (search by number or email, filter by status) and order page with items, address, payments, history, "Mark as sent" and "Cancel order" for unpaid ones. View with `orders.read`, change with `orders.manage`.
   - The mock provider refuses to run in production unless explicitly allowed (only the tests do).
 
+- **Cash on delivery (part of 3.4):**
+  - Checkout asks "How will you pay?": cash on delivery (default, needs a phone number) or, when a provider is set up, online by card.
+  - A cash order is confirmed at once, its stock held, and the confirmation email says how much to pay the courier.
+  - Staff mark it sent (stock leaves the shelf), then "Cash received" (the order counts as paid) or "Delivery refused" (cancelled, items back in stock).
+  - `PAYMENT_PROVIDER=none` runs the store with cash on delivery only, in production too.
+  - Database rules keep online and cash orders on their own status paths; the payment method cannot change after placing.
+
 ## In progress
 
 Nothing.
@@ -139,7 +146,7 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 ## Known limitations of what is built
 
 - **Products have no stock levels** (Milestone 3.2), so the storefront says nothing about availability yet.
-- **Payments are test-only.** The mock provider takes no money; a real provider (Milestone 3.4) needs your choice and test keys. No refunds yet.
+- **No card payments yet.** Cash on delivery works; the online option is the test-only mock. A Lebanese card gateway (areeba or NetCommerce) needs your merchant account (Stripe and Tap do not accept Lebanese merchants). No refunds yet (with the card gateway).
 - **Shipping and tax are not charged** (Milestone 3.5); checkout says "Not charged yet". There is no billing address and no discount codes yet.
 - **Confirmation email links use `APP_URL`'s scheme and port** with the store's domain; check them on the deployed site.
 - **Staff names are not shown in an order's history yet** (only "Staff").
@@ -217,7 +224,7 @@ Read by code today (validated in `packages/config/src/env.ts`):
 | `ENCRYPTION_KEY` | Derives the keys in guests' private order links (changing it makes old links stop working); later also encrypts stored OAuth tokens (Phase 6) |
 | `ALLOW_SEARCH_INDEXING` | "true" lets search engines index the storefront. Default "false". Set "true" on the live site only. |
 | `S3_*` | Object storage |
-| `PAYMENT_PROVIDER`, `MOCK_PAYMENT_WEBHOOK_SECRET` | Payments. Only `mock` exists; it needs the signing secret (a local-only value is in .env.example). **If you have an older `.env`, add the `MOCK_PAYMENT_WEBHOOK_SECRET` line from .env.example**, or the app will not start. |
+| `PAYMENT_PROVIDER`, `MOCK_PAYMENT_WEBHOOK_SECRET` | Online payments: `mock` (test page, needs the signing secret; a local-only value is in .env.example) or `none` (cash on delivery only; use this on the live site until a card gateway exists). **If you have an older `.env`, add the `MOCK_PAYMENT_WEBHOOK_SECRET` line from .env.example**, or the app will not start. |
 | `ALLOW_MOCK_PAYMENTS_IN_PRODUCTION` | Only for the automated tests. Never set it on a real site. |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Email. `smtp` needs host and port. |
 
@@ -314,24 +321,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 3.3, on the first computer)
+## Checks run this session (cash on delivery, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 195 tests (payment provider signature checks, payment settings) |
-| `pnpm test:int` | Pass, 216 tests, on the separate test database (14 for orders: repeated and mismatched notifications, five shoppers racing for the last item, who can see an order, expiry, the database rules) |
+| `pnpm test` | Pass, 198 tests |
+| `pnpm test:int` | Pass, 221 tests, on the separate test database (5 new for cash on delivery: phone required, stock held then sold, cash recorded once, refused parcel restocked once, kept apart from online orders) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 83 tests (27 skipped by design), including the full checkout journey and a forged webhook |
+| `pnpm test:e2e` | Pass, 85 tests (27 skipped by design), including the cash-on-delivery journey |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Covered by the browser tests on desktop and phone (full checkout journey) |
-| CI on GitHub | Milestone 3.2 commit passed; see the Actions tab for the Milestone 3.3 commit |
+| Looked at in a browser | Covered by the browser tests on desktop and phone |
+| CI on GitHub | Milestone 3.3 commit passed; see the Actions tab for this commit |
 
 ## Recommended next task
 
-Milestone 3.4: a real payment provider, once you have chosen one and have test keys. Details in NEXT_STEPS.md.
+Milestone 3.5: shipping and tax (delivery zones and fees for Lebanon). Details and owner questions in NEXT_STEPS.md.
 
 ## Session log
 
@@ -356,5 +363,6 @@ Milestone 3.4: a real payment provider, once you have chosen one and have test k
 | 2026-11-16 | Milestone 3.1: customer accounts with email confirmation, password reset, profile and consent; saved addresses with country rules; cart follows the account; admin customer list |
 | 2026-11-16 | Milestone 3.2: stock locations, levels, recorded movements, race-safe checkout holds, admin stock screens, storefront and cart stock checks |
 | 2026-11-16 | Milestone 3.3: orders and payments tables with status and amount rules, checkout, mock payment provider with signed once-only webhooks, unpaid-order expiry, order pages, account orders, admin orders |
+| 2026-11-17 | Stripe dropped (not available in Lebanon). Cash on delivery: payment method on orders, confirmed status, sent / cash received / delivery refused, cash-only mode |
 
 Commit hashes: `git log --oneline`.

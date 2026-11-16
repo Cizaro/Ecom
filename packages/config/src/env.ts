@@ -40,8 +40,12 @@ const envSchema = z.object({
     .default("false")
     .transform((value) => value === "true"),
 
-  /** Who takes payments. Only the mock exists so far (Milestone 3.4 adds a real one). */
-  PAYMENT_PROVIDER: z.enum(["mock"]).default("mock"),
+  /**
+   * Who takes online payments: "mock" (test page, no money) or "none" (no
+   * online payment; cash on delivery only). A real card gateway is added
+   * when the store has a merchant account.
+   */
+  PAYMENT_PROVIDER: z.enum(["mock", "none"]).default("mock"),
   /** Signs the mock provider's notifications to the webhook. */
   MOCK_PAYMENT_WEBHOOK_SECRET: z.preprocess(
     (value) => (value === "" ? undefined : value),

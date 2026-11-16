@@ -111,12 +111,15 @@ const INVENTORY_ACTION_ENTRIES: readonly ActionEntry[] = [
 
 const ORDER_ACTIONS = "(admin)/admin/(protected)/orders/actions.ts";
 
-const ORDER_ACTION_ENTRIES: readonly ActionEntry[] = ["fulfilOrderAction", "cancelOrderAction"].map(
-  (name) => ({
-    id: `${ORDER_ACTIONS}#${name}`,
-    access: { level: "permission", permission: "orders.manage" } as const,
-  }),
-);
+const ORDER_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "fulfilOrderAction",
+  "cancelOrderAction",
+  "cashCollectedAction",
+  "deliveryRefusedAction",
+].map((name) => ({
+  id: `${ORDER_ACTIONS}#${name}`,
+  access: { level: "permission", permission: "orders.manage" } as const,
+}));
 
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 

@@ -9,27 +9,37 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 3.4, a real payment provider (needs the owner's choice)
+## Next development task: Milestone 3.5, shipping and tax
 
-**Blocked on the owner:** choose the payment provider (open decision Q4 in DECISIONS.md; the suggestion is Stripe) and create a test-mode account. Put its test keys in `.env` on your computer only; never send them in chat or commit them.
+Cash on delivery is built (decision D72); the card gateway waits on a merchant account (see below).
 
-1. A provider adapter behind the existing `PaymentProvider` interface (`packages/core/src/payments/provider.ts`): create a payment on the provider's hosted page, verify its webhook signatures, map its events.
-2. Refunds: a `refunds` table, staff refund from the order page (`orders.refund`), the provider's refund call, order status refunded; the "paid after cancellation" case resolved by a refund.
-3. Configuration: `PAYMENT_PROVIDER=stripe` (or the chosen one), its keys and webhook secret validated at start-up; the mock stays for development and tests.
-4. Tests only in the provider's test mode: success, decline, 3-D Secure, webhook retries and replays, refunds. No live money in any automated test.
+1. Delivery zones and rates set by staff (for example Beirut, Mount Lebanon, other governorates), a flat rate or free above an amount, and which countries are delivered to at all.
+2. The delivery fee on the cart and checkout, copied into the order (`shipping_amount`); a cash-on-delivery order's amount to collect includes it.
+3. Tax as a store setting (rate, included in prices or added), shown on the order.
+4. Shipments: courier, tracking reference, sent date; the shopper sees it on their order.
+5. Tests: the fee follows the address; an order's amounts never change after placing; another store's zones are not visible.
 
-If the provider decision will take a while, 3.5 (shipping and tax) or 3.6 (notification emails) can go first.
+**Owner questions for this milestone:** which areas you deliver to, the fee for each, whether delivery is free above some amount, which couriers you use, and whether prices include VAT.
+
+## Card payments (Milestone 3.4), waiting on the owner
+
+Stripe and Tap Payments do not accept Lebanese merchants (decision D71). Apply to **areeba** and/or **NetCommerce** for an online merchant account. When approved, put the test credentials in `.env` on your computer only (never in chat or a commit) and share their integration guide; the gateway is then added behind the existing `PaymentProvider` interface, with refunds.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 3.5 to 3.8 Shipping and tax, notifications, admin order tools (refunds, returns, dashboard), promotions | 3.5 needs the shipping rules (open decisions) |
+| 2 | 3.6 to 3.8 Notifications, admin order tools (returns, dashboard, CSV export), promotions | |
+| 2a | 3.4 Card gateway (areeba or NetCommerce) | When the merchant account exists |
 | 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Cash on delivery: a maximum order amount for cash, and a store setting to switch cash on delivery off.
+- Cash on delivery: a courier view or export of today's parcels with phone numbers and amounts to collect.
+- Cash on delivery: flag customers whose deliveries were refused before (staff decide; no automatic blocking).
 
 - Orders: a billing address separate from delivery; order notes from the shopper; an "order received, waiting for payment" email.
 - Orders: let a guest claim their past orders into an account by confirming the same email address.

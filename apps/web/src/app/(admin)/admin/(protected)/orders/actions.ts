@@ -2,6 +2,8 @@
 
 import {
   cancelUnpaidOrder,
+  recordCashCollected,
+  recordDeliveryRefused,
   ForbiddenError,
   fulfilOrder,
   NotFoundError,
@@ -57,5 +59,33 @@ export async function cancelOrderAction(
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${id}`);
     return { notice: "Cancelled. The items are back in stock." };
+  });
+}
+
+export async function cashCollectedAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("orders.manage");
+  const id = field(formData, "id");
+  return attempt(async () => {
+    await recordCashCollected(tenantDb(context), context, id);
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${id}`);
+    return { notice: "Cash recorded. The order is paid." };
+  });
+}
+
+export async function deliveryRefusedAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("orders.manage");
+  const id = field(formData, "id");
+  return attempt(async () => {
+    await recordDeliveryRefused(tenantDb(context), context, id, field(formData, "note"));
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${id}`);
+    return { notice: "Recorded. The order is cancelled and the items are back in stock." };
   });
 }

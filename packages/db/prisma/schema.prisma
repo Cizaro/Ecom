@@ -1055,12 +1055,23 @@ model StockReservation {
 enum OrderStatus {
   /// Placed; stock is held while the shopper pays.
   pending_payment
+  /// Cash on delivery: accepted and waiting to be sent; payment is collected on delivery.
+  confirmed
   paid
   fulfilled
   cancelled
   refunded
 
   @@map("order_status")
+}
+
+enum PaymentMethod {
+  /// Paid online through the payment provider before the order is sent.
+  online
+  /// Paid in cash to the courier.
+  cash_on_delivery
+
+  @@map("payment_method")
 }
 
 /// Gives each store its own order numbers, starting at 1001.
@@ -1074,31 +1085,32 @@ model OrderCounter {
 }
 
 model Order {
-  id              String      @id @default(uuid(7)) @db.Uuid
-  tenantId        String      @map("tenant_id") @db.Uuid
+  id              String        @id @default(uuid(7)) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
   number          Int
-  status          OrderStatus @default(pending_payment)
+  status          OrderStatus   @default(pending_payment)
+  paymentMethod   PaymentMethod @default(online) @map("payment_method")
   /// Set only when a signed-in customer placed it. Guest orders belong to no account.
-  customerId      String?     @map("customer_id") @db.Uuid
+  customerId      String?       @map("customer_id") @db.Uuid
   /// The cart it came from; emptied when payment succeeds.
-  cartId          String?     @map("cart_id") @db.Uuid
+  cartId          String?       @map("cart_id") @db.Uuid
   email           String
   /// SHA-256 of the key in the confirmation link (the only way a guest can view the order).
-  accessKeyHash   String      @unique @map("access_key_hash")
-  currency        String      @db.Char(3)
-  subtotalAmount  Int         @map("subtotal_amount")
-  shippingAmount  Int         @default(0) @map("shipping_amount")
-  taxAmount       Int         @default(0) @map("tax_amount")
-  discountAmount  Int         @default(0) @map("discount_amount")
-  totalAmount     Int         @map("total_amount")
+  accessKeyHash   String        @unique @map("access_key_hash")
+  currency        String        @db.Char(3)
+  subtotalAmount  Int           @map("subtotal_amount")
+  shippingAmount  Int           @default(0) @map("shipping_amount")
+  taxAmount       Int           @default(0) @map("tax_amount")
+  discountAmount  Int           @default(0) @map("discount_amount")
+  totalAmount     Int           @map("total_amount")
   /// The delivery address as it was when the order was placed.
-  shippingAddress Json        @map("shipping_address")
+  shippingAddress Json          @map("shipping_address")
   /// Stock is held until then; an unpaid order is cancelled after it.
-  payBy           DateTime    @map("pay_by") @db.Timestamptz(3)
-  placedAt        DateTime    @default(now()) @map("placed_at") @db.Timestamptz(3)
-  paidAt          DateTime?   @map("paid_at") @db.Timestamptz(3)
-  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  payBy           DateTime      @map("pay_by") @db.Timestamptz(3)
+  placedAt        DateTime      @default(now()) @map("placed_at") @db.Timestamptz(3)
+  paidAt          DateTime?     @map("paid_at") @db.Timestamptz(3)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)

@@ -266,6 +266,7 @@ export {
   releaseExpiredReservations,
   releaseReservations,
   reserveStockIn,
+  returnCommittedIn,
   settleReservationsIn,
   reserveStock,
   setDefaultLocation,
@@ -303,6 +304,7 @@ export type {
 } from "./payments/provider";
 export {
   cancelUnpaidOrder,
+  COD_HOLD_DAYS,
   expireUnpaidOrders,
   fulfilOrder,
   getOrderForShopper,
@@ -317,7 +319,10 @@ export {
   orderAccessKey,
   OrderError,
   PAY_WITHIN_MINUTES,
+  PAYMENT_METHODS,
   placeOrder,
+  recordCashCollected,
+  recordDeliveryRefused,
   startPayment,
 } from "./orders/orders";
 export type {
@@ -327,6 +332,7 @@ export type {
   OrderStatusValue,
   OrderSummary,
   OrderView,
+  PaymentMethodValue,
   PlacedOrder,
   PlaceOrderInput,
   StaffOrderView,
