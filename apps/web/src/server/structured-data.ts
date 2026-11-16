@@ -20,6 +20,15 @@ export interface ProductData {
   }[];
   /** Digits after the decimal point for the currency (2 for USD, 0 for JPY). */
   currencyExponent: number;
+  /** Approved reviews only. */
+  rating?: { count: number; average: number | null };
+  reviews?: {
+    rating: number;
+    title: string | null;
+    body: string;
+    authorName: string;
+    createdAt: Date;
+  }[];
 }
 
 /** "4990" minor units -> "49.90". Text arithmetic only, so no rounding error. */
@@ -79,6 +88,26 @@ export function productStructuredData(product: ProductData): Record<string, unkn
     ...(product.brandName ? { brand: { "@type": "Brand", name: product.brandName } } : {}),
     ...(product.categoryName ? { category: product.categoryName } : {}),
     ...(product.variants.length > 0 ? { offers } : {}),
+    // Only real, approved reviews; nothing when there are none.
+    ...(product.rating && product.rating.count > 0 && product.rating.average !== null
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: product.rating.average,
+            reviewCount: product.rating.count,
+            bestRating: 5,
+            worstRating: 1,
+          },
+          review: (product.reviews ?? []).map((review) => ({
+            "@type": "Review",
+            reviewRating: { "@type": "Rating", ratingValue: review.rating, bestRating: 5 },
+            author: { "@type": "Person", name: review.authorName },
+            datePublished: review.createdAt.toISOString().slice(0, 10),
+            ...(review.title ? { name: review.title } : {}),
+            reviewBody: review.body,
+          })),
+        }
+      : {}),
   };
 }
 

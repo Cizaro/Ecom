@@ -468,3 +468,27 @@ export {
 export type { SheetRow } from "./catalog/import-file";
 export { fetchImageFromUrl, ImageFetchError, isPublicAddress } from "./media/fetch-image";
 export { listTenantsWithPendingImportImages } from "./platform/import-lookup";
+
+export {
+  authorNameFrom,
+  listProductReviews,
+  listReviewsForModeration,
+  moderateReview,
+  replyToReview,
+  REPORT_REASON_LABEL,
+  REPORT_REASONS,
+  reportReview,
+  REVIEW_STATUSES,
+  ReviewError,
+  reviewEligibility,
+  REVIEWS_PAGE_SIZE,
+  submitReview,
+} from "./reviews/reviews";
+export type {
+  ModerationReview,
+  PublicReview,
+  RatingSummary,
+  ReportReason,
+  ReviewEligibility,
+  ReviewStatus,
+} from "./reviews/reviews";

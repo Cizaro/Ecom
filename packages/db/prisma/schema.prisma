@@ -88,6 +88,8 @@ model Tenant {
   discountRedemptions     DiscountRedemption[]
   productImports          ProductImport[]
   productImportImages     ProductImportImage[]
+  productReviews          ProductReview[]
+  reviewReports           ReviewReport[]
 
   @@map("tenants")
 }
@@ -604,6 +606,8 @@ model Product {
 
   importImages ProductImportImage[]
 
+  reviews ProductReview[]
+
   @@unique([tenantId, slug])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, categoryId])
@@ -858,6 +862,9 @@ model Customer {
   addresses Address[]
   carts     Cart[]
   orders    Order[]
+
+  reviews       ProductReview[]
+  reviewReports ReviewReport[]
 
   @@unique([tenantId, email])
   @@index([tenantId, createdAt])
@@ -1153,6 +1160,8 @@ model Order {
   returns            OrderReturn[]
   discountRedemption DiscountRedemption?
 
+  reviews ProductReview[]
+
   @@unique([tenantId, number])
   @@index([tenantId, placedAt])
   @@index([customerId, placedAt])
@@ -1229,6 +1238,60 @@ model ShippingZone {
   @@unique([tenantId, name])
   @@index([tenantId, position])
   @@map("shipping_zones")
+}
+
+/// A customer's review of a product they bought and received. Shown only once staff approve it.
+model ProductReview {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  customerId  String?   @map("customer_id") @db.Uuid
+  /// The order that shows they bought it (a verified purchase).
+  orderId     String?   @map("order_id") @db.Uuid
+  rating      Int
+  title       String?
+  body        String
+  /// As shown with the review: first name and initial, chosen when written.
+  authorName  String    @map("author_name")
+  /// pending, approved, rejected or hidden.
+  status      String    @default("pending")
+  /// The store's public answer.
+  reply       String?
+  repliedAt   DateTime? @map("replied_at") @db.Timestamptz(3)
+  moderatedAt DateTime? @map("moderated_at") @db.Timestamptz(3)
+  moderatedBy String?   @map("moderated_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product  Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order    Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  reports  ReviewReport[]
+
+  @@unique([productId, customerId])
+  @@index([tenantId, status, createdAt])
+  @@index([productId, status, createdAt])
+  @@map("product_reviews")
+}
+
+/// A shopper telling the store a review breaks the rules. One per shopper per review.
+model ReviewReport {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  reviewId   String   @map("review_id") @db.Uuid
+  customerId String?  @map("customer_id") @db.Uuid
+  /// spam, offensive, not_about_product or other.
+  reason     String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  review   ProductReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([reviewId, customerId])
+  @@index([tenantId])
+  @@map("review_reports")
 }
 
 /// A spreadsheet of new products: checked first, then imported on request.

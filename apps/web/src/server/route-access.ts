@@ -78,6 +78,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/settings/shipping", access: SETTINGS_WRITE },
   { path: "/admin/settings/notifications", access: SETTINGS_WRITE },
   { path: "/admin/promotions", access: { level: "permission", permission: "promotions.write" } },
+  { path: "/admin/reviews", access: { level: "permission", permission: "reviews.moderate" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -167,6 +168,14 @@ const PROMOTION_ACTION_ENTRIES: readonly ActionEntry[] = [
   access: { level: "permission", permission: "promotions.write" } as const,
 }));
 
+const REVIEW_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "moderateReviewAction",
+  "replyToReviewAction",
+].map((name) => ({
+  id: `(admin)/admin/(protected)/reviews/actions.ts#${name}`,
+  access: { level: "permission", permission: "reviews.moderate" } as const,
+}));
+
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 
 export const ADMIN_ACTIONS: readonly ActionEntry[] = [
@@ -191,6 +200,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...RETURN_ACTION_ENTRIES,
   ...SETTINGS_ACTION_ENTRIES,
   ...PROMOTION_ACTION_ENTRIES,
+  ...REVIEW_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [
@@ -241,6 +251,12 @@ export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
   // paying again needs the order's key or its owner's session; the mock
   // provider's buttons go through the same verified path as the webhook;
   // previewing a discount code reads only the shopper's own cart.
+  // Reviews: the customer comes from their own session and the service checks
+  // they received the product; reports are once per customer.
+  ...["submitReviewAction", "reportReviewAction"].map((name) => ({
+    id: `(storefront)/reviews/actions.ts#${name}`,
+    access: { level: "public" } as const,
+  })),
   ...["placeOrderAction", "retryPaymentAction", "mockPayAction", "previewDiscountAction"].map(
     (name) => ({
       id: `${CHECKOUT_ACTIONS}#${name}`,

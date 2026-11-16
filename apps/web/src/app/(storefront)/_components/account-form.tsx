@@ -1,6 +1,14 @@
 "use client";
 
-import { Alert, buttonClasses, Checkbox, Field, Select, type SelectOption } from "@ecom/ui";
+import {
+  Alert,
+  buttonClasses,
+  Checkbox,
+  Field,
+  Select,
+  TextArea,
+  type SelectOption,
+} from "@ecom/ui";
 import {
   createContext,
   useActionState,
@@ -83,6 +91,19 @@ export function AccountField({
   const kept = props.type === "password" ? undefined : state.values?.[name];
   const value = kept ?? defaultValue;
   return <Field key={value ?? ""} name={name} defaultValue={value} {...props} />;
+}
+
+/** Multi-line counterpart of AccountField. */
+export function AccountTextArea({
+  name,
+  defaultValue,
+  ...props
+}: { label: string; name: string; id?: string; hint?: string; defaultValue?: string } & Omit<
+  ComponentProps<typeof TextArea>,
+  "name" | "defaultValue"
+>) {
+  const value = useContext(StateContext).values?.[name] ?? defaultValue;
+  return <TextArea key={value ?? ""} name={name} defaultValue={value} {...props} />;
 }
 
 export function AccountSelect({

@@ -2,7 +2,9 @@ import {
   currencyExponent,
   getPublicProduct,
   listPublicProductsBySlug,
+  listProductReviews,
   listRelatedProducts,
+  reviewEligibility,
   selectVariant,
   type StockStatus,
   type PublicProduct,
@@ -10,6 +12,7 @@ import {
 } from "@ecom/core";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { getCurrentCustomer } from "@/server/customer";
 import { viewOf } from "@/server/media";
 import { parseRecent, RECENT_COOKIE } from "@/server/recently-viewed";
 import { publicOrNotFound, storefrontDb, storefrontOrigin } from "@/server/storefront";
@@ -23,6 +26,7 @@ import { AddToCartForm } from "../../_components/cart-forms";
 import { Price, ProductGrid } from "../../_components/product-card";
 import { RememberProduct, ShareButton } from "../../_components/product-extras";
 import { ProductGallery } from "../../_components/product-gallery";
+import { ProductReviews, RatingLine } from "../../_components/product-reviews";
 import { VariantPicker } from "../../_components/variant-picker";
 import { addToCartAction } from "../../cart/actions";
 
@@ -113,10 +117,17 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const recentSlugs = parseRecent((await cookies()).get(RECENT_COOKIE)?.value).filter(
     (recent) => recent !== product.slug,
   );
-  const [related, recent, origin] = await Promise.all([
+  const reviewPage = Math.min(
+    1000,
+    Math.max(1, Number.parseInt(first(query.reviews) ?? "1", 10) || 1),
+  );
+  const customer = await getCurrentCustomer();
+  const [related, recent, origin, reviews, eligibility] = await Promise.all([
     listRelatedProducts(db, { id: product.id, categoryId: product.category?.id ?? null }),
     listPublicProductsBySlug(db, recentSlugs),
     storefrontOrigin(),
+    listProductReviews(db, product.id, reviewPage),
+    reviewEligibility(db, customer?.id ?? null, product.id),
   ]);
 
   const details = [
@@ -145,6 +156,8 @@ export default async function ProductPage({ params, searchParams }: Props) {
         stock: item.stock,
       })),
       currencyExponent: currencyExponent(variant.currency),
+      rating: reviews.summary,
+      reviews: reviews.reviews.slice(0, 5),
     }),
     breadcrumbStructuredData([
       ...trail.map((step) => ({ name: step.name, url: `${origin}${step.href}` })),
@@ -188,6 +201,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 </p>
               ) : null}
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{product.name}</h1>
+              <RatingLine summary={reviews.summary} />
             </div>
             <div className="text-xl">
               <Price
@@ -262,6 +276,17 @@ export default async function ProductPage({ params, searchParams }: Props) {
           </div>
         </div>
       </div>
+
+      <ProductReviews
+        productId={product.id}
+        slug={product.slug}
+        summary={reviews.summary}
+        reviews={reviews.reviews}
+        page={reviewPage}
+        pageCount={reviews.pageCount}
+        eligibility={eligibility}
+        signedIn={customer !== null}
+      />
 
       {related.length > 0 && product.category ? (
         <section
