@@ -13,7 +13,7 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 
 Sign in to the admin:
 
-1. **Delivery and tax**: you said delivery is $3 to $5 anywhere in Lebanon. Add one area per price, for example "Beirut" (LB, $3.00), "Mount Lebanon" (LB, $4.00), "Other areas" (LB, $5.00); tell me which places cost what and I can enter them. Then set your tax rate (0% until you set it; confirm it with your accountant).
+1. **Delivery and tax**: done for delivery: one area, "All of Lebanon", $4.00 flat (change it there any time). Still to do: set your tax rate (0% until you set it; confirm it with your accountant).
 2. **Store emails**: add the address(es) that should hear about new orders and low stock.
 3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 

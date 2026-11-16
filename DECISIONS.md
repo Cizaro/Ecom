@@ -262,7 +262,7 @@ Until answered, the assumption shown is used and kept configurable. Items marked
 | Q3 | Languages? | English, with multi-language and right-to-left support built in | |
 | Q4 | Card payment provider? | A Lebanese gateway (areeba or NetCommerce); Stripe and Tap are not available (D71). Cash on delivery is built. | **3.4**, waits on the merchant account |
 | Q5 | Countries served? | Lebanon only (owner, 2026-11-17) | |
-| Q6 | Shipping method? | Built: delivery areas with a price each and optional free delivery above an amount; courier and tracking entered by staff (D74, D75). Owner, 2026-11-17: delivery costs $3 to $5 anywhere in Lebanon; which areas cost what is still to be entered under Delivery and tax. | |
+| Q6 | Shipping method? | Built: delivery areas with a price each and optional free delivery above an amount; courier and tracking entered by staff (D74, D75). Owner, 2026-11-17: one flat price, $4.00, anywhere in Lebanon (set up in the demo store as the area "All of Lebanon"). | |
 | Q7 | Inventory owned, wholesale or dropshipped? | Owned, one location | 3.2 design detail |
 | Q8 | Domain? | localhost | Launch |
 | Q9 | Logo, colors, brand assets? | Neutral placeholder theme | 1.5 polish |
