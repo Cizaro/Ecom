@@ -342,7 +342,7 @@ Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, st
 | `pnpm test:e2e` | Pass, 90 tests (34 skipped by design), including delivery areas at checkout on a second test store, staff managing areas and tax, and courier and tracking on a cash order |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
-| CI on GitHub | See the Actions tab for this commit |
+| CI on GitHub | The cash-on-delivery commit failed there: a fresh test database had no staff roles until a test file happened to create them. The test database setup now creates them first; checked locally on a freshly created test database (226 pass). See the Actions tab for this commit |
 
 ## Recommended next task
 

@@ -1,9 +1,11 @@
-// Creates the test database if it does not exist and applies all migrations to
-// it. Run automatically before integration tests (Vitest global setup) and
+// Creates the test database if it does not exist, applies all migrations to
+// it and adds the built-in roles and permissions every test relies on. Run automatically before integration tests (Vitest global setup) and
 // end-to-end tests (Playwright global setup); safe to run any number of times.
 
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
+import { seedSystemData } from "@ecom/core";
+import { disconnectDatabase, getAdminPrisma } from "@ecom/db";
 import pg from "pg";
 import { toTestDatabaseUrl, useTestDatabase } from "../packages/testing/src/test-database";
 
@@ -47,3 +49,13 @@ const env = { ...process.env };
 useTestDatabase(env);
 execSync("pnpm --filter @ecom/db migrate:deploy", { stdio: "pipe", env });
 console.log(`prepare-test-db: ${testName} is migrated`);
+
+// Before any test file runs, so no test depends on another file having seeded
+// first (a fresh CI database has no roles until this runs).
+const prisma = getAdminPrisma(env.DATABASE_ADMIN_URL!);
+try {
+  await seedSystemData(prisma);
+} finally {
+  await disconnectDatabase();
+}
+console.log(`prepare-test-db: system roles and permissions are in place in ${testName}`);
