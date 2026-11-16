@@ -66,7 +66,12 @@ export { audit, createTenantDb } from "./access/tenant-db";
 export type { AuditTarget, TenantDb } from "./access/tenant-db";
 export { createAccessService } from "./identity/access-service";
 export type { AccessService, ContextResult } from "./identity/access-service";
-export { loadStorefront, normalizeHost, resolveStoreHost } from "./tenancy/store-host";
+export {
+  loadStorefront,
+  normalizeHost,
+  resolveStoreHost,
+  storefrontRequestHost,
+} from "./tenancy/store-host";
 export type { StoreHost, Storefront } from "./tenancy/store-host";
 export { listTeamMembers } from "./identity/team";
 export type { TeamMember } from "./identity/team";
@@ -318,6 +323,7 @@ export {
   orderConfirmationEmail,
   orderAccessKey,
   OrderError,
+  orderAmountLines,
   PAY_WITHIN_MINUTES,
   PAYMENT_METHODS,
   placeOrder,
@@ -326,6 +332,7 @@ export {
   startPayment,
 } from "./orders/orders";
 export type {
+  FulfilInput,
   HandledNotification,
   NotificationOutcome,
   OrderErrorCode,
@@ -338,3 +345,34 @@ export type {
   StaffOrderView,
 } from "./orders/orders";
 export { findPaymentTenant, listTenantsWithExpiredOrders } from "./platform/payment-lookup";
+
+export {
+  createShippingZone,
+  deleteShippingZone,
+  deliveryFee,
+  describeZone,
+  formatTaxRate,
+  getCheckoutOptions,
+  getTaxSettings,
+  listShippingZones,
+  MAX_TAX_RATE_BASIS_POINTS,
+  MAX_ZONES,
+  NO_TAX,
+  parseCountries,
+  parseTaxRate,
+  priceOrder,
+  pricingVersion,
+  quoteDeliveryIn,
+  saveTaxSettings,
+  ShippingError,
+  updateShippingZone,
+  zoneFormValues,
+} from "./shipping/shipping";
+export type {
+  CheckoutOptions,
+  DeliveryQuote,
+  OrderPricing,
+  ShippingZoneView,
+  TaxSettings,
+  ZoneInput,
+} from "./shipping/shipping";

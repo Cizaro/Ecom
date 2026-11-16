@@ -14,6 +14,9 @@ import {
   E2E_PROJECTS,
   E2E_PURPOSES,
   E2E_ROLES,
+  E2E_SHIPPING_HOST,
+  E2E_SHIPPING_PRODUCT_SLUG,
+  E2E_SHIPPING_TENANT_SLUG,
   E2E_TENANT_SLUG,
   e2eEmail,
   MFA_OWNER_EMAIL,
@@ -42,6 +45,7 @@ try {
     { slug: E2E_TENANT_SLUG, name: "End-to-end Test Store", requireStaffTwoFactor: false },
     { slug: E2E_OTHER_TENANT_SLUG, name: "Other Test Store", requireStaffTwoFactor: false },
     { slug: E2E_MFA_TENANT_SLUG, name: "Two-factor Test Store", requireStaffTwoFactor: true },
+    { slug: E2E_SHIPPING_TENANT_SLUG, name: "Delivery Test Store", requireStaffTwoFactor: false },
   ];
   for (const tenant of tenants) {
     const row = await prisma.tenant.upsert({
@@ -113,6 +117,74 @@ try {
       });
     }
   }
+  // The delivery test store: two areas in Lebanon, 11% VAT included in
+  // prices, and one product that is always available.
+  const shipping = await prisma.tenant.findUniqueOrThrow({
+    where: { slug: E2E_SHIPPING_TENANT_SLUG },
+    include: { stores: { take: 1, orderBy: { createdAt: "asc" } } },
+  });
+  await prisma.storeDomain.deleteMany({ where: { hostname: E2E_SHIPPING_HOST } });
+  await prisma.storeDomain.create({
+    data: {
+      tenantId: shipping.id,
+      storeId: shipping.stores[0]!.id,
+      hostname: E2E_SHIPPING_HOST,
+      isPrimary: true,
+    },
+  });
+  await prisma.shippingZone.deleteMany({ where: { tenantId: shipping.id } });
+  await prisma.shippingZone.createMany({
+    data: [
+      {
+        tenantId: shipping.id,
+        name: "Beirut",
+        countries: ["LB"],
+        rateAmount: 300,
+        freeOverAmount: 10_000,
+        currency: "USD",
+        position: 1,
+      },
+      {
+        tenantId: shipping.id,
+        name: "Mount Lebanon",
+        countries: ["LB"],
+        rateAmount: 500,
+        currency: "USD",
+        position: 2,
+      },
+    ],
+  });
+  await prisma.checkoutSettings.upsert({
+    where: { tenantId: shipping.id },
+    create: { tenantId: shipping.id, taxRateBasisPoints: 1100, taxIncluded: true, taxLabel: "VAT" },
+    update: { taxRateBasisPoints: 1100, taxIncluded: true, taxLabel: "VAT" },
+  });
+  if (
+    !(await prisma.product.findFirst({
+      where: { tenantId: shipping.id, slug: E2E_SHIPPING_PRODUCT_SLUG },
+    }))
+  ) {
+    const product = await prisma.product.create({
+      data: {
+        tenantId: shipping.id,
+        name: "Delivery Tote",
+        slug: E2E_SHIPPING_PRODUCT_SLUG,
+        status: "active",
+      },
+    });
+    await prisma.productVariant.create({
+      data: {
+        tenantId: shipping.id,
+        productId: product.id,
+        sku: "E2E-TOTE",
+        color: "Sand",
+        priceAmount: 4000,
+        currency: "USD",
+        trackInventory: false,
+      },
+    });
+  }
+
   await clearRedisRateLimits(env.REDIS_URL);
 } finally {
   await disconnectDatabase();

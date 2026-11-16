@@ -9,17 +9,21 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 3.5, shipping and tax
+## Owner: set up delivery and tax
 
-Cash on delivery is built (decision D72); the card gateway waits on a merchant account (see below).
+Sign in to the admin and open **Delivery and tax**:
 
-1. Delivery zones and rates set by staff (for example Beirut, Mount Lebanon, other governorates), a flat rate or free above an amount, and which countries are delivered to at all.
-2. The delivery fee on the cart and checkout, copied into the order (`shipping_amount`); a cash-on-delivery order's amount to collect includes it.
-3. Tax as a store setting (rate, included in prices or added), shown on the order.
-4. Shipments: courier, tracking reference, sent date; the shopper sees it on their order.
-5. Tests: the fee follows the address; an order's amounts never change after placing; another store's zones are not visible.
+1. Add your delivery areas, for example "Beirut" (country code LB, $3.00), "Mount Lebanon" (LB, $4.00), "Other areas" (LB, $5.00). Leave "Free delivery over" empty or enter an amount.
+2. Enter your tax rate and whether your prices already include it. It is 0% until you set it; confirm the rate with your accountant.
+3. When you mark an order as sent, you can add the courier, tracking number and tracking link; the shopper sees them on their order.
 
-**Owner questions for this milestone:** which areas you deliver to, the fee for each, whether delivery is free above some amount, which couriers you use, and whether prices include VAT.
+## Next development task: Milestone 3.6, notifications
+
+1. Email templates in one place (order confirmed, sent with tracking, cash received, cancelled, delivery refused), with the store's name and links.
+2. A "your order is on its way" email when staff mark it sent, including courier and tracking.
+3. Staff notifications: a new order, and low stock (carried over from 3.2).
+4. Shopper email preferences where the law requires them (marketing email stays off until asked for).
+5. Tests: each email goes to the right person, once, with the right store and no data from another store; a failed email never undoes the order change.
 
 ## Card payments (Milestone 3.4), waiting on the owner
 
@@ -29,7 +33,7 @@ Stripe and Tap Payments do not accept Lebanese merchants (decision D71). Apply t
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 3.6 to 3.8 Notifications, admin order tools (returns, dashboard, CSV export), promotions | |
+| 2 | 3.7 and 3.8 Admin order tools (returns, dashboard, CSV export), promotions | 3.7 needs the return rules (open decision Q22) |
 | 2a | 3.4 Card gateway (areeba or NetCommerce) | When the merchant account exists |
 | 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
@@ -38,6 +42,10 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 ## Small follow-ups carried forward
 
 - Cash on delivery: a maximum order amount for cash, and a store setting to switch cash on delivery off.
+- Delivery: correcting a shipment's tracking after it was recorded, and more than one parcel per order.
+- Delivery: offer only the areas for the country chosen in the checkout form (today every area is listed and a mismatch is refused with a message).
+- Delivery: a delivery time per area, once the owner can state one truthfully.
+- Storefront: the card gateway's payment link is built from APP_URL; on a custom store domain it should use the store's own domain.
 - Cash on delivery: a courier view or export of today's parcels with phone numbers and amounts to collect.
 - Cash on delivery: flag customers whose deliveries were refused before (staff decide; no automatic blocking).
 

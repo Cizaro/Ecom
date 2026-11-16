@@ -1,26 +1,63 @@
 import { getEnv } from "@ecom/config";
-import { formatMoney, getCart, listAddresses, PAY_WITHIN_MINUTES } from "@ecom/core";
+import {
+  formatMoney,
+  getCart,
+  getCheckoutOptions,
+  listAddresses,
+  orderAmountLines,
+  PAY_WITHIN_MINUTES,
+  priceOrder,
+  type ShippingZoneView,
+  type TaxSettings,
+} from "@ecom/core";
 import { Alert, buttonClasses, Card } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cartOwner, getCurrentCustomer } from "@/server/customer";
 import { storefrontDb } from "@/server/storefront";
-import { AccountCheckbox, AccountField, AccountForm } from "../_components/account-form";
+import {
+  AccountCheckbox,
+  AccountField,
+  AccountForm,
+  AccountSelect,
+} from "../_components/account-form";
 import { AddressFields } from "../_components/address-fields";
 import { Breadcrumbs } from "../_components/breadcrumbs";
 import { placeOrderAction } from "./actions";
+import { CheckoutAmounts, type PricedRows } from "./checkout-amounts";
+
+/** The summary rows for one delivery area (or none), worked out on the server. */
+function pricedRows(
+  subtotal: number,
+  currency: string,
+  zone: ShippingZoneView | null,
+  tax: TaxSettings,
+  hasZones: boolean,
+): PricedRows {
+  const pricing = priceOrder(subtotal, zone, tax);
+  const rows = orderAmountLines({
+    ...pricing,
+    currency,
+    shippingZoneName: zone?.name ?? null,
+    taxRateBasisPoints: tax.rateBasisPoints,
+    taxLabel: tax.label,
+  });
+  if (hasZones && !zone) rows.splice(1, 0, ["Delivery", "Choose your area"]);
+  return { rows, total: formatMoney(pricing.totalAmount, currency) };
+}
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false, follow: false } };
 
-// One page: who you are, where it goes, what it costs. Every amount shown
+// One page: who you are, where it goes (and which delivery area), what it costs. Every amount shown
 // here is worked out on the server again when the order is placed; if it
 // changed in between, the order is not placed and the shopper is told.
 export default async function CheckoutPage() {
   const { db } = await storefrontDb();
-  const [cart, customer] = await Promise.all([
+  const [cart, customer, options] = await Promise.all([
     cartOwner().then((owner) => getCart(db, owner)),
     getCurrentCustomer(),
+    getCheckoutOptions(db),
   ]);
   if (cart.lines.length === 0) redirect("/cart");
   const currency = cart.currency ?? "USD";
@@ -29,6 +66,26 @@ export default async function CheckoutPage() {
   const defaultAddress = saved.find((address) => address.isDefaultShipping);
   // Cash on delivery is always offered; paying online only when a provider is set up.
   const online = getEnv().PAYMENT_PROVIDER === "none" ? null : getEnv().PAYMENT_PROVIDER;
+  // Delivery areas the store offers, each with its price for this cart.
+  const zones = options.zones.filter((zone) => zone.currency === currency);
+  const hasZones = options.zones.length > 0;
+  const byZone = Object.fromEntries(
+    zones.map((zone) => [
+      zone.id,
+      pricedRows(cart.subtotalAmount, currency, zone, options.tax, true),
+    ]),
+  );
+  const fallback = pricedRows(cart.subtotalAmount, currency, null, options.tax, hasZones);
+  const zoneOptions = zones.map((zone) => {
+    const fee = priceOrder(cart.subtotalAmount, zone, {
+      ...options.tax,
+      rateBasisPoints: 0,
+    }).shippingAmount;
+    return {
+      value: zone.id,
+      label: `${zone.name}: ${fee === 0 ? "free delivery" : formatMoney(fee, currency)}`,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,6 +110,7 @@ export default async function CheckoutPage() {
         <div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
           <AccountForm action={placeOrderAction} submitLabel="Place order" testId="checkout-form">
             <input type="hidden" name="expectedTotal" value={cart.subtotalAmount} />
+            <input type="hidden" name="pricingVersion" value={options.version} />
             <Card title="Contact">
               {customer ? (
                 <p className="text-sm" data-testid="checkout-email">
@@ -84,6 +142,16 @@ export default async function CheckoutPage() {
             </Card>
             <Card title="Delivery address">
               <AddressFields address={defaultAddress} />
+              {hasZones ? (
+                <AccountSelect
+                  label="Delivery area"
+                  name="shippingZoneId"
+                  hint="The delivery price is added to your total."
+                  required
+                  defaultValue={zones.length === 1 ? zones[0]!.id : ""}
+                  options={[{ value: "", label: "Choose your delivery area" }, ...zoneOptions]}
+                />
+              ) : null}
               {customer ? (
                 <AccountCheckbox label="Save this address to my account" name="saveAddress" />
               ) : null}
@@ -153,20 +221,7 @@ export default async function CheckoutPage() {
                 </li>
               ))}
             </ul>
-            <dl className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
-              <div className="flex justify-between">
-                <dt>Subtotal</dt>
-                <dd>{formatMoney(cart.subtotalAmount, currency)}</dd>
-              </div>
-              <div className="flex justify-between text-ink-muted">
-                <dt>Shipping and tax</dt>
-                <dd>Not charged yet</dd>
-              </div>
-              <div className="flex justify-between text-base font-semibold">
-                <dt>Total</dt>
-                <dd data-testid="checkout-total">{formatMoney(cart.subtotalAmount, currency)}</dd>
-              </div>
-            </dl>
+            <CheckoutAmounts selectId="shippingZoneId" byZone={byZone} fallback={fallback} />
             <Link href="/cart" className={buttonClasses("secondary")}>
               Edit cart
             </Link>

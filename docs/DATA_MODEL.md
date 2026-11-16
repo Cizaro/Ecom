@@ -53,6 +53,11 @@ erDiagram
 | store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items, customers, customer_sessions, customer_tokens, addresses, inventory_locations, inventory_levels, stock_reservations | Own tenant | Own tenant |
 | stock_movements | Own tenant | Own tenant, insert only (no update or delete) |
 | order_counters, orders, payments | Own tenant | Own tenant, no delete |
+| shipping_zones | Own tenant | Own tenant |
+| checkout_settings | Own tenant | Own tenant, no delete |
+| shipments | Own tenant | Own tenant, add only |
+
+**Delivery and tax (2026-11-17, decisions D74 and D75):** `shipping_zones` (name, country codes, price and optional free-delivery amount in the store currency, offered or not), `checkout_settings` (one row per store: tax rate in hundredths of a percent, included in prices or added, tax name), `shipments` (one per order: courier, tracking number, https tracking link, sent time). Orders gain `shipping_zone_name`, `tax_rate_basis_points`, `tax_included_amount` and `tax_label`, frozen with the other amounts once placed.
 
 **Cash on delivery (2026-11-17):** `orders.payment_method` (online or cash_on_delivery, fixed after placing), order status `confirmed` for accepted cash orders, and a check that online orders never use `confirmed` and cash orders never wait for payment. Cash collected is a `payments` row with provider `cash_on_delivery` (decision D72).
 | order_items, order_events, payment_events | Own tenant | Own tenant, insert only (no update or delete) |
@@ -166,7 +171,7 @@ erDiagram
 | Payment | order_id (or giveaway entry payment), provider, provider_payment_id, status, amount, currency, method_brand, method_last4, idempotency_key |
 | PaymentEvent | provider, provider_event_id (unique per provider), type, payload, signature_verified, processed_at |
 
-**Built (Milestone 3.3):** `orders` (number per store via `order_counters`, status, customer_id only when signed in, cart_id, email, access_key_hash, currency and amounts with a check that total = subtotal + shipping + tax - discount, shipping_address snapshot as JSON, pay_by, placed_at, paid_at), `order_items` (name, SKU, colour, size and price copies; variant_id kept for reports), `order_events`, `payments` (provider, provider_payment_id unique, status pending, succeeded, failed or cancelled, amount, currency, method brand and last four digits only) and `payment_events` (unique per provider and event ID). Triggers allow only the defined status steps and freeze amounts, currency and number; lines, history and notifications are insert-only for the runtime role. All tenant-scoped with Row-Level Security and same-tenant triggers (decisions D66 to D70). Not built yet: refunds, shipments, returns, coupons, promotions, billing address, tax and discount lines.
+**Built (Milestone 3.3):** `orders` (number per store via `order_counters`, status, customer_id only when signed in, cart_id, email, access_key_hash, currency and amounts with a check that total = subtotal + shipping + tax - discount, shipping_address snapshot as JSON, pay_by, placed_at, paid_at), `order_items` (name, SKU, colour, size and price copies; variant_id kept for reports), `order_events`, `payments` (provider, provider_payment_id unique, status pending, succeeded, failed or cancelled, amount, currency, method brand and last four digits only) and `payment_events` (unique per provider and event ID). Triggers allow only the defined status steps and freeze amounts, currency and number; lines, history and notifications are insert-only for the runtime role. All tenant-scoped with Row-Level Security and same-tenant triggers (decisions D66 to D70). Not built yet: refunds, returns, coupons, promotions, billing address and discount lines (shipments, delivery and tax: Milestone 3.5, see above).
 | Refund | payment_id, return_id, amount, reason, status, provider_refund_id, actor_user_id |
 | Shipment | order_id, carrier, service, tracking_number, label_asset_id, status, shipped_at, delivered_at |
 | TrackingEvent | shipment_id, status, description, location, occurred_at |

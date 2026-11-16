@@ -213,7 +213,7 @@ The product page says "In stock", "Only a few left" (at or below the variant's l
 An order copies the item names, SKUs, colours, sizes and prices, and the delivery address, at the moment it is placed; later catalog or address changes never alter it. Order numbers are per store, from 1001. Status steps: waiting for payment to paid or cancelled; paid to sent (fulfilled), cancelled or refunded; sent to refunded. A database trigger refuses any other step and any change to an order's amounts, currency or number; order lines, order history and payment notifications can be added and read by the application but never changed or deleted.
 
 ### D67. Checkout holds stock with the order, and prices come only from the server (2026-11-16)
-Placing an order rebuilds it from the shopper's cart on the server, in one transaction that also holds the stock (decision D63): if anything is unavailable or short, no order is made. The checkout form sends the total the shopper saw; if the server's total differs, the order is not placed and the shopper is told. Stock is held for 30 minutes; the worker cancels unpaid orders after that and gives their stock back. Shipping and tax are not charged yet (Milestone 3.5); the checkout says so.
+Placing an order rebuilds it from the shopper's cart on the server, in one transaction that also holds the stock (decision D63): if anything is unavailable or short, no order is made. The checkout form sends the total the shopper saw; if the server's total differs, the order is not placed and the shopper is told. Stock is held for 30 minutes; the worker cancels unpaid orders after that and gives their stock back. Delivery and tax were added in Milestone 3.5 (decision D74).
 
 ### D68. Payments are confirmed only by a verified, once-only notification (2026-11-16)
 The application never sees card details: the shopper pays on the provider's page. An order becomes paid only when the provider's notification (webhook) passes its signature check, is less than five minutes old, and matches the payment's amount and currency. Each notification is recorded first by the provider's own event ID; a repeat changes nothing. A failed payment leaves the order waiting so the shopper can try again; a payment that arrives after the order was cancelled is recorded and flagged for a refund. A notification that cannot be verified gets a plain 400 and changes nothing. The webhook finds the payment's store with a lookup on the admin connection (platform module) that returns only the tenant ID; everything else runs inside that tenant.
@@ -233,18 +233,27 @@ Cash on delivery is the main way Lebanese shoppers pay online orders, so it is a
 ### D73. Online payments can be switched off (2026-11-17)
 `PAYMENT_PROVIDER=none` offers cash on delivery only and needs no payment secrets, so the live store can open before a card gateway exists (the mock provider remains refused in production). The checkout then shows no card option, and the mock webhook refuses every notification.
 
+### D74. Delivery areas are picked by the shopper; tax is one store-wide rate (2026-11-17)
+Staff set delivery areas (name, countries, price, optional free-delivery amount, offered or not). At checkout the shopper picks their area from a list that shows each price, rather than the store guessing it from a typed city name, which is unreliable for Lebanese addresses. The server checks that the area is offered, in this store and covers the address's country, and works the fee out again. A store with no areas charges no delivery and accepts any country (how it worked before). Tax is one rate per store, either included in prices (the tax inside the total is shown, the total is unchanged) or added on top; it applies to the items and the delivery together, rounded half up to the cent. 0% shows no tax. The default is 0%: the owner sets the rate (Lebanon's VAT is for the owner and their accountant to confirm). Checkout sends a fingerprint of the prices it showed; if staff changed an area or the tax in between, the order is not placed and the shopper sees the new total. Orders copy the area name, fee and tax rate, and the database refuses to change them later, so editing or deleting an area never alters past orders.
+
+### D75. A shipment is recorded once, when the order is marked as sent (2026-11-17)
+Marking an order as sent records one shipment: courier, tracking number and tracking link, all optional. The link must be a full https address (no other schemes, no user names in it) and opens in a new tab with no referrer. Shipments are a record: the application can add and read them, never change or delete them. Corrections and split parcels can come later if needed.
+
+### D76. The storefront trusts X-Forwarded-Host only from this machine (2026-11-17)
+After a server action redirects, Next.js renders the next page with a request to its own localhost address and passes the shopper's host in X-Forwarded-Host. The storefront previously read only the Host header, so on any host other than the server's own name (every custom store domain) the page after a redirect showed the wrong store or a 404. The storefront now uses X-Forwarded-Host only when the Host header is a loopback address (localhost, 127.0.0.1, ::1), which public requests to a store domain never have. A request to a store domain cannot switch stores by sending the header. A reverse proxy on another machine will need its own trusted-proxy setting (launch hardening).
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
 
 | # | Question | Assumption in use | Blocks |
 | --- | --- | --- | --- |
-| Q1 | Which country or countries does the store operate in? | Unspecified; tax and policies configurable | Tax setup, giveaway legality, 3.4 |
+| Q1 | Which country or countries does the store operate in? | Lebanon (owner, 2026-11-17). Tax rate set by the owner under Delivery and tax (default 0%) | Giveaway legality |
 | Q2 | Currency? | USD | |
 | Q3 | Languages? | English, with multi-language and right-to-left support built in | |
 | Q4 | Card payment provider? | A Lebanese gateway (areeba or NetCommerce); Stripe and Tap are not available (D71). Cash on delivery is built. | **3.4**, waits on the merchant account |
 | Q5 | Countries served? | Same as operating country | Shipping zones |
-| Q6 | Shipping method? | Flat rate by zone, manual tracking numbers | 3.5 |
+| Q6 | Shipping method? | Built: delivery areas with a price each and optional free delivery above an amount; courier and tracking entered by staff (D74, D75). Owner to enter the real areas, prices and couriers. | |
 | Q7 | Inventory owned, wholesale or dropshipped? | Owned, one location | 3.2 design detail |
 | Q8 | Domain? | localhost | Launch |
 | Q9 | Logo, colors, brand assets? | Neutral placeholder theme | 1.5 polish |

@@ -1,4 +1,4 @@
-import { formatAddress, formatMoney, type OrderView } from "@ecom/core";
+import { formatAddress, formatMoney, orderAmountLines, type OrderView } from "@ecom/core";
 import { Alert, Badge, type BadgeTone } from "@ecom/ui";
 import { ButtonForm } from "./account-form";
 import { retryPaymentAction } from "../checkout/actions";
@@ -103,14 +103,12 @@ export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey
 
       <div className="grid gap-6 sm:grid-cols-2">
         <dl className="flex flex-col gap-1 text-sm">
-          <div className="flex justify-between">
-            <dt>Subtotal</dt>
-            <dd>{money(order.subtotalAmount)}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt>Shipping</dt>
-            <dd>{money(order.shippingAmount)}</dd>
-          </div>
+          {orderAmountLines(order).map(([label, value]) => (
+            <div key={label} className="flex justify-between" data-testid="order-amount">
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
           <div className="flex justify-between text-base font-semibold">
             <dt>Total</dt>
             <dd data-testid="order-total">{money(order.totalAmount)}</dd>
@@ -142,6 +140,28 @@ export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey
             ))}
           </address>
           <p className="mt-2 text-ink-muted">Placed {when.format(order.placedAt)}</p>
+          {order.shipment ? (
+            <p className="mt-2" data-testid="order-shipment">
+              Sent {when.format(order.shipment.shippedAt)}
+              {order.shipment.courier ? ` with ${order.shipment.courier}` : ""}
+              {order.shipment.trackingReference
+                ? `. Tracking number: ${order.shipment.trackingReference}`
+                : ""}
+              {order.shipment.trackingUrl ? (
+                <>
+                  {" "}
+                  <a
+                    href={order.shipment.trackingUrl}
+                    className="underline underline-offset-4"
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                  >
+                    Track your parcel
+                  </a>
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

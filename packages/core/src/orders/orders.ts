@@ -19,6 +19,7 @@ import {
 import { formatMoney } from "../catalog/money";
 import type { EmailMessage } from "../notifications/email";
 import type { PaymentNotification, PaymentProvider } from "../payments/provider";
+import { formatTaxRate, quoteDeliveryIn, ShippingError } from "../shipping/shipping";
 
 // Orders. Rules this file keeps:
 //
@@ -105,9 +106,23 @@ export interface OrderView {
   discountAmount: number;
   totalAmount: number;
   shippingAddress: ValidAddress;
+  /** The delivery area picked at checkout; null when the store had none. */
+  shippingZoneName: string | null;
+  /** Tax as it applied when placed (0: none). */
+  taxRateBasisPoints: number;
+  /** Tax inside the prices, for display (taxAmount is tax added on top). */
+  taxIncludedAmount: number;
+  taxLabel: string | null;
   placedAt: Date;
   paidAt: Date | null;
   payBy: Date;
+  /** How it was sent, once staff mark it as sent. */
+  shipment: {
+    courier: string | null;
+    trackingReference: string | null;
+    trackingUrl: string | null;
+    shippedAt: Date;
+  } | null;
   items: {
     id: string;
     productName: string;
@@ -157,9 +172,16 @@ const ORDER_SELECT = {
   discountAmount: true,
   totalAmount: true,
   shippingAddress: true,
+  shippingZoneName: true,
+  taxRateBasisPoints: true,
+  taxIncludedAmount: true,
+  taxLabel: true,
   placedAt: true,
   paidAt: true,
   payBy: true,
+  shipment: {
+    select: { courier: true, trackingReference: true, trackingUrl: true, shippedAt: true },
+  },
   items: {
     select: {
       id: true,
@@ -209,6 +231,10 @@ export interface PlaceOrderInput {
   accessSecret: string;
   /** Defaults to online. Cash on delivery needs a phone number for the courier. */
   paymentMethod?: PaymentMethodValue;
+  /** The delivery area picked at checkout (needed when the store has any). */
+  shippingZoneId?: unknown;
+  /** The delivery and tax prices the shopper saw (getCheckoutOptions().version). */
+  pricingVersion?: unknown;
 }
 
 export interface PlacedOrder {
@@ -232,8 +258,9 @@ async function nextOrderNumber(tx: AppTransaction, tenantId: string): Promise<nu
 /**
  * Turns the shopper's cart into an order waiting for payment, holding its
  * stock for PAY_WITHIN_MINUTES. Nothing is made if the cart is empty, has
- * an item that is no longer for sale or not in stock, or its total differs
- * from what the shopper was shown.
+ * an item that is no longer for sale or not in stock, its items or the
+ * delivery and tax prices differ from what the shopper was shown, or the
+ * store does not deliver to the address.
  */
 export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<PlacedOrder> {
   const email = input.customer ? input.customer.email : normalizeEmail(input.email);
@@ -283,6 +310,16 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
         );
       }
 
+      // Delivery and tax, from the store's own settings.
+      const quote = await quoteDeliveryIn(tx, {
+        zoneId: input.shippingZoneId,
+        country: address.country,
+        subtotalAmount: view.subtotalAmount,
+        currency: view.currency!,
+        expectedVersion: input.pricingVersion,
+      });
+      const taxed = quote.tax.rateBasisPoints > 0;
+
       const number = await nextOrderNumber(tx, db.tenantId);
       const order = await tx.order.create({
         data: {
@@ -294,8 +331,14 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
           email,
           accessKeyHash: hash(accessKey),
           currency: view.currency!,
-          subtotalAmount: view.subtotalAmount,
-          totalAmount: view.subtotalAmount,
+          subtotalAmount: quote.subtotalAmount,
+          shippingAmount: quote.shippingAmount,
+          taxAmount: quote.taxAmount,
+          totalAmount: quote.totalAmount,
+          shippingZoneName: quote.zoneName,
+          taxRateBasisPoints: taxed ? quote.tax.rateBasisPoints : 0,
+          taxIncludedAmount: quote.taxIncludedAmount,
+          taxLabel: taxed ? quote.tax.label : null,
           shippingAddress: { ...address },
           paymentMethod: method,
           status: cod ? "confirmed" : "pending_payment",
@@ -343,6 +386,9 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
     });
   } catch (error) {
     // Rolled back: no order, no hold.
+    if (error instanceof ShippingError) {
+      throw new OrderError("invalid", error.message, error.field);
+    }
     if (error instanceof InventoryError && error.code === "insufficient") {
       throw new OrderError(
         "out_of_stock",
@@ -762,19 +808,59 @@ export async function getOrderForStaff(
   };
 }
 
+export interface FulfilInput {
+  note?: unknown;
+  courier?: unknown;
+  trackingReference?: unknown;
+  trackingUrl?: unknown;
+}
+
+const shortText = (value: unknown, max: number): string | null => {
+  const cleaned = typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+  return cleaned ? cleaned.slice(0, max) : null;
+};
+
+/** Only a well-formed https link is kept; anything else is refused with a message. */
+function cleanTrackingUrl(value: unknown): string | null {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    url = new URL("invalid:");
+  }
+  if (url.protocol !== "https:" || raw.length > 500 || url.username || url.password) {
+    throw new OrderError(
+      "invalid",
+      "Enter the tracking link as a full https:// address, or leave it empty.",
+      "trackingUrl",
+    );
+  }
+  return url.toString();
+}
+
 /**
  * Marks an order as sent: a paid online order, or a confirmed cash-on-delivery
- * order (its held stock leaves the shelf now).
+ * order (its held stock leaves the shelf now). Records the shipment: courier
+ * and tracking, when staff give them. A plain string is taken as the note.
  */
 export async function fulfilOrder(
   db: TenantDb,
   context: RequestContext,
   orderId: string,
-  note?: unknown,
+  details?: string | FulfilInput,
 ): Promise<void> {
   assertPermission(context, "orders.manage");
   assertOrderId(orderId);
-  const text = typeof note === "string" && note.trim() ? note.trim().slice(0, 500) : null;
+  const input: FulfilInput = typeof details === "string" ? { note: details } : (details ?? {});
+  const text =
+    typeof input.note === "string" && input.note.trim() ? input.note.trim().slice(0, 500) : null;
+  const shipment = {
+    courier: shortText(input.courier, 100),
+    trackingReference: shortText(input.trackingReference, 100),
+    trackingUrl: cleanTrackingUrl(input.trackingUrl),
+  };
   await db.run(async (tx) => {
     const before = await tx.order.findUnique({
       where: { id: orderId },
@@ -802,6 +888,9 @@ export async function fulfilOrder(
         "commit",
       );
     }
+    await tx.shipment.create({
+      data: { tenantId: db.tenantId, orderId, ...shipment, createdByUserId: context.userId },
+    });
     await tx.orderEvent.create({
       data: {
         tenantId: db.tenantId,
@@ -846,6 +935,44 @@ export async function cancelUnpaidOrder(
   });
 }
 
+// --- Amounts for display ----------------------------------------------------------
+
+/**
+ * The lines under an order's items: delivery and tax, as they were charged.
+ * Shared by the order pages and the confirmation email so they always agree.
+ */
+export function orderAmountLines(
+  order: Pick<
+    OrderView,
+    | "currency"
+    | "subtotalAmount"
+    | "shippingAmount"
+    | "shippingZoneName"
+    | "taxAmount"
+    | "taxIncludedAmount"
+    | "taxRateBasisPoints"
+    | "taxLabel"
+  >,
+): [label: string, value: string][] {
+  const money = (amount: number) => formatMoney(amount, order.currency);
+  const rows: [string, string][] = [["Subtotal", money(order.subtotalAmount)]];
+  if (order.shippingZoneName !== null || order.shippingAmount > 0) {
+    rows.push([
+      order.shippingZoneName ? `Delivery (${order.shippingZoneName})` : "Delivery",
+      order.shippingAmount === 0 ? "Free" : money(order.shippingAmount),
+    ]);
+  }
+  if (order.taxRateBasisPoints > 0) {
+    const label = `${order.taxLabel ?? "Tax"} ${formatTaxRate(order.taxRateBasisPoints)}`;
+    rows.push(
+      order.taxAmount > 0
+        ? [label, money(order.taxAmount)]
+        : [`${label} included`, money(order.taxIncludedAmount)],
+    );
+  }
+  return rows;
+}
+
 // --- Email ---------------------------------------------------------------------
 
 /** The confirmation sent when an order is paid. */
@@ -869,6 +996,7 @@ export function orderConfirmationEmail(
       "",
       `Order #${order.number}`,
       ...lines,
+      ...orderAmountLines(order).map(([label, value]) => `${label}: ${value}`),
       "",
       order.paymentMethod === "cash_on_delivery"
         ? `To pay the courier in cash: ${money(order.totalAmount)}`

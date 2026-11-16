@@ -84,11 +84,31 @@ test("cash on delivery: ordered, sent, paid in cash; or refused and restocked", 
   await expect(page.getByTestId("order-row")).toContainText("Confirmed, cash on delivery");
   await page.getByTestId("order-row").getByRole("link").first().click();
   await expect(page.getByTestId("admin-payment-method")).toHaveText("Cash on delivery");
-  await page.getByTestId("fulfil-form").getByLabel("Note").fill("Courier: Toters");
+  const fulfil = page.getByTestId("fulfil-form");
+  await fulfil.getByLabel("Courier").fill("Toters");
+  await fulfil.getByLabel("Tracking number").fill(`TT-${tag}`);
+  // Only an https link is accepted.
+  await fulfil.getByLabel("Tracking link").fill("http://track.example.test/1");
+  await page.getByRole("button", { name: "Mark as sent" }).click();
+  await expect(fulfil.getByTestId("form-error")).toContainText("https://");
+  await fulfil.getByLabel("Courier").fill("Toters");
+  await fulfil.getByLabel("Tracking number").fill(`TT-${tag}`);
+  await fulfil.getByLabel("Tracking link").fill(`https://track.example.test/TT-${tag}`);
+  await fulfil.getByLabel("Note").fill("Left with the concierge");
   await page.getByRole("button", { name: "Mark as sent" }).click();
   await expect(page.getByTestId("admin-order-status")).toHaveText("Sent");
+  await expect(page.getByTestId("admin-shipment")).toContainText(
+    `with Toters · tracking TT-${tag}`,
+  );
   await shopper.goto(orderUrl);
   await expect(shopper.getByTestId("order-message")).toContainText("on its way");
+  await expect(shopper.getByTestId("order-shipment")).toContainText(
+    `with Toters. Tracking number: TT-${tag}`,
+  );
+  await expect(shopper.getByRole("link", { name: "Track your parcel" })).toHaveAttribute(
+    "href",
+    `https://track.example.test/TT-${tag}`,
+  );
 
   await page.getByRole("button", { name: "Cash received" }).click();
   await expect(page.getByTestId("admin-payment-method")).toContainText("cash collected");

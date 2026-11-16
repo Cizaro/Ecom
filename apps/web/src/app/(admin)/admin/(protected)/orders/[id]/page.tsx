@@ -1,4 +1,10 @@
-import { formatAddress, formatMoney, getOrderForStaff, hasPermission } from "@ecom/core";
+import {
+  formatAddress,
+  formatMoney,
+  getOrderForStaff,
+  hasPermission,
+  orderAmountLines,
+} from "@ecom/core";
 import { Alert, Badge, Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -72,15 +78,48 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           {cod ? "Cash on delivery" : "Paid online"}
           {cod && cashTaken ? ": cash collected" : ""}
         </p>
+        {order.shipment ? (
+          <p className="text-sm" data-testid="admin-shipment">
+            Sent {when.format(order.shipment.shippedAt)}
+            {order.shipment.courier ? ` with ${order.shipment.courier}` : ""}
+            {order.shipment.trackingReference
+              ? ` · tracking ${order.shipment.trackingReference}`
+              : ""}
+            {order.shipment.trackingUrl ? (
+              <>
+                {" · "}
+                <a
+                  href={order.shipment.trackingUrl}
+                  className="underline underline-offset-4"
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                >
+                  Tracking link
+                </a>
+              </>
+            ) : null}
+          </p>
+        ) : null}
         {canManage && (order.status === "paid" || order.status === "confirmed") ? (
           <ActionForm action={fulfilOrderAction} submitLabel="Mark as sent" testId="fulfil-form">
             <input type="hidden" name="id" value={order.id} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField label="Courier" name="courier" maxLength={100} hint="Optional" />
+              <TextField
+                label="Tracking number"
+                name="trackingReference"
+                maxLength={100}
+                hint="Optional"
+              />
+            </div>
             <TextField
-              label="Note"
-              name="note"
+              label="Tracking link"
+              name="trackingUrl"
+              type="url"
               maxLength={500}
-              hint="Optional, for example the courier."
+              hint="Optional. A full https:// address; the shopper sees it on their order."
             />
+            <TextField label="Note" name="note" maxLength={500} hint="Optional, for staff." />
           </ActionForm>
         ) : null}
         {canManage && cod && order.status === "fulfilled" && !cashTaken ? (
@@ -125,6 +164,17 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             </li>
           ))}
         </ul>
+        <dl
+          className="flex flex-col gap-1 border-t border-line pt-2 text-sm"
+          data-testid="admin-order-amounts"
+        >
+          {orderAmountLines(order).map(([label, value]) => (
+            <div key={label} className="flex justify-between">
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
         <p className="flex justify-between border-t border-line pt-2 font-semibold">
           <span>Total</span>
           <span>{money(order.totalAmount)}</span>

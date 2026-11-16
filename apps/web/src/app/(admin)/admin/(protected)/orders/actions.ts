@@ -41,7 +41,12 @@ export async function fulfilOrderAction(
   const { context } = await requirePermission("orders.manage");
   const id = field(formData, "id");
   return attempt(async () => {
-    await fulfilOrder(tenantDb(context), context, id, field(formData, "note"));
+    await fulfilOrder(tenantDb(context), context, id, {
+      note: field(formData, "note"),
+      courier: field(formData, "courier"),
+      trackingReference: field(formData, "trackingReference"),
+      trackingUrl: field(formData, "trackingUrl"),
+    });
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${id}`);
     return { notice: "Marked as sent." };

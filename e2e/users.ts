@@ -16,6 +16,12 @@ export const e2eEmail = (purpose: E2EPurpose, project: string) =>
 // projects share them.
 export const E2E_OTHER_TENANT_SLUG = "e2e-other";
 export const E2E_MFA_TENANT_SLUG = "e2e-mfa";
+
+// A store reached at 127.0.0.1 with delivery areas and tax already set, so
+// its checkout charges delivery without changing the main test store.
+export const E2E_SHIPPING_TENANT_SLUG = "e2e-shipping";
+export const E2E_SHIPPING_HOST = "127.0.0.1";
+export const E2E_SHIPPING_PRODUCT_SLUG = "e2e-delivery-tote";
 export const E2E_ROLES = [
   "store_owner",
   "store_manager",

@@ -26,7 +26,8 @@ import type { AccountFormState } from "../account/actions";
 // Checkout actions for shoppers. The store comes from the host name
 // (storefrontDb), the cart from the shopper's own session or cookie, and the
 // customer (if any) from their session. The form supplies only contact and
-// address details; every amount is worked out on the server. Next.js rejects
+// address details and the delivery area picked from the store's list; every
+// amount is worked out on the server. Next.js rejects
 // cross-site POSTs to server actions, which is the CSRF protection here.
 
 const text = (formData: FormData, name: string): string => {
@@ -57,7 +58,7 @@ export async function placeOrderAction(
 ): Promise<AccountFormState> {
   const { store, db } = await storefrontDb();
   const values = Object.fromEntries(
-    [...ADDRESS_FIELDS, "email", "saveAddress", "paymentMethod"].map((name) => [
+    [...ADDRESS_FIELDS, "email", "saveAddress", "paymentMethod", "shippingZoneId"].map((name) => [
       name,
       text(formData, name),
     ]),
@@ -94,6 +95,8 @@ export async function placeOrderAction(
       expectedTotal: Number.isInteger(expected) ? expected : undefined,
       accessSecret: getEnv().ENCRYPTION_KEY,
       paymentMethod,
+      shippingZoneId: text(formData, "shippingZoneId"),
+      pricingVersion: text(formData, "pricingVersion") || undefined,
     });
     if (customer && formData.get("saveAddress") === "on") {
       // Saving is a convenience: a full address book does not stop the order.

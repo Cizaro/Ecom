@@ -40,6 +40,7 @@ const CATALOG_READ: RouteAccess = { level: "permission", permission: "catalog.re
 const CATALOG_WRITE: RouteAccess = { level: "permission", permission: "catalog.write" };
 const INVENTORY_READ: RouteAccess = { level: "permission", permission: "inventory.read" };
 const INVENTORY_ADJUST: RouteAccess = { level: "permission", permission: "inventory.adjust" };
+const SETTINGS_WRITE: RouteAccess = { level: "permission", permission: "settings.write" };
 
 /**
  * A path segment in square brackets (`[id]`) stands for a record identifier.
@@ -72,6 +73,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/inventory/locations", access: INVENTORY_READ },
   { path: "/admin/orders", access: { level: "permission", permission: "orders.read" } },
   { path: "/admin/orders/[id]", access: { level: "permission", permission: "orders.read" } },
+  { path: "/admin/settings/shipping", access: SETTINGS_WRITE },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -121,6 +123,15 @@ const ORDER_ACTION_ENTRIES: readonly ActionEntry[] = [
   access: { level: "permission", permission: "orders.manage" } as const,
 }));
 
+const SETTINGS_ACTIONS = "(admin)/admin/(protected)/settings/actions.ts";
+
+const SETTINGS_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "createShippingZoneAction",
+  "updateShippingZoneAction",
+  "deleteShippingZoneAction",
+  "saveTaxSettingsAction",
+].map((name) => ({ id: `${SETTINGS_ACTIONS}#${name}`, access: SETTINGS_WRITE }));
+
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 
 export const ADMIN_ACTIONS: readonly ActionEntry[] = [
@@ -141,6 +152,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...CATALOG_ACTION_ENTRIES,
   ...INVENTORY_ACTION_ENTRIES,
   ...ORDER_ACTION_ENTRIES,
+  ...SETTINGS_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [

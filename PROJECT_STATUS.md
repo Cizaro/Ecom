@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.5 (shipping and tax). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.6 (notifications). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -53,7 +53,7 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. Product pages say whether an item is in stock, nearly gone or sold out, and the cart never holds more than there is. They can check out as a guest or signed in and pay with the test payment provider (no real money), see their order, and find it in their account. Staff see orders and mark them sent. There is no real payment provider, shipping, tax or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. Product pages say whether an item is in stock, nearly gone or sold out, and the cart never holds more than there is. They can check out as a guest or signed in and pay with the test payment provider (no real money), see their order, and find it in their account. Staff see orders and mark them sent with courier and tracking, and set delivery areas and tax. There is no real card payment provider or dashboard yet.
 
 - **Milestone 2.2, product media:**
   - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
@@ -135,6 +135,14 @@ Last updated: 2026-11-12
   - `PAYMENT_PROVIDER=none` runs the store with cash on delivery only, in production too.
   - Database rules keep online and cash orders on their own status paths; the payment method cannot change after placing.
 
+- **Milestone 3.5, delivery and tax:**
+  - Admin page **Delivery and tax** (permission `settings.write`): delivery areas with countries, price, optional free delivery above an amount, offered or not, and order; one tax rate for the store, included in prices or added at checkout. Every change is audited.
+  - Checkout: the shopper picks a delivery area from the list (each shows its price); the summary and total update; the server works delivery and tax out again and refuses an area that is switched off, from another store or for another country, and refuses the order if prices changed after the page was shown.
+  - Orders keep the delivery area, fee, tax rate and tax amount they were placed with; the order page, the admin order page and the confirmation email show them. The database refuses to change them.
+  - Marking an order as sent records the courier, tracking number and tracking link (https only); the shopper sees them on their order.
+  - A store with no delivery areas works as before: no delivery charge.
+  - Fixed: after a form on a store's own domain redirected (placing an order, signing in), the next page could show the wrong store. See decision D76.
+
 ## In progress
 
 Nothing.
@@ -147,7 +155,7 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 
 - **Products have no stock levels** (Milestone 3.2), so the storefront says nothing about availability yet.
 - **No card payments yet.** Cash on delivery works; the online option is the test-only mock. A Lebanese card gateway (areeba or NetCommerce) needs your merchant account (Stripe and Tap do not accept Lebanese merchants). No refunds yet (with the card gateway).
-- **Shipping and tax are not charged** (Milestone 3.5); checkout says "Not charged yet". There is no billing address and no discount codes yet.
+- **No billing address and no discount codes yet.** Delivery is one price per area; there are no weight-based rates or courier integrations.
 - **Confirmation email links use `APP_URL`'s scheme and port** with the store's domain; check them on the deployed site.
 - **Staff names are not shown in an order's history yet** (only "Staff").
 - **Customers cannot yet change their email address or change their password while signed in** (only through the reset link).
@@ -157,7 +165,7 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 - **Products that existed before stock tracking are not counted** (they keep selling without a stock check) until staff switch counting on for each variant (decision D64). New variants are counted from the start and show as out of stock until stock is received.
 - **The cart does not hold stock.** Stock is held when the order is placed, so an item can sell out between adding it and checking out; the cart and checkout then say so.
 - **No transfers between locations, suppliers or purchase orders yet**, and each item in a checkout is taken from a single location.
-- **Delivery times are not shown** anywhere (they come with shipping, Milestone 3.5).
+- **Delivery times are not shown** anywhere; the store states none it cannot keep.
 - **Expired carts stay in the database** (ignored, not deleted) until a cleanup job exists.
 - **"Recently viewed" sets a preference cookie without asking**, because there is no consent banner yet (decision D49). Must be gated before launch in regions that require consent.
 - **Gallery has no zoom and no previous/next buttons**; thumbnails, swipe and arrow keys work.
@@ -321,24 +329,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (cash on delivery, on the first computer)
+## Checks run this session (Milestone 3.5, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 198 tests |
-| `pnpm test:int` | Pass, 221 tests, on the separate test database (5 new for cash on delivery: phone required, stock held then sold, cash recorded once, refused parcel restocked once, kept apart from online orders) |
+| `pnpm test` | Pass, 218 tests (new: delivery and tax pricing, rounding, staff input, price fingerprint, which host a request is for) |
+| `pnpm test:int` | Pass, 226 tests, on the separate test database (5 new: areas checked and audited, kept within one store, checkout charges and refuses correctly, tax added or included and stale prices refused, shipments recorded and add-only) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 85 tests (27 skipped by design), including the cash-on-delivery journey |
+| `pnpm test:e2e` | Pass, 90 tests (34 skipped by design), including delivery areas at checkout on a second test store, staff managing areas and tax, and courier and tracking on a cash order |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
-| CI on GitHub | Milestone 3.3 commit passed; see the Actions tab for this commit |
+| CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Milestone 3.5: shipping and tax (delivery zones and fees for Lebanon). Details and owner questions in NEXT_STEPS.md.
+Milestone 3.6: notifications (order emails, "on its way" with tracking, staff alerts). Before that, the owner enters the real delivery areas and tax under Delivery and tax.
 
 ## Session log
 
@@ -364,5 +372,6 @@ Milestone 3.5: shipping and tax (delivery zones and fees for Lebanon). Details a
 | 2026-11-16 | Milestone 3.2: stock locations, levels, recorded movements, race-safe checkout holds, admin stock screens, storefront and cart stock checks |
 | 2026-11-16 | Milestone 3.3: orders and payments tables with status and amount rules, checkout, mock payment provider with signed once-only webhooks, unpaid-order expiry, order pages, account orders, admin orders |
 | 2026-11-17 | Stripe dropped (not available in Lebanon). Cash on delivery: payment method on orders, confirmed status, sent / cash received / delivery refused, cash-only mode |
+| 2026-11-17 | Milestone 3.5: delivery areas and tax set by staff, delivery area at checkout with live total, frozen on the order, shipments with courier and tracking; storefront host fix after redirects |
 
 Commit hashes: `git log --oneline`.

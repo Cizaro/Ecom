@@ -97,6 +97,7 @@ export function CheckboxField({
 }: {
   label: string;
   name: string;
+  id?: string;
   hint?: string;
   defaultChecked?: boolean;
 }) {

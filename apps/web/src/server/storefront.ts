@@ -5,6 +5,7 @@ import {
   createTenantDb,
   loadStorefront,
   NotFoundError,
+  storefrontRequestHost,
   type Storefront,
   type TenantDb,
 } from "@ecom/core";
@@ -13,13 +14,19 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 
+/** The host this request was made to (see storefrontRequestHost for the one exception). */
+async function requestHost(): Promise<string | null> {
+  const requestHeaders = await headers();
+  return storefrontRequestHost(requestHeaders.get("host"), requestHeaders.get("x-forwarded-host"));
+}
+
 /**
- * The store this storefront request is for, found from the Host header. The
+ * The store this storefront request is for, found from the host name. The
  * tenant is never taken from anything else the client sends. Unknown hosts
  * get the 404 page.
  */
 export const requireStorefront = cache(async (): Promise<Storefront> => {
-  const host = (await headers()).get("host");
+  const host = await requestHost();
   const storefront = await loadStorefront(getAppPrisma(getEnv().DATABASE_URL), host);
   if (!storefront) notFound();
   return storefront;
@@ -56,7 +63,7 @@ export async function publicOrNotFound<T>(work: Promise<T>): Promise<T> {
 export async function storefrontOrigin(): Promise<string> {
   await requireStorefront();
   const requestHeaders = await headers();
-  const host = requestHeaders.get("host") ?? new URL(getEnv().APP_URL).host;
+  const host = (await requestHost()) ?? new URL(getEnv().APP_URL).host;
   const forwarded = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim();
   const protocol =
     forwarded === "https" || forwarded === "http"

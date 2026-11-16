@@ -73,7 +73,8 @@ test("stock counts drive what shoppers see and can buy", async ({ page, browser 
   await expect(shopper.getByTestId("cart-count")).toHaveText("4");
 
   // --- Staff count the shelf: only 2 are really there ---------------------------------
-  await page.goto("/admin/inventory");
+  // Search for it: other test runs leave many products, and the list is paged.
+  await page.goto(`/admin/inventory?q=${encodeURIComponent(sku)}`);
   const row = page.getByTestId("stock-row").filter({ hasText: sku });
   await expect(row.getByTestId("stock-available")).toContainText("5 available");
   await row.getByRole("link", { name }).click();

@@ -22,6 +22,27 @@ export function normalizeHost(hostHeader: string | null | undefined): string | n
   return host;
 }
 
+const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i;
+
+/**
+ * The host a storefront request was made to. Normally the Host header. When
+ * Host is a loopback address the request came from this machine: Next.js
+ * itself (after a server action redirects, it renders the next page with a
+ * request to its own localhost address and passes the shopper's host in
+ * X-Forwarded-Host) or a reverse proxy on the same machine. Only then is
+ * X-Forwarded-Host used, so a request to a public store domain can never be
+ * switched to another store by adding that header.
+ */
+export function storefrontRequestHost(
+  host: string | null | undefined,
+  forwardedHost: string | null | undefined,
+): string | null {
+  const direct = host?.trim() || null;
+  const forwarded = forwardedHost?.split(",")[0]?.trim();
+  if (direct && LOOPBACK.test(direct) && forwarded) return forwarded;
+  return direct;
+}
+
 /**
  * Finds the store a storefront request is for, before any tenant context
  * exists. Runs as the restricted runtime role through a database function

@@ -78,6 +78,9 @@ model Tenant {
   payments                Payment[]
   paymentEvents           PaymentEvent[]
   orderCounter            OrderCounter?
+  shippingZones           ShippingZone[]
+  checkoutSettings        CheckoutSettings?
+  shipments               Shipment[]
 
   @@map("tenants")
 }
@@ -1085,32 +1088,39 @@ model OrderCounter {
 }
 
 model Order {
-  id              String        @id @default(uuid(7)) @db.Uuid
-  tenantId        String        @map("tenant_id") @db.Uuid
-  number          Int
-  status          OrderStatus   @default(pending_payment)
-  paymentMethod   PaymentMethod @default(online) @map("payment_method")
+  id                 String        @id @default(uuid(7)) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  number             Int
+  status             OrderStatus   @default(pending_payment)
+  paymentMethod      PaymentMethod @default(online) @map("payment_method")
   /// Set only when a signed-in customer placed it. Guest orders belong to no account.
-  customerId      String?       @map("customer_id") @db.Uuid
+  customerId         String?       @map("customer_id") @db.Uuid
   /// The cart it came from; emptied when payment succeeds.
-  cartId          String?       @map("cart_id") @db.Uuid
-  email           String
+  cartId             String?       @map("cart_id") @db.Uuid
+  email              String
   /// SHA-256 of the key in the confirmation link (the only way a guest can view the order).
-  accessKeyHash   String        @unique @map("access_key_hash")
-  currency        String        @db.Char(3)
-  subtotalAmount  Int           @map("subtotal_amount")
-  shippingAmount  Int           @default(0) @map("shipping_amount")
-  taxAmount       Int           @default(0) @map("tax_amount")
-  discountAmount  Int           @default(0) @map("discount_amount")
-  totalAmount     Int           @map("total_amount")
+  accessKeyHash      String        @unique @map("access_key_hash")
+  currency           String        @db.Char(3)
+  subtotalAmount     Int           @map("subtotal_amount")
+  shippingAmount     Int           @default(0) @map("shipping_amount")
+  taxAmount          Int           @default(0) @map("tax_amount")
+  discountAmount     Int           @default(0) @map("discount_amount")
+  totalAmount        Int           @map("total_amount")
   /// The delivery address as it was when the order was placed.
-  shippingAddress Json          @map("shipping_address")
+  shippingAddress    Json          @map("shipping_address")
+  /// The delivery area chosen at checkout, copied as it was (null: the store had none).
+  shippingZoneName   String?       @map("shipping_zone_name")
+  /// Tax as it applied when the order was placed, in hundredths of a percent.
+  taxRateBasisPoints Int           @default(0) @map("tax_rate_basis_points")
+  /// Tax already inside the prices (shown for information; not added to the total).
+  taxIncludedAmount  Int           @default(0) @map("tax_included_amount")
+  taxLabel           String?       @map("tax_label")
   /// Stock is held until then; an unpaid order is cancelled after it.
-  payBy           DateTime      @map("pay_by") @db.Timestamptz(3)
-  placedAt        DateTime      @default(now()) @map("placed_at") @db.Timestamptz(3)
-  paidAt          DateTime?     @map("paid_at") @db.Timestamptz(3)
-  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  payBy              DateTime      @map("pay_by") @db.Timestamptz(3)
+  placedAt           DateTime      @default(now()) @map("placed_at") @db.Timestamptz(3)
+  paidAt             DateTime?     @map("paid_at") @db.Timestamptz(3)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -1118,6 +1128,7 @@ model Order {
   items    OrderItem[]
   events   OrderEvent[]
   payments Payment[]
+  shipment Shipment?
 
   @@unique([tenantId, number])
   @@index([tenantId, placedAt])
@@ -1169,6 +1180,66 @@ model OrderEvent {
 
   @@index([orderId, createdAt])
   @@map("order_events")
+}
+
+/// Where the store delivers and what it charges. Amounts are minor units of `currency`.
+model ShippingZone {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  /// What the shopper picks at checkout, e.g. "Beirut" or "Rest of Lebanon".
+  name           String
+  /// Country codes (ISO 3166-1 alpha-2) this area is in.
+  countries      String[]
+  rateAmount     Int      @map("rate_amount")
+  /// Delivery is free when the items come to at least this much.
+  freeOverAmount Int?     @map("free_over_amount")
+  currency       String   @db.Char(3)
+  /// Switched-off areas are kept but not offered at checkout.
+  isActive       Boolean  @default(true) @map("is_active")
+  position       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId, position])
+  @@map("shipping_zones")
+}
+
+/// One row per store: how tax is charged at checkout.
+model CheckoutSettings {
+  tenantId           String   @id @map("tenant_id") @db.Uuid
+  /// Hundredths of a percent: 1100 is 11%. 0 means no tax is shown or charged.
+  taxRateBasisPoints Int      @default(0) @map("tax_rate_basis_points")
+  /// True: prices already include the tax. False: it is added at checkout.
+  taxIncluded        Boolean  @default(true) @map("tax_included")
+  taxLabel           String   @default("VAT") @map("tax_label")
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("checkout_settings")
+}
+
+/// How an order was sent: one per order, recorded when staff mark it as sent.
+model Shipment {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  orderId           String   @unique @map("order_id") @db.Uuid
+  courier           String?
+  trackingReference String?  @map("tracking_reference")
+  /// Only https links are stored.
+  trackingUrl       String?  @map("tracking_url")
+  shippedAt         DateTime @default(now()) @map("shipped_at") @db.Timestamptz(3)
+  createdByUserId   String?  @map("created_by_user_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("shipments")
 }
 
 enum PaymentStatus {

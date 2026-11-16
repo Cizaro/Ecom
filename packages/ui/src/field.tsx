@@ -174,18 +174,19 @@ export function Select({
 export function Checkbox({
   label,
   name,
+  id = name,
   hint,
   ...input
-}: { label: string; name: string; hint?: string } & Omit<
+}: { label: string; name: string; id?: string; hint?: string } & Omit<
   ComponentProps<"input">,
   "name" | "id" | "type"
 >) {
-  const hintId = hint ? `${name}-hint` : undefined;
+  const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={name} className="flex min-h-11 items-center gap-3 text-sm font-medium">
+      <label htmlFor={id} className="flex min-h-11 items-center gap-3 text-sm font-medium">
         <input
-          id={name}
+          id={id}
           name={name}
           type="checkbox"
           aria-describedby={hintId}
