@@ -373,6 +373,7 @@ export type {
   CheckoutOptions,
   DeliveryQuote,
   OrderPricing,
+  PricingDiscount,
   ShippingZoneView,
   TaxSettings,
   ZoneInput,
@@ -420,3 +421,23 @@ export type { RefundMethod, ReturnInput, ReturnReason } from "./orders/returns";
 export { csvField, EXPORT_LIMIT, exportOrdersCsv, getDashboard } from "./reports/reports";
 export type { Dashboard, PeriodFigures } from "./reports/reports";
 export { addDays, isCalendarDate, safeTimeZone, zonedDay, zonedDayStart } from "./platform/time";
+
+export {
+  checkDiscountCode,
+  createDiscountCode,
+  deleteDiscountCode,
+  describeDiscount,
+  DISCOUNT_KINDS,
+  DiscountError,
+  discountFormValues,
+  listDiscountCodes,
+  normalizeCode,
+  resolveDiscountIn,
+  updateDiscountCode,
+} from "./promotions/discounts";
+export type {
+  AppliedDiscount,
+  DiscountCodeView,
+  DiscountInput,
+  DiscountKind,
+} from "./promotions/discounts";

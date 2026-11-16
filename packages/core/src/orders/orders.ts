@@ -17,6 +17,12 @@ import { addDays, safeTimeZone, zonedDayStart } from "../platform/time";
 import { EMAIL_EVENTS, enqueueEmailIn, enqueueStaffEmailsIn } from "../notifications/enqueue";
 import type { PaymentNotification, PaymentProvider } from "../payments/provider";
 import { formatTaxRate, quoteDeliveryIn, ShippingError } from "../shipping/shipping";
+import {
+  DiscountError,
+  normalizeCode,
+  resolveDiscountIn,
+  type AppliedDiscount,
+} from "../promotions/discounts";
 
 // Orders. Rules this file keeps:
 //
@@ -104,6 +110,8 @@ export interface OrderView {
   totalAmount: number;
   /** Money given back so far (recorded with returns). */
   refundedAmount: number;
+  /** The discount code used, if any (its money off is discountAmount). */
+  discountCode: string | null;
   shippingAddress: ValidAddress;
   /** The delivery area picked at checkout; null when the store had none. */
   shippingZoneName: string | null;
@@ -180,6 +188,7 @@ const ORDER_SELECT = {
   discountAmount: true,
   totalAmount: true,
   refundedAmount: true,
+  discountCode: true,
   shippingAddress: true,
   shippingZoneName: true,
   taxRateBasisPoints: true,
@@ -281,6 +290,8 @@ export interface PlaceOrderInput {
   shippingZoneId?: unknown;
   /** The delivery and tax prices the shopper saw (getCheckoutOptions().version). */
   pricingVersion?: unknown;
+  /** A discount code the shopper typed; checked again here with the code locked. */
+  discountCode?: unknown;
 }
 
 export interface PlacedOrder {
@@ -356,8 +367,22 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
         );
       }
 
-      // Delivery and tax, from the store's own settings.
+      // A discount code, checked and locked until this order is made, so its
+      // last use cannot be taken twice.
+      const typedCode = normalizeCode(input.discountCode);
+      const applied: AppliedDiscount | null = typedCode
+        ? await resolveDiscountIn(tx, {
+            code: typedCode,
+            subtotalAmount: view.subtotalAmount,
+            currency: view.currency!,
+            email,
+            lock: true,
+          })
+        : null;
+
+      // Delivery, discount and tax, from the store's own settings.
       const quote = await quoteDeliveryIn(tx, {
+        discount: applied,
         zoneId: input.shippingZoneId,
         country: address.country,
         subtotalAmount: view.subtotalAmount,
@@ -380,6 +405,8 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
           subtotalAmount: quote.subtotalAmount,
           shippingAmount: quote.shippingAmount,
           taxAmount: quote.taxAmount,
+          discountAmount: quote.discountAmount,
+          discountCode: applied?.code ?? null,
           totalAmount: quote.totalAmount,
           shippingZoneName: quote.zoneName,
           taxRateBasisPoints: taxed ? quote.tax.rateBasisPoints : 0,
@@ -394,6 +421,17 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
         },
         select: { id: true },
       });
+      if (applied) {
+        await tx.discountRedemption.create({
+          data: {
+            tenantId: db.tenantId,
+            codeId: applied.codeId,
+            orderId: order.id,
+            email,
+            amount: quote.discountAmount,
+          },
+        });
+      }
       await tx.orderItem.createMany({
         data: view.lines.map((line) => ({
           tenantId: db.tenantId,
@@ -451,7 +489,7 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
     });
   } catch (error) {
     // Rolled back: no order, no hold.
-    if (error instanceof ShippingError) {
+    if (error instanceof ShippingError || error instanceof DiscountError) {
       throw new OrderError("invalid", error.message, error.field);
     }
     if (error instanceof InventoryError && error.code === "insufficient") {
@@ -1075,6 +1113,8 @@ export function orderAmountLines(
     | "taxIncludedAmount"
     | "taxRateBasisPoints"
     | "taxLabel"
+    | "discountAmount"
+    | "discountCode"
   >,
 ): [label: string, value: string][] {
   const money = (amount: number) => formatMoney(amount, order.currency);
@@ -1083,6 +1123,12 @@ export function orderAmountLines(
     rows.push([
       order.shippingZoneName ? `Delivery (${order.shippingZoneName})` : "Delivery",
       order.shippingAmount === 0 ? "Free" : money(order.shippingAmount),
+    ]);
+  }
+  if (order.discountAmount > 0) {
+    rows.push([
+      order.discountCode ? `Discount (${order.discountCode})` : "Discount",
+      `-${money(order.discountAmount)}`,
     ]);
   }
   if (order.taxRateBasisPoints > 0) {

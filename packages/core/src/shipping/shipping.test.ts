@@ -41,10 +41,50 @@ describe("pricing an order", () => {
     expect(priceOrder(4_000, null, NO_TAX)).toEqual({
       subtotalAmount: 4_000,
       shippingAmount: 0,
+      discountAmount: 0,
       taxAmount: 0,
       taxIncludedAmount: 0,
       totalAmount: 4_000,
     });
+  });
+
+  it("takes a percent or amount off the items, never more than they cost", () => {
+    const area = zone({ rateAmount: 400 });
+    // 10% of 40.00 = 4.00 off; delivery 4.00 still charged.
+    expect(priceOrder(4_000, area, NO_TAX, { kind: "percent", value: 10 })).toMatchObject({
+      discountAmount: 400,
+      shippingAmount: 400,
+      totalAmount: 4_000,
+    });
+    // 50.00 off a 40.00 order takes the items to zero, not below.
+    expect(priceOrder(4_000, area, NO_TAX, { kind: "fixed", value: 5_000 })).toMatchObject({
+      discountAmount: 4_000,
+      totalAmount: 400,
+    });
+  });
+
+  it("covers the delivery fee for free delivery, shown as a discount", () => {
+    const priced = priceOrder(4_000, zone({ rateAmount: 400 }), NO_TAX, {
+      kind: "free_delivery",
+      value: 0,
+    });
+    expect(priced).toMatchObject({ shippingAmount: 400, discountAmount: 400, totalAmount: 4_000 });
+  });
+
+  it("judges free delivery over an amount after the discount, and taxes what is charged", () => {
+    const area = zone({ rateAmount: 400, freeOverAmount: 5_000 });
+    // 50.00 of items, 10% off = 45.00: under the free-delivery amount, so delivery is charged.
+    const priced = priceOrder(
+      5_000,
+      area,
+      { rateBasisPoints: 1100, included: false, label: "VAT" },
+      { kind: "percent", value: 10 },
+    );
+    // (45.00 + 4.00) * 11% = 5.39
+    expect(priced).toMatchObject({ discountAmount: 500, shippingAmount: 400, taxAmount: 539 });
+    expect(priced.totalAmount).toBe(
+      priced.subtotalAmount + priced.shippingAmount + priced.taxAmount - priced.discountAmount,
+    );
   });
 
   it("adds tax on items and delivery when prices exclude it", () => {

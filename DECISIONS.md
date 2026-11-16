@@ -260,6 +260,9 @@ Until the owner sets return rules (open decision Q22), there is no shopper-start
 ### D82. The orders export needs permission to export customer data (2026-11-17)
 The CSV holds names, emails, phones and addresses, so it needs `customers.export` as well as `orders.read`, and every export is written to the audit log with its filters and row count. It follows the Orders page filters (search, status, payment, from and to dates in the store's time zone), takes at most 5,000 rows, and protects spreadsheet users: any value starting with = + - @ is prefixed with an apostrophe so it cannot run as a formula.
 
+### D83. Discount codes are checked twice and counted from orders (2026-11-18)
+Staff with `promotions.write` make codes: percent off the items (1 to 100), a fixed amount off the items, or free delivery, with an optional minimum order, first and last day (store time), total uses and uses per email address. At checkout "Apply" checks the code against the shopper's own cart and shows the new total; when the order is placed the code is checked again with its row locked, so two shoppers can never both take its last use. Uses are counted from orders that are not cancelled, so a cancelled order gives its use back. A discount comes off the items first (never below zero), or equals the delivery fee for free delivery; "free delivery over" is judged on the items after the discount, and tax applies to what is then charged. The order keeps the code and the amount, frozen like its other amounts; a used code cannot be deleted, only switched off. No countdowns or urgency are shown to shoppers. Automatic promotions (without a code) are not built.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

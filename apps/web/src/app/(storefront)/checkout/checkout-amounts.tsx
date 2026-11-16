@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+/** Sent on the document when the summary's figures change (a discount code applied). */
+export const PRICING_EVENT = "checkout:pricing";
+
 export interface PricedRows {
   rows: [label: string, value: string][];
   total: string;
@@ -22,6 +25,19 @@ export function CheckoutAmounts({
   fallback: PricedRows;
 }) {
   const [zoneId, setZoneId] = useState("");
+  // Replaced when a discount code is applied (see discount-field.tsx).
+  const [pricing, setPricing] = useState({ byZone, fallback });
+
+  useEffect(() => {
+    const onPricing = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{ byZone: Record<string, PricedRows>; fallback: PricedRows }>
+      ).detail;
+      if (detail?.fallback) setPricing(detail);
+    };
+    document.addEventListener(PRICING_EVENT, onPricing);
+    return () => document.removeEventListener(PRICING_EVENT, onPricing);
+  }, []);
 
   useEffect(() => {
     const read = () => {
@@ -37,7 +53,7 @@ export function CheckoutAmounts({
     return () => document.removeEventListener("change", onChange);
   }, [selectId]);
 
-  const current = byZone[zoneId] ?? fallback;
+  const current = pricing.byZone[zoneId] ?? pricing.fallback;
   return (
     <dl className="flex flex-col gap-1 border-t border-line pt-3 text-sm" aria-live="polite">
       {current.rows.map(([label, value]) => (

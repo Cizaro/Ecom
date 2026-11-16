@@ -4,11 +4,8 @@ import {
   getCart,
   getCheckoutOptions,
   listAddresses,
-  orderAmountLines,
   PAY_WITHIN_MINUTES,
   priceOrder,
-  type ShippingZoneView,
-  type TaxSettings,
 } from "@ecom/core";
 import { Alert, buttonClasses, Card } from "@ecom/ui";
 import type { Metadata } from "next";
@@ -25,27 +22,9 @@ import {
 import { AddressFields } from "../_components/address-fields";
 import { Breadcrumbs } from "../_components/breadcrumbs";
 import { placeOrderAction } from "./actions";
-import { CheckoutAmounts, type PricedRows } from "./checkout-amounts";
-
-/** The summary rows for one delivery area (or none), worked out on the server. */
-function pricedRows(
-  subtotal: number,
-  currency: string,
-  zone: ShippingZoneView | null,
-  tax: TaxSettings,
-  hasZones: boolean,
-): PricedRows {
-  const pricing = priceOrder(subtotal, zone, tax);
-  const rows = orderAmountLines({
-    ...pricing,
-    currency,
-    shippingZoneName: zone?.name ?? null,
-    taxRateBasisPoints: tax.rateBasisPoints,
-    taxLabel: tax.label,
-  });
-  if (hasZones && !zone) rows.splice(1, 0, ["Delivery", "Choose your area"]);
-  return { rows, total: formatMoney(pricing.totalAmount, currency) };
-}
+import { CheckoutAmounts } from "./checkout-amounts";
+import { DiscountField } from "./discount-field";
+import { summaryPricing } from "@/server/checkout-pricing";
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false, follow: false } };
 
@@ -69,13 +48,7 @@ export default async function CheckoutPage() {
   // Delivery areas the store offers, each with its price for this cart.
   const zones = options.zones.filter((zone) => zone.currency === currency);
   const hasZones = options.zones.length > 0;
-  const byZone = Object.fromEntries(
-    zones.map((zone) => [
-      zone.id,
-      pricedRows(cart.subtotalAmount, currency, zone, options.tax, true),
-    ]),
-  );
-  const fallback = pricedRows(cart.subtotalAmount, currency, null, options.tax, hasZones);
+  const { byZone, fallback } = summaryPricing(cart.subtotalAmount, currency, options, null);
   const zoneOptions = zones.map((zone) => {
     const fee = priceOrder(cart.subtotalAmount, zone, {
       ...options.tax,
@@ -155,6 +128,9 @@ export default async function CheckoutPage() {
               {customer ? (
                 <AccountCheckbox label="Save this address to my account" name="saveAddress" />
               ) : null}
+            </Card>
+            <Card title="Discount code">
+              <DiscountField />
             </Card>
             <Card title="Payment">
               <fieldset className="flex flex-col gap-3" data-testid="payment-methods">

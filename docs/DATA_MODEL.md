@@ -58,6 +58,10 @@ erDiagram
 | shipments | Own tenant | Own tenant, add only |
 | notification_settings | Own tenant | Own tenant, no delete |
 | order_returns, order_return_items | Own tenant | Own tenant, add only |
+| discount_codes | Own tenant | Own tenant |
+| discount_redemptions | Own tenant | Own tenant, add only |
+
+**Discount codes (2026-11-18, decision D83):** `discount_codes` (code unique per store, kind percent, fixed or free_delivery, value, minimum, first and last moment, total and per-customer limits, on or off) and `discount_redemptions` (one per order: code, email, amount; add-only). Orders gain `discount_code`, frozen with `discount_amount`.
 
 **Returns (2026-11-17, decision D80):** `order_returns` (reason, note, refund amount and method, who recorded it) and `order_return_items` (order line, quantity, resellable or damaged), both add-only; a trigger keeps returned quantities within what was bought and on the same order. `orders.refunded_amount` holds money given back, at most the total and never decreasing.
 

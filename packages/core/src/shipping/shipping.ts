@@ -81,9 +81,18 @@ export function deliveryFee(
 /** Rounds a / b to the nearest whole number, halves up (all values are non-negative). */
 const roundDiv = (a: number, b: number) => Math.floor((2 * a + b) / (2 * b));
 
+/** A discount from a code: money off the items, or the delivery fee. */
+export interface PricingDiscount {
+  kind: "percent" | "fixed" | "free_delivery";
+  /** percent: 1 to 100; fixed: minor units; free_delivery: unused. */
+  value: number;
+}
+
 export interface OrderPricing {
   subtotalAmount: number;
   shippingAmount: number;
+  /** Money off: from the items, or the delivery fee for free delivery. */
+  discountAmount: number;
   /** Tax added on top (0 when prices include it). */
   taxAmount: number;
   /** Tax already inside the prices, shown for information. */
@@ -92,44 +101,44 @@ export interface OrderPricing {
 }
 
 /**
- * What an order costs: items, delivery and tax. Tax applies to the items and
- * the delivery together. When prices include tax, the total is unchanged and
- * the tax inside it is worked out for display.
+ * What an order costs: items, delivery, discount and tax. A discount comes
+ * off the items first (never more than they cost), or covers the delivery
+ * fee; free delivery over an amount is judged on the items after the
+ * discount. Tax applies to what is then charged for items and delivery.
+ * When prices include tax, the tax inside the total is worked out for display.
  */
 export function priceOrder(
   subtotalAmount: number,
   zone: Pick<ShippingZoneView, "rateAmount" | "freeOverAmount"> | null,
   tax: TaxSettings,
+  discount: PricingDiscount | null = null,
 ): OrderPricing {
-  const shippingAmount = zone ? deliveryFee(zone, subtotalAmount) : 0;
-  const taxable = subtotalAmount + shippingAmount;
+  const itemsDiscount =
+    discount?.kind === "percent"
+      ? Math.min(subtotalAmount, roundDiv(subtotalAmount * discount.value, 100))
+      : discount?.kind === "fixed"
+        ? Math.min(subtotalAmount, discount.value)
+        : 0;
+  const net = subtotalAmount - itemsDiscount;
+  const shippingAmount = zone ? deliveryFee(zone, net) : 0;
+  const deliveryDiscount = discount?.kind === "free_delivery" ? shippingAmount : 0;
+  const discountAmount = itemsDiscount + deliveryDiscount;
+  const taxable = net + shippingAmount - deliveryDiscount;
+  const base = { subtotalAmount, shippingAmount, discountAmount };
   const rate = tax.rateBasisPoints;
   if (rate === 0) {
-    return {
-      subtotalAmount,
-      shippingAmount,
-      taxAmount: 0,
-      taxIncludedAmount: 0,
-      totalAmount: taxable,
-    };
+    return { ...base, taxAmount: 0, taxIncludedAmount: 0, totalAmount: taxable };
   }
   if (tax.included) {
     return {
-      subtotalAmount,
-      shippingAmount,
+      ...base,
       taxAmount: 0,
       taxIncludedAmount: roundDiv(taxable * rate, 10_000 + rate),
       totalAmount: taxable,
     };
   }
   const taxAmount = roundDiv(taxable * rate, 10_000);
-  return {
-    subtotalAmount,
-    shippingAmount,
-    taxAmount,
-    taxIncludedAmount: 0,
-    totalAmount: taxable + taxAmount,
-  };
+  return { ...base, taxAmount, taxIncludedAmount: 0, totalAmount: taxable + taxAmount };
 }
 
 /** "11%" or "12.5%". */
@@ -219,6 +228,7 @@ export async function quoteDeliveryIn(
     currency: string;
     /** From checkoutOptions().version; omitted means "do not check". */
     expectedVersion?: unknown;
+    discount?: PricingDiscount | null;
   },
 ): Promise<DeliveryQuote> {
   const [zones, tax] = await Promise.all([activeZonesIn(tx), taxSettingsIn(tx)]);
@@ -229,7 +239,11 @@ export async function quoteDeliveryIn(
     );
   }
   if (zones.length === 0) {
-    return { ...priceOrder(input.subtotalAmount, null, tax), zoneName: null, tax };
+    return {
+      ...priceOrder(input.subtotalAmount, null, tax, input.discount ?? null),
+      zoneName: null,
+      tax,
+    };
   }
   const zone = zones.find((candidate) => candidate.id === input.zoneId);
   if (!zone) {
@@ -252,7 +266,11 @@ export async function quoteDeliveryIn(
       "shippingZoneId",
     );
   }
-  return { ...priceOrder(input.subtotalAmount, zone, tax), zoneName: zone.name, tax };
+  return {
+    ...priceOrder(input.subtotalAmount, zone, tax, input.discount ?? null),
+    zoneName: zone.name,
+    tax,
+  };
 }
 
 // --- Staff: delivery areas -------------------------------------------------------

@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.7 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.8 (coupons and promotions). The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: bulk product import from a spreadsheet (owner request). The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -153,6 +153,10 @@ Last updated: 2026-11-12
   - **Dashboard** on the admin home (`reports.read`): sales and orders today, last 7 and 30 days, a 14-day chart, orders to send, cash to collect, online orders waiting for payment, low-stock products and the latest orders, in the store's time zone.
   - **Orders**: filters for payment method and from/to dates, and **Download as CSV** of the filtered orders (`customers.export`, audited, at most 5,000 rows, safe against spreadsheet formulas).
   - **Returns**: on a sent and paid order, staff record what came back (how many of each item, resellable or damaged, reason) and any money given back (cash, bank transfer or other, with `orders.refund`). Stock comes back, the order shows what was given back and becomes "Refunded" when everything is, and the shopper sees it on their order and gets an email.
+
+- **Milestone 3.8, discount codes:**
+  - Admin page **Discount codes** (`promotions.write`, audited): percent off, amount off or free delivery; optional minimum order, first and last day, total uses and uses per customer; switch on or off; delete only if never used. The list shows how many orders used each code.
+  - Checkout: a **Discount code** box with **Apply** that shows the new total straight away; the code is checked again, locked, when the order is placed. The order, its emails, the admin order page and the CSV export show the code and the money off.
 
 ## In progress
 
@@ -341,24 +345,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 3.7, on the first computer)
+## Checks run this session (Milestone 3.8, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 239 tests (new: store days and time zones, CSV quoting and formula protection) |
-| `pnpm test:int` | Pass, 239 tests, on the separate test database (5 new: returns restock and refund to "refunded", permissions and paid-only rule, database rules for returns and refunds, dashboard figures and store separation, export and filters) |
+| `pnpm test` | Pass, 247 tests (new: discounts in pricing, free delivery, tax after discount) |
+| `pnpm test:int` | Pass, 245 tests, on the separate test database (6 new: staff codes and permissions, codes at checkout and their refusals, free delivery, last use taken once under a race and given back on cancel, per-customer limit, records kept and store separation) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 98 tests (36 skipped by design), including a return with a cash refund, the dashboard, filters, the CSV export and its permission |
+| `pnpm test:e2e` | Pass, 101 tests (37 skipped by design), including a code made by staff and applied by a shopper |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
 | CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Milestone 3.8: coupons and promotions (if the owner wants them at launch). The owner's return rules would let shoppers start returns themselves.
+Bulk product import from a spreadsheet, as the owner asked (details to agree first).
 
 ## Session log
 
@@ -387,5 +391,6 @@ Milestone 3.8: coupons and promotions (if the owner wants them at launch). The o
 | 2026-11-17 | Milestone 3.5: delivery areas and tax set by staff, delivery area at checkout with live total, frozen on the order, shipments with courier and tracking; storefront host fix after redirects |
 | 2026-11-17 | Milestone 3.6: store emails through the outbox (confirmed, on its way, payment received, cancelled; staff new order and low stock), worker email sweep, Store emails admin page; owner: delivery $4 flat, Lebanon only (area added to the demo store) |
 | 2026-11-17 | Milestone 3.7: dashboard, order filters and CSV export, staff-recorded returns with refunds, return email; demo store time zone set to Asia/Beirut |
+| 2026-11-18 | Milestone 3.8: discount codes (percent, amount, free delivery; limits and dates), checkout Apply with live total, locked check when ordering, uses counted from orders |
 
 Commit hashes: `git log --oneline`.

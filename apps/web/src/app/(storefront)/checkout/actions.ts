@@ -2,8 +2,14 @@
 
 import { getEnv } from "@ecom/config";
 import {
+  checkDiscountCode,
   createAddress,
   CustomerError,
+  describeDiscount,
+  DiscountError,
+  getCart,
+  getCheckoutOptions,
+  normalizeCode,
   getOrderForShopper,
   NotFoundError,
   OrderError,
@@ -17,6 +23,7 @@ import { cartOwner, getCurrentCustomer, safeReturnPath } from "@/server/customer
 import { deliverPaymentNotification, getMockProvider, getPaymentProvider } from "@/server/payments";
 import { sendWaitingEmails } from "@/server/notifications";
 import { storefrontDb } from "@/server/storefront";
+import { summaryPricing, type SummaryPricing } from "@/server/checkout-pricing";
 import type { AccountFormState } from "../account/actions";
 
 // Checkout actions for shoppers. The store comes from the host name
@@ -54,10 +61,14 @@ export async function placeOrderAction(
 ): Promise<AccountFormState> {
   const { store, db } = await storefrontDb();
   const values = Object.fromEntries(
-    [...ADDRESS_FIELDS, "email", "saveAddress", "paymentMethod", "shippingZoneId"].map((name) => [
-      name,
-      text(formData, name),
-    ]),
+    [
+      ...ADDRESS_FIELDS,
+      "email",
+      "saveAddress",
+      "paymentMethod",
+      "shippingZoneId",
+      "discountCode",
+    ].map((name) => [name, text(formData, name)]),
   );
   if (await tooManyCartChanges(store.tenantId)) {
     return { error: "Too many attempts in a short time. Please wait a minute.", values };
@@ -93,6 +104,7 @@ export async function placeOrderAction(
       paymentMethod,
       shippingZoneId: text(formData, "shippingZoneId"),
       pricingVersion: text(formData, "pricingVersion") || undefined,
+      discountCode: text(formData, "discountCode"),
     });
     if (customer && formData.get("saveAddress") === "on") {
       // Saving is a convenience: a full address book does not stop the order.
@@ -182,4 +194,42 @@ export async function mockPayAction(
   // A paid order closes the cart: every page header shows the new count.
   revalidatePath("/", "layout");
   redirect(safeReturnPath(text(formData, "return"), "/"));
+}
+
+/**
+ * Checks a discount code against the shopper's own cart and returns the
+ * summary's figures with it (or without it, when it does not apply). Nothing
+ * is held: the code is checked again, and locked, when the order is placed.
+ */
+export async function previewDiscountAction(
+  code: string,
+): Promise<{ ok: boolean; message: string; pricing?: SummaryPricing }> {
+  const { store, db } = await storefrontDb();
+  if (await tooManyCartChanges(store.tenantId)) {
+    return { ok: false, message: "Too many attempts in a short time. Please wait a minute." };
+  }
+  const [cart, options] = await Promise.all([
+    cartOwner().then((owner) => getCart(db, owner)),
+    getCheckoutOptions(db),
+  ]);
+  const currency = cart.currency ?? "USD";
+  const typed = normalizeCode(typeof code === "string" ? code : "");
+  const without = summaryPricing(cart.subtotalAmount, currency, options, null);
+  if (!typed) return { ok: true, message: "", pricing: without };
+  try {
+    const applied = await checkDiscountCode(db, {
+      code: typed,
+      subtotalAmount: cart.subtotalAmount,
+      currency,
+    });
+    return {
+      ok: true,
+      message: `${applied.code}: ${describeDiscount({ ...applied, currency })} applied.`,
+      pricing: summaryPricing(cart.subtotalAmount, currency, options, applied),
+    };
+  } catch (error) {
+    if (error instanceof DiscountError)
+      return { ok: false, message: error.message, pricing: without };
+    throw error;
+  }
 }

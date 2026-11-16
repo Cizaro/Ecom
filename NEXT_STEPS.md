@@ -17,14 +17,9 @@ Sign in to the admin:
 2. **Store emails**: add the address(es) that should hear about new orders and low stock.
 3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 
-## Next development task: Milestone 3.8, coupons and promotions
+## Next development task: bulk product import from a spreadsheet (owner request, 2026-11-18)
 
-1. Discount codes set by staff: percent or fixed amount, free delivery, minimum order, start and end dates, usage limit overall and per customer.
-2. Applied at checkout on the server (the code is checked again when the order is placed), shown on the order and in emails; `discount_amount` is frozen with the other amounts.
-3. Automatic promotions (for example 10% off a category) only if the owner wants them; no fake countdowns or scarcity.
-4. Tests: a code cannot be used past its limits or dates, by another store, or stacked unless allowed; totals stay consistent.
-
-**Owner questions for this milestone:** do you want discount codes at launch, and which kinds?
+The owner wants to add many products at once: fill in a spreadsheet (Excel or CSV) with the product details and picture links, choose each product's category from a dropdown of the store's categories, then upload it. To be planned with the owner before building.
 
 ## Return rules (owner)
 

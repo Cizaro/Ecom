@@ -75,6 +75,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/orders/[id]", access: { level: "permission", permission: "orders.read" } },
   { path: "/admin/settings/shipping", access: SETTINGS_WRITE },
   { path: "/admin/settings/notifications", access: SETTINGS_WRITE },
+  { path: "/admin/promotions", access: { level: "permission", permission: "promotions.write" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -144,6 +145,17 @@ const SETTINGS_ACTION_ENTRIES: readonly ActionEntry[] = [
   "retryEmailAction",
 ].map((name) => ({ id: `${SETTINGS_ACTIONS}#${name}`, access: SETTINGS_WRITE }));
 
+const PROMOTION_ACTIONS = "(admin)/admin/(protected)/promotions/actions.ts";
+
+const PROMOTION_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "createDiscountCodeAction",
+  "updateDiscountCodeAction",
+  "deleteDiscountCodeAction",
+].map((name) => ({
+  id: `${PROMOTION_ACTIONS}#${name}`,
+  access: { level: "permission", permission: "promotions.write" } as const,
+}));
+
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 
 export const ADMIN_ACTIONS: readonly ActionEntry[] = [
@@ -166,6 +178,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...ORDER_ACTION_ENTRIES,
   ...RETURN_ACTION_ENTRIES,
   ...SETTINGS_ACTION_ENTRIES,
+  ...PROMOTION_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [
@@ -213,11 +226,14 @@ export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
   ].map((name) => ({ id: `${ACCOUNT_ACTIONS}#${name}`, access: { level: "public" } as const })),
   // Checkout: the order is built from the shopper's own cart on the server;
   // paying again needs the order's key or its owner's session; the mock
-  // provider's buttons go through the same verified path as the webhook.
-  ...["placeOrderAction", "retryPaymentAction", "mockPayAction"].map((name) => ({
-    id: `${CHECKOUT_ACTIONS}#${name}`,
-    access: { level: "public" } as const,
-  })),
+  // provider's buttons go through the same verified path as the webhook;
+  // previewing a discount code reads only the shopper's own cart.
+  ...["placeOrderAction", "retryPaymentAction", "mockPayAction", "previewDiscountAction"].map(
+    (name) => ({
+      id: `${CHECKOUT_ACTIONS}#${name}`,
+      access: { level: "public" } as const,
+    }),
+  ),
 ];
 
 /** The call every storefront action's source must contain. */
