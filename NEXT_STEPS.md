@@ -9,29 +9,33 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Next development task: Milestone 3.3, checkout and orders
+## Next development task: Milestone 3.4, a real payment provider (needs the owner's choice)
 
-See PROJECT_PLAN.md section 4 (Phase 3) and docs/DATA_MODEL.md section 3.
+**Blocked on the owner:** choose the payment provider (open decision Q4 in DECISIONS.md; the suggestion is Stripe) and create a test-mode account. Put its test keys in `.env` on your computer only; never send them in chat or commit them.
 
-1. `orders`, `order_items`, `order_addresses` and `payments` tables, tenant-scoped with Row-Level Security. Order lines copy the name, SKU and price at the moment of purchase, so later catalog changes never alter an order.
-2. An order state machine (pending payment, paid, fulfilled, cancelled, refunded), with every transition recorded and only allowed transitions possible.
-3. Checkout for guests and signed-in customers: contact email, delivery address (reusing `validateAddress` and saved addresses), a review step; stock held with `reserveStock` for the checkout and committed when payment succeeds, released when it fails or times out.
-4. A `PaymentProvider` interface with the mock provider only: card details never reach this application; the mock simulates success, decline and delayed confirmation. Webhook handling with signature checks and idempotency keys, so a repeated notification never charges or fulfils twice.
-5. Order confirmation page and email; the order in the customer's account; a basic order list in the admin.
-6. Tests: two shoppers checking out the last item; a repeated webhook; a customer can never see another's order; prices cannot be changed from the browser.
+1. A provider adapter behind the existing `PaymentProvider` interface (`packages/core/src/payments/provider.ts`): create a payment on the provider's hosted page, verify its webhook signatures, map its events.
+2. Refunds: a `refunds` table, staff refund from the order page (`orders.refund`), the provider's refund call, order status refunded; the "paid after cancellation" case resolved by a refund.
+3. Configuration: `PAYMENT_PROVIDER=stripe` (or the chosen one), its keys and webhook secret validated at start-up; the mock stays for development and tests.
+4. Tests only in the provider's test mode: success, decline, 3-D Secure, webhook retries and replays, refunds. No live money in any automated test.
 
-Owner decision needed before 3.4: which payment provider, and its test keys (open decision Q4).
+If the provider decision will take a while, 3.5 (shipping and tax) or 3.6 (notification emails) can go first.
 
 ## Then, in order
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 3.4 to 3.8 Real payments, shipping and tax, notifications, admin order screens, promotions | 3.4 needs payment provider test keys |
+| 2 | 3.5 to 3.8 Shipping and tax, notifications, admin order tools (refunds, returns, dashboard), promotions | 3.5 needs the shipping rules (open decisions) |
 | 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Orders: a billing address separate from delivery; order notes from the shopper; an "order received, waiting for payment" email.
+- Orders: let a guest claim their past orders into an account by confirming the same email address.
+- Orders: staff notes on an order, and the staff member's name in the order history (stored as an ID today).
+- Checkout: express payment buttons and saved cards come with the real provider.
+- Checkout: show stock holds per order to staff, and let staff extend a hold.
 
 - Stock: transfers between locations, suppliers and purchase orders (receive against an order), CSV import of counts.
 - Stock: a low-stock email to staff (with notifications, Milestone 3.6).

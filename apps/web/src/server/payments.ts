@@ -8,6 +8,7 @@ import {
   createTenantDb,
   findPaymentTenant,
   handlePaymentNotification,
+  orderAccessKey,
   orderConfirmationEmail,
   WebhookError,
   type EmailProvider,
@@ -81,11 +82,17 @@ export async function deliverPaymentNotification(
   try {
     notification = provider.verifyNotification(rawBody, headers);
   } catch (error) {
-    if (error instanceof WebhookError) {
-      logger.warn({ reason: error.message }, "payment notification refused");
-      return { outcome: "rejected" };
-    }
-    throw error;
+    // Verification only reads and checks; any failure there means the
+    // notification cannot be trusted. (No instanceof check: bundling can load
+    // the error class twice, and a forged notification must never cause a 500.)
+    logger.warn(
+      {
+        reason: error instanceof Error ? error.message : String(error),
+        expected: error instanceof WebhookError,
+      },
+      "payment notification refused",
+    );
+    return { outcome: "rejected" };
   }
   const tenantId = await findPaymentTenant(env.DATABASE_ADMIN_URL, notification.providerPaymentId);
   if (!tenantId) return { outcome: "unknown_payment" };
@@ -112,6 +119,6 @@ async function sendConfirmation(db: TenantDb, order: OrderView) {
   // A signed-in customer's order is in their account; a guest's opens from this link only.
   const orderUrl = order.customerId
     ? `${store.url}/account/orders/${order.id}`
-    : `${store.url}/order/${order.id}`;
+    : `${store.url}/order/${order.id}?key=${orderAccessKey(env.ENCRYPTION_KEY, order.id)}`;
   await globals.__orderEmail.send(orderConfirmationEmail(order, store, orderUrl));
 }

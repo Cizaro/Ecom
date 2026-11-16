@@ -314,6 +314,7 @@ export {
   ORDER_PAGE_SIZE,
   ORDER_STATUSES,
   orderConfirmationEmail,
+  orderAccessKey,
   OrderError,
   PAY_WITHIN_MINUTES,
   placeOrder,

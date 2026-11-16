@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import type { AppTransaction, Prisma } from "@ecom/db";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
@@ -60,6 +60,16 @@ export class OrderError extends Error {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KEY = /^[A-Za-z0-9_-]{43}$/;
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+
+/**
+ * The key in an order's private link. Derived from the order ID and a server
+ * secret, so the confirmation email (sent later, when payment arrives) can
+ * carry it again, while nobody without the secret can work it out. Only its
+ * hash is stored. Changing the secret makes earlier links stop working.
+ */
+export function orderAccessKey(secret: string, orderId: string): string {
+  return createHmac("sha256", secret).update(`order-access:${orderId}`).digest("base64url");
+}
 
 function assertOrderId(id: unknown): asserts id is string {
   if (typeof id !== "string" || !UUID.test(id)) throw new NotFoundError("order");
@@ -179,6 +189,8 @@ export interface PlaceOrderInput {
   address: AddressInput;
   /** The total the shopper saw. If prices changed since, the order is not placed. */
   expectedTotal?: number;
+  /** Server secret the order's link key is derived from (see orderAccessKey). */
+  accessSecret: string;
 }
 
 export interface PlacedOrder {
@@ -213,7 +225,11 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
     throw new OrderError("invalid", problem.message ?? "Check the address.", problem.field);
   }
 
-  const accessKey = randomBytes(32).toString("base64url");
+  if (typeof input.accessSecret !== "string" || input.accessSecret.length < 32) {
+    throw new Error("placeOrder: accessSecret must be at least 32 characters");
+  }
+  const orderId = randomUUID();
+  const accessKey = orderAccessKey(input.accessSecret, orderId);
   try {
     return await db.run(async (tx) => {
       const cart = await checkoutCartIn(tx, input.owner);
@@ -237,6 +253,7 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
       const number = await nextOrderNumber(tx, db.tenantId);
       const order = await tx.order.create({
         data: {
+          id: orderId,
           tenantId: db.tenantId,
           number,
           customerId: input.customer?.id ?? null,

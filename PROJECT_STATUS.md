@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 and 3.2 complete.** Phases 1 and 2 are complete. Next: Milestone 3.3 (checkout and orders).
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 complete.** Phases 1 and 2 are complete. Next: Milestone 3.4 (a real payment provider), which needs the owner's choice of provider.
 
 ## Completed
 
@@ -53,7 +53,7 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. Product pages say whether an item is in stock, nearly gone or sold out, and the cart never holds more than there is. There is no checkout yet. There are no stock levels, orders or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. Product pages say whether an item is in stock, nearly gone or sold out, and the cart never holds more than there is. They can check out as a guest or signed in and pay with the test payment provider (no real money), see their order, and find it in their account. Staff see orders and mark them sent. There is no real payment provider, shipping, tax or dashboard yet.
 
 - **Milestone 2.2, product media:**
   - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
@@ -119,6 +119,15 @@ Last updated: 2026-11-12
   - Storefront: "In stock" or "Only a few left" on the product page, a sold-out message instead of the buy button, "Sold out" on cards, the quantity list limited to what there is, availability for search engines when counted.
   - Cart: refuses more than is left and says how many there are; flags lines that ran low or sold out; sold-out lines are not in the total.
 
+- **Milestone 3.3, checkout and orders:**
+  - Tables `orders`, `order_items`, `order_events`, `payments`, `payment_events` and `order_counters`; an order is a frozen copy of what was bought; database triggers allow only the defined status steps and never let an order's amounts change.
+  - Checkout on one page (contact, delivery address, summary) for guests and signed-in customers, optionally saving the address; prices rebuilt on the server; stock held in the same transaction for 30 minutes; refused if the total changed.
+  - A `PaymentProvider` interface with a mock provider: a test payment page with pay, decline and leave buttons; payment confirmed only by a signed, fresh, once-only notification whose amount matches; a public webhook at `/api/webhooks/payments/mock`.
+  - Unpaid orders cancelled after 30 minutes by the worker, stock returned; a late payment flagged for a refund.
+  - Order page with status and "Pay now" to try again; guests open it with a private link, also sent in the confirmation email; customers see their orders under Account.
+  - Admin: Orders list (search by number or email, filter by status) and order page with items, address, payments, history, "Mark as sent" and "Cancel order" for unpaid ones. View with `orders.read`, change with `orders.manage`.
+  - The mock provider refuses to run in production unless explicitly allowed (only the tests do).
+
 ## In progress
 
 Nothing.
@@ -130,13 +139,16 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 ## Known limitations of what is built
 
 - **Products have no stock levels** (Milestone 3.2), so the storefront says nothing about availability yet.
-- **No checkout yet** (Phase 3). The cart page says so and offers no pay button. The subtotal has no shipping, tax or discounts.
+- **Payments are test-only.** The mock provider takes no money; a real provider (Milestone 3.4) needs your choice and test keys. No refunds yet.
+- **Shipping and tax are not charged** (Milestone 3.5); checkout says "Not charged yet". There is no billing address and no discount codes yet.
+- **Confirmation email links use `APP_URL`'s scheme and port** with the store's domain; check them on the deployed site.
+- **Staff names are not shown in an order's history yet** (only "Staff").
 - **Customers cannot yet change their email address or change their password while signed in** (only through the reset link).
 - **Staff can list customers but not open, disable or delete one** from the admin yet (Milestone 3.7). Disabling is possible in the database.
 - **Expired customer sessions and used links stay in the database** (ignored, not deleted) until a cleanup job exists.
 - **Account pages and emails are English only.**
 - **Products that existed before stock tracking are not counted** (they keep selling without a stock check) until staff switch counting on for each variant (decision D64). New variants are counted from the start and show as out of stock until stock is received.
-- **The cart does not hold stock.** Stock is held only at checkout (Milestone 3.3), so an item can sell out between adding it and checking out; the cart then says so.
+- **The cart does not hold stock.** Stock is held when the order is placed, so an item can sell out between adding it and checking out; the cart and checkout then say so.
 - **No transfers between locations, suppliers or purchase orders yet**, and each item in a checkout is taken from a single location.
 - **Delivery times are not shown** anywhere (they come with shipping, Milestone 3.5).
 - **Expired carts stay in the database** (ignored, not deleted) until a cleanup job exists.
@@ -202,9 +214,11 @@ Read by code today (validated in `packages/config/src/env.ts`):
 | `DATABASE_ADMIN_URL` | Owner connection: migrations, seeding, sign-in |
 | `REDIS_URL` | Queues and rate limits |
 | `AUTH_SECRET` | Signs session cookies and encrypts two-factor secrets. Changing it signs everyone out and invalidates two-factor enrolments. |
-| `ENCRYPTION_KEY` | Reserved for encrypting stored OAuth tokens (Phase 6) |
+| `ENCRYPTION_KEY` | Derives the keys in guests' private order links (changing it makes old links stop working); later also encrypts stored OAuth tokens (Phase 6) |
 | `ALLOW_SEARCH_INDEXING` | "true" lets search engines index the storefront. Default "false". Set "true" on the live site only. |
-| `S3_PUBLIC_URL`
+| `S3_*` | Object storage |
+| `PAYMENT_PROVIDER`, `MOCK_PAYMENT_WEBHOOK_SECRET` | Payments. Only `mock` exists; it needs the signing secret (a local-only value is in .env.example). **If you have an older `.env`, add the `MOCK_PAYMENT_WEBHOOK_SECRET` line from .env.example**, or the app will not start. |
+| `ALLOW_MOCK_PAYMENTS_IN_PRODUCTION` | Only for the automated tests. Never set it on a real site. |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Email. `smtp` needs host and port. |
 
 `.env.example` works as-is for local development. Generate your own `AUTH_SECRET` and `ENCRYPTION_KEY` (command is in the file). `.env` is never committed, so each computer has its own.
@@ -300,24 +314,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 3.2, on the first computer)
+## Checks run this session (Milestone 3.3, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 183 tests |
-| `pnpm test:int` | Pass, 202 tests, on the separate test database (14 for stock, including eight simultaneous checkouts for one item and a new store racing to create its first location; 4 for stock in the cart) |
+| `pnpm test` | Pass, 195 tests (payment provider signature checks, payment settings) |
+| `pnpm test:int` | Pass, 216 tests, on the separate test database (14 for orders: repeated and mismatched notifications, five shoppers racing for the last item, who can see an order, expiry, the database rules) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 79 tests (27 skipped by design) |
+| `pnpm test:e2e` | Pass, 83 tests (27 skipped by design), including the full checkout journey and a forged webhook |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Covered by the browser tests on desktop and phone (stock journey from staff and shopper sides) |
-| CI on GitHub | Milestone 3.1 commit passed; see the Actions tab for the Milestone 3.2 commit |
+| Looked at in a browser | Covered by the browser tests on desktop and phone (full checkout journey) |
+| CI on GitHub | Milestone 3.2 commit passed; see the Actions tab for the Milestone 3.3 commit |
 
 ## Recommended next task
 
-Milestone 3.3: checkout and orders. Details in NEXT_STEPS.md.
+Milestone 3.4: a real payment provider, once you have chosen one and have test keys. Details in NEXT_STEPS.md.
 
 ## Session log
 
@@ -341,5 +355,6 @@ Milestone 3.3: checkout and orders. Details in NEXT_STEPS.md.
 | 2026-11-14 | Milestone 2.6: indexing switch, robots.txt, sitemap.xml, store-name titles, canonical addresses, in-shop 404, performance budgets. Phase 2 complete |
 | 2026-11-16 | Milestone 3.1: customer accounts with email confirmation, password reset, profile and consent; saved addresses with country rules; cart follows the account; admin customer list |
 | 2026-11-16 | Milestone 3.2: stock locations, levels, recorded movements, race-safe checkout holds, admin stock screens, storefront and cart stock checks |
+| 2026-11-16 | Milestone 3.3: orders and payments tables with status and amount rules, checkout, mock payment provider with signed once-only webhooks, unpaid-order expiry, order pages, account orders, admin orders |
 
 Commit hashes: `git log --oneline`.

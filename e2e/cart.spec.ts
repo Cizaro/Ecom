@@ -158,9 +158,8 @@ test("a visitor fills a cart; prices follow the catalog; carts are private", asy
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow).toBeLessThanOrEqual(0);
-  // Nothing is promised that does not exist yet.
-  await expect(visitor.getByText("Checkout is not open yet")).toBeVisible();
-  await expect(visitor.getByRole("button", { name: /checkout|pay|buy/i })).toHaveCount(0);
+  // With everything available, the cart leads to checkout.
+  await expect(visitor.getByTestId("checkout-link")).toHaveAttribute("href", "/checkout");
 
   await visitorContext.close();
 

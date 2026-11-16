@@ -18,6 +18,7 @@ import {
   handlePaymentNotification,
   listCustomerOrders,
   listOrders,
+  orderAccessKey,
   OrderError,
   placeOrder,
   startPayment,
@@ -34,6 +35,7 @@ const run = randomUUID().slice(0, 8);
 const tenantIds: string[] = [];
 const userIds: string[] = [];
 const provider = createMockPaymentProvider({ webhookSecret: "w".repeat(40) });
+const SECRET = "k".repeat(40);
 
 let tenantA: string;
 let tenantB: string;
@@ -125,6 +127,7 @@ async function placeAndStart(db: TenantDb, token: string, email = "guest@example
     customer: null,
     email,
     address,
+    accessSecret: SECRET,
   });
   const { payUrl } = await startPayment(db, provider, placed.orderId, `/order/${placed.orderId}`);
   const providerPaymentId = new URL(payUrl, "http://x").searchParams.get("payment")!;
@@ -232,12 +235,14 @@ describe("placing and paying for an order", () => {
       customer: null,
       email: "a@example.test",
       address,
+      accessSecret: SECRET,
     });
     const second = await placeOrder(shop, {
       owner: { token: await guestCart(shop, item.id) },
       customer: null,
       email: "b@example.test",
       address,
+      accessSecret: SECRET,
     });
     expect([first.number, second.number]).toEqual([1001, 1002]);
   });
@@ -322,6 +327,7 @@ describe("what cannot be ordered", () => {
           customer: null,
           email: "racer@example.test",
           address,
+          accessSecret: SECRET,
         }),
       ),
     );
@@ -341,6 +347,7 @@ describe("what cannot be ordered", () => {
         customer: null,
         email: "g@example.test",
         address,
+        accessSecret: SECRET,
       }),
       "empty_cart",
     );
@@ -352,11 +359,18 @@ describe("what cannot be ordered", () => {
         email: "g@example.test",
         address,
         expectedTotal: 1500,
+        accessSecret: SECRET,
       }),
       "cart_changed",
     );
     await expectOrderError(
-      placeOrder(shopA, { owner: { token }, customer: null, email: "not-an-email", address }),
+      placeOrder(shopA, {
+        owner: { token },
+        customer: null,
+        email: "not-an-email",
+        address,
+        accessSecret: SECRET,
+      }),
       "invalid",
     );
     await expectOrderError(
@@ -365,12 +379,19 @@ describe("what cannot be ordered", () => {
         customer: null,
         email: "g@example.test",
         address: { ...address, country: "US", region: "TX", postalCode: "nope" },
+        accessSecret: SECRET,
       }),
       "invalid",
     );
     await admin.product.update({ where: { id: item.productId }, data: { status: "draft" } });
     await expectOrderError(
-      placeOrder(shopA, { owner: { token }, customer: null, email: "g@example.test", address }),
+      placeOrder(shopA, {
+        owner: { token },
+        customer: null,
+        email: "g@example.test",
+        address,
+        accessSecret: SECRET,
+      }),
       "cart_changed",
     );
     expect(await admin.orderItem.count({ where: { variantId: item.id } })).toBe(0);
@@ -402,6 +423,7 @@ describe("who can see an order", () => {
       customer: { id: owner.id, email: owner.email },
       email: "ignored@example.test",
       address,
+      accessSecret: SECRET,
     });
 
     expect((await getOrderForShopper(shopA, mine.orderId, { customerId: owner.id })).email).toBe(
@@ -434,6 +456,7 @@ describe("who can see an order", () => {
       customer: null,
       email: owner.email,
       address,
+      accessSecret: SECRET,
     });
     expect((await listCustomerOrders(shopA, owner.id)).map((order) => order.id)).not.toContain(
       sameEmail.orderId,
@@ -555,5 +578,22 @@ describe("staff", () => {
     await expect(getOrderForStaff(other.db, other.context, paid.orderId)).rejects.toBeInstanceOf(
       NotFoundError,
     );
+  });
+});
+
+describe("the order link key", () => {
+  it("can be made again from the secret, but not without it", async () => {
+    const item = await variant(tenantA, 1000);
+    const placed = await placeAndStart(shopA, await guestCart(shopA, item.id));
+    expect(orderAccessKey(SECRET, placed.orderId)).toBe(placed.accessKey);
+    expect(orderAccessKey("z".repeat(40), placed.orderId)).not.toBe(placed.accessKey);
+    await getOrderForShopper(shopA, placed.orderId, {
+      accessKey: orderAccessKey(SECRET, placed.orderId),
+    });
+    await expect(
+      getOrderForShopper(shopA, placed.orderId, {
+        accessKey: orderAccessKey("z".repeat(40), placed.orderId),
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });

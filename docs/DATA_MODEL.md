@@ -52,6 +52,8 @@ erDiagram
 | stores, consent_records, notification_preferences, idempotency_keys, outbox_events, jobs | Own tenant | Own tenant |
 | store_domains, categories, brands, products, product_variants, product_attributes, media_assets, product_images, carts, cart_items, customers, customer_sessions, customer_tokens, addresses, inventory_locations, inventory_levels, stock_reservations | Own tenant | Own tenant |
 | stock_movements | Own tenant | Own tenant, insert only (no update or delete) |
+| order_counters, orders, payments | Own tenant | Own tenant, no delete |
+| order_items, order_events, payment_events | Own tenant | Own tenant, insert only (no update or delete) |
 | user_tenant_memberships | Own tenant, plus the signed-in user's own memberships elsewhere | Own tenant |
 | users | Self and members of the current tenant; never `password_hash` or `is_platform_admin` | Own `name` only |
 | roles | System roles and own tenant's | Own tenant's non-system roles |
@@ -155,12 +157,14 @@ erDiagram
 | Customer | email, phone, first_name, last_name, locale, status, assigned_agent_id, deletion_requested_at, anonymized_at |
 | Address | customer_id, type, name, line1, line2, city, region, postal_code, country, phone, is_default |
 | Cart / CartItem | customer_id or anonymous token, currency, expires_at; variant_id, quantity, unit_price_amount snapshot. **Built (Milestone 2.5)** for guests: `carts.token_hash` (SHA-256 of the cookie token, unique), `status` (active, converted), one line per variant per cart, quantity 1 to 99 by check constraint (the service allows 10), same-tenant triggers on the cart and the variant. `customer_id` arrives with customer accounts. |
-| CheckoutSession | cart_id, email, shipping_address, billing_address, shipping_method, coupon_id, totals (JSON), idempotency_key, status, expires_at |
+| CheckoutSession | Not built: checkout is one page, and the order itself (status waiting for payment) plays this role. Shipping method and coupon arrive with Milestones 3.5 and 3.8. |
 | Order | number (per-store sequence), customer_id, status, currency, subtotal_amount, discount_amount, shipping_amount, tax_amount, total_amount, refunded_amount, address snapshots, coupon_id, placed_at |
 | OrderItem | order_id, variant_id, name/sku/price snapshots, quantity, tax_amount, discount_amount |
 | OrderEvent | order_id, type, from_status, to_status, actor, note (internal notes and full history) |
 | Payment | order_id (or giveaway entry payment), provider, provider_payment_id, status, amount, currency, method_brand, method_last4, idempotency_key |
 | PaymentEvent | provider, provider_event_id (unique per provider), type, payload, signature_verified, processed_at |
+
+**Built (Milestone 3.3):** `orders` (number per store via `order_counters`, status, customer_id only when signed in, cart_id, email, access_key_hash, currency and amounts with a check that total = subtotal + shipping + tax - discount, shipping_address snapshot as JSON, pay_by, placed_at, paid_at), `order_items` (name, SKU, colour, size and price copies; variant_id kept for reports), `order_events`, `payments` (provider, provider_payment_id unique, status pending, succeeded, failed or cancelled, amount, currency, method brand and last four digits only) and `payment_events` (unique per provider and event ID). Triggers allow only the defined status steps and freeze amounts, currency and number; lines, history and notifications are insert-only for the runtime role. All tenant-scoped with Row-Level Security and same-tenant triggers (decisions D66 to D70). Not built yet: refunds, shipments, returns, coupons, promotions, billing address, tax and discount lines.
 | Refund | payment_id, return_id, amount, reason, status, provider_refund_id, actor_user_id |
 | Shipment | order_id, carrier, service, tracking_number, label_asset_id, status, shipped_at, delivered_at |
 | TrackingEvent | shipment_id, status, description, location, occurred_at |

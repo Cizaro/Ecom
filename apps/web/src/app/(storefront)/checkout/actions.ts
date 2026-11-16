@@ -1,5 +1,6 @@
 "use server";
 
+import { getEnv } from "@ecom/config";
 import {
   createAddress,
   CustomerError,
@@ -9,6 +10,7 @@ import {
   placeOrder,
   startPayment,
 } from "@ecom/core";
+import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { tooManyCartChanges } from "@/server/cart";
 import { cartOwner, getCurrentCustomer, safeReturnPath } from "@/server/customer";
@@ -76,6 +78,7 @@ export async function placeOrderAction(
       email: text(formData, "email"),
       address,
       expectedTotal: Number.isInteger(expected) ? expected : undefined,
+      accessSecret: getEnv().ENCRYPTION_KEY,
     });
     if (customer && formData.get("saveAddress") === "on") {
       // Saving is a convenience: a full address book does not stop the order.
@@ -156,5 +159,7 @@ export async function mockPayAction(
     currency: payment.currency,
   });
   await deliverPaymentNotification(body, headers);
+  // A paid order closes the cart: every page header shows the new count.
+  revalidatePath("/", "layout");
   redirect(safeReturnPath(text(formData, "return"), "/"));
 }
