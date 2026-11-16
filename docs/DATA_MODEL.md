@@ -61,6 +61,10 @@ erDiagram
 | discount_codes | Own tenant | Own tenant |
 | discount_redemptions | Own tenant | Own tenant, add only |
 | product_imports, product_import_images | Own tenant | Own tenant, no delete |
+| product_reviews | Own tenant | Own tenant, no delete |
+| review_reports | Own tenant | Own tenant, add only |
+
+**Reviews (2026-11-18, decision D86):** `product_reviews` (product, customer, the qualifying order, rating 1 to 5, title, text, name shown, status pending, approved, rejected or hidden, store reply, who moderated) with a trigger that requires a sent order of the customer's containing the product, one per customer per product; `review_reports` (review, customer, reason; one per customer per review, add-only).
 
 **Product imports (2026-11-18, decisions D84 and D85):** `product_imports` (file name, checked rows as JSON, problems, counts, status checked, imported or discarded) and `product_import_images` (one picture link per row, its product, and download status, attempts and error).
 

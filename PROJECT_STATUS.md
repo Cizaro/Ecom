@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. Next: Phase 4, to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM): Milestone 4.1 (reviews) complete.** Next: 4.2 or launch readiness, to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -162,6 +162,12 @@ Last updated: 2026-11-12
   - Products page: **Import from a spreadsheet**. Download an Excel template for the store (Category and Brand are dropdowns of its own lists), fill it in, upload it (.xlsx or .csv).
   - Every row is checked first and problems are listed by row and column; nothing is added until **Import**, and then all products are added together, as drafts or published.
   - Picture links are downloaded safely (public addresses only, size and time limits, real images only) by the request and then the worker; failures are listed per link.
+
+- **Milestone 4.1, reviews:**
+  - Product page: average rating and count next to the name, a reviews section with a star breakdown, reviews marked "Verified purchase", the store's replies, and pages of older reviews.
+  - Only a signed-in customer who received the product can write one (checked by the database too), once; it shows after staff approve it.
+  - Admin **Reviews** page (`reviews.moderate`): waiting, reported, shown, hidden and rejected; approve, hide or reject; reply publicly. All audited.
+  - Signed-in shoppers can report a review once. Search engines get the rating from approved reviews only.
 
 ## In progress
 
@@ -350,24 +356,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (bulk product import, on the first computer)
+## Checks run this session (Milestone 4.1, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 263 tests (new: CSV and Excel reading, the template dropdowns, unpacked-size check, picture link checks and private-address refusals) |
-| `pnpm test:int` | Pass, 249 tests, on the separate test database (4 new: problems listed by row and nothing created, import with variants, stock and pictures from a local server, private addresses refused, store separation and permissions). Also fixed: emails and imported pictures are now sent and added oldest first |
+| `pnpm test` | Pass, 270 tests (new: the name shown with a review, ratings in search data only from approved reviews) |
+| `pnpm test:int` | Pass, 253 tests, on the separate test database (4 new: only customers who received the product review, once, and the database refuses others; only approved reviews shown, summary, replies, no deletes; reports once, not own; store separation and permissions) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 106 tests (40 skipped by design), including an import fixed after a problem and published with its picture |
-| `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged; exceljs's old uuid overridden) |
+| `pnpm test:e2e` | Pass, 109 tests (41 skipped by design), including a customer reviewing after delivery, staff replying and approving, and the review shown to everyone. Also fixed: reply boxes on the Reviews page each have their own ID |
+| `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
 | CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Phase 4, to agree with the owner (store settings, policy pages, Arabic, launch hardening).
+Milestone 4.2 (customer photos and videos) or launch readiness, as the owner prefers.
 
 ## Session log
 
@@ -398,5 +404,6 @@ Phase 4, to agree with the owner (store settings, policy pages, Arabic, launch h
 | 2026-11-17 | Milestone 3.7: dashboard, order filters and CSV export, staff-recorded returns with refunds, return email; demo store time zone set to Asia/Beirut |
 | 2026-11-18 | Milestone 3.8: discount codes (percent, amount, free delivery; limits and dates), checkout Apply with live total, locked check when ordering, uses counted from orders |
 | 2026-11-18 | Bulk product import: store template with category and brand dropdowns, check then import, safe picture downloads by request and worker |
+| 2026-11-18 | Milestone 4.1: verified-buyer reviews with approval, replies, reports, ratings on product pages and in search data |
 
 Commit hashes: `git log --oneline`.

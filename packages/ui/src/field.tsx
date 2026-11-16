@@ -101,18 +101,21 @@ export function TextArea({
   error,
   className,
   rows = 4,
+  id = name,
   ...textarea
 }: {
   label: string;
   name: string;
+  /** Needed when the same field appears more than once on a page. */
+  id?: string;
   hint?: string;
   error?: string;
 } & Omit<ComponentProps<"textarea">, "name" | "id">) {
   return (
-    <FieldShell label={label} id={name} hint={hint} error={error}>
+    <FieldShell label={label} id={id} hint={hint} error={error}>
       {(describedBy) => (
         <textarea
-          id={name}
+          id={id}
           name={name}
           rows={rows}
           aria-describedby={describedBy}

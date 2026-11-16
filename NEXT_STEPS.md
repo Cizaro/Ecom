@@ -17,9 +17,9 @@ Sign in to the admin:
 2. **Store emails**: add the address(es) that should hear about new orders and low stock.
 3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 
-## Next development task: Phase 4 (storefront polish and launch readiness), to agree with the owner
+## Next development task: Milestone 4.2, customer photos and videos (UGC), or launch readiness
 
-Phase 3 is complete apart from the card gateway, which waits on a merchant account. Proposed order: store settings page (name, currency, time zone, contact details), policy pages (returns, delivery, privacy), Arabic and right-to-left storefront, then launch hardening (backups, monitoring, real email sending service). See PROJECT_PLAN.md section 4.
+Milestone 4.1 (reviews) is done. Per PROJECT_PLAN.md the next is 4.2 (customer uploads with permission tracking, a reels gallery), then 4.3 (support conversations and customer timeline). The owner may prefer launch readiness first: store settings page, policy pages, Arabic, a real email sending service, backups and monitoring.
 
 ## Return rules (owner)
 
@@ -44,6 +44,7 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 - Cash on delivery: a maximum order amount for cash, and a store setting to switch cash on delivery off.
 - Store settings: a page for the store's name, currency and time zone (the demo store's time zone was set to Asia/Beirut directly).
 - Import: update existing products by SKU (today a known SKU is reported, not changed); variant pictures (a picture per colour).
+- Reviews: an email asking customers to review a few days after their order is sent (with an unsubscribe); guest buyers reviewing through their order link; photos in reviews (with 4.2).
 - Dashboard: compare with the previous period; best-selling products.
 - Returns: shopper-started return requests once the return rules are known; card refunds with the gateway.
 - Emails: an HTML version with the store's logo, and Arabic wording (with right-to-left layout).

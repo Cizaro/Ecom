@@ -150,3 +150,38 @@ describe("structured data", () => {
     expect(JSON.parse(text)).toEqual(hostile);
   });
 });
+
+describe("ratings in structured data", () => {
+  it("are left out without approved reviews, and come only from them", () => {
+    expect(
+      productStructuredData({ ...product, rating: { count: 0, average: null } }),
+    ).not.toHaveProperty("aggregateRating");
+    const data = productStructuredData({
+      ...product,
+      rating: { count: 2, average: 4.5 },
+      reviews: [
+        {
+          rating: 5,
+          title: "Lovely",
+          body: "Great bag.",
+          authorName: "Maya K.",
+          createdAt: new Date("2026-11-18T10:00:00Z"),
+        },
+      ],
+    });
+    expect(data.aggregateRating).toEqual({
+      "@type": "AggregateRating",
+      ratingValue: 4.5,
+      reviewCount: 2,
+      bestRating: 5,
+      worstRating: 1,
+    });
+    expect(data.review).toEqual([
+      expect.objectContaining({
+        author: { "@type": "Person", name: "Maya K." },
+        datePublished: "2026-11-18",
+        reviewBody: "Great bag.",
+      }),
+    ]);
+  });
+});

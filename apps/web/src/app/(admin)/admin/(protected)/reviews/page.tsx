@@ -130,6 +130,7 @@ export default async function ReviewsPage({
                     >
                       <input type="hidden" name="id" value={review.id} />
                       <TextAreaField
+                        id={`reply-${review.id}`}
                         label="Reply"
                         name="reply"
                         rows={3}
