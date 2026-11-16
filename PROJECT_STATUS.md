@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3, 3.5 and 3.6 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.7 (admin order tools). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.7 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.8 (coupons and promotions). The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -53,7 +53,7 @@ Last updated: 2026-11-12
   - Form components added to the design system: text area, drop-down, checkbox, and a confirm-before-delete form.
   - `pnpm db:seed` adds five launch categories and two sample products to the demo store when it has no categories.
 
-**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. Product pages say whether an item is in stock, nearly gone or sold out, and the cart never holds more than there is. They can check out as a guest or signed in and pay with the test payment provider (no real money), see their order, and find it in their account. Staff see orders and mark them sent with courier and tracking, and set delivery areas and tax. There is no real card payment provider or dashboard yet.
+**What a signed-in user can do today:** choose which store to work in; build the catalog (categories, brands, products with variants, prices and images; publish, unpublish, archive); see what their role allows; see the team (owners); manage two-factor; sign out. **What a visitor can do today** at http://localhost:3000: see the home page (categories, featured, new arrivals), open a category, sort and filter by brand, colour and price, search, and open a product page where choosing a colour and size changes the price and pictures, add it to a cart, and change or remove cart lines; create an account (confirmed by email), sign in and out, reset a forgotten password, keep a profile and saved addresses, and have the cart follow them between devices. Product pages say whether an item is in stock, nearly gone or sold out, and the cart never holds more than there is. They can check out as a guest or signed in and pay with the test payment provider (no real money), see their order, and find it in their account. Staff see orders and mark them sent with courier and tracking, and set delivery areas and tax. Staff see a dashboard, filter and export orders, and record returns and refunds. There is no real card payment provider yet.
 
 - **Milestone 2.2, product media:**
   - Tables `media_assets` and `product_images`, a category image and a brand logo, each limited to its own tenant by Row-Level Security, same-tenant triggers and a rule that a file's key sits under its tenant's prefix.
@@ -148,6 +148,11 @@ Last updated: 2026-11-12
   - Staff get, at addresses listed on the new **Store emails** admin page (`settings.write`): new order ready to prepare, and low stock when an order takes a product down to its level (once a day per product).
   - Every email is saved with the order change in one transaction, sent once only, straight away by the request and otherwise by the worker every 30 seconds, and retried after failures. Emails that could not be sent are listed on Store emails with a "Try again" button.
   - Emails are plain text, show only what the order records, and stay within the store's own data.
+
+- **Milestone 3.7, admin order tools:**
+  - **Dashboard** on the admin home (`reports.read`): sales and orders today, last 7 and 30 days, a 14-day chart, orders to send, cash to collect, online orders waiting for payment, low-stock products and the latest orders, in the store's time zone.
+  - **Orders**: filters for payment method and from/to dates, and **Download as CSV** of the filtered orders (`customers.export`, audited, at most 5,000 rows, safe against spreadsheet formulas).
+  - **Returns**: on a sent and paid order, staff record what came back (how many of each item, resellable or damaged, reason) and any money given back (cash, bank transfer or other, with `orders.refund`). Stock comes back, the order shows what was given back and becomes "Refunded" when everything is, and the shopper sees it on their order and gets an email.
 
 ## In progress
 
@@ -336,24 +341,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 3.6, on the first computer)
+## Checks run this session (Milestone 3.7, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 230 tests (new: wording of every store email, one-line subjects, staff address lists) |
-| `pnpm test:int` | Pass, 234 tests, on the separate test database (8 new: emails along an order's life sent once each, cancellations, retry and give-up, two senders at once, low stock once, store separation and links, permissions) |
+| `pnpm test` | Pass, 239 tests (new: store days and time zones, CSV quoting and formula protection) |
+| `pnpm test:int` | Pass, 239 tests, on the separate test database (5 new: returns restock and refund to "refunded", permissions and paid-only rule, database rules for returns and refunds, dashboard figures and store separation, export and filters) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 93 tests (35 skipped by design), including the shipped and payment emails of a cash order, the staff new-order email, and the Store emails page |
+| `pnpm test:e2e` | Pass, 98 tests (36 skipped by design), including a return with a cash refund, the dashboard, filters, the CSV export and its permission |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
 | CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Milestone 3.7: admin order tools (dashboard, CSV export, returns). Returns need the owner's return rules (open decision Q22).
+Milestone 3.8: coupons and promotions (if the owner wants them at launch). The owner's return rules would let shoppers start returns themselves.
 
 ## Session log
 
@@ -381,5 +386,6 @@ Milestone 3.7: admin order tools (dashboard, CSV export, returns). Returns need 
 | 2026-11-17 | Stripe dropped (not available in Lebanon). Cash on delivery: payment method on orders, confirmed status, sent / cash received / delivery refused, cash-only mode |
 | 2026-11-17 | Milestone 3.5: delivery areas and tax set by staff, delivery area at checkout with live total, frozen on the order, shipments with courier and tracking; storefront host fix after redirects |
 | 2026-11-17 | Milestone 3.6: store emails through the outbox (confirmed, on its way, payment received, cancelled; staff new order and low stock), worker email sweep, Store emails admin page; owner: delivery $4 flat, Lebanon only (area added to the demo store) |
+| 2026-11-17 | Milestone 3.7: dashboard, order filters and CSV export, staff-recorded returns with refunds, return email; demo store time zone set to Asia/Beirut |
 
 Commit hashes: `git log --oneline`.

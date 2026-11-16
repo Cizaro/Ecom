@@ -57,6 +57,9 @@ erDiagram
 | checkout_settings | Own tenant | Own tenant, no delete |
 | shipments | Own tenant | Own tenant, add only |
 | notification_settings | Own tenant | Own tenant, no delete |
+| order_returns, order_return_items | Own tenant | Own tenant, add only |
+
+**Returns (2026-11-17, decision D80):** `order_returns` (reason, note, refund amount and method, who recorded it) and `order_return_items` (order line, quantity, resellable or damaged), both add-only; a trigger keeps returned quantities within what was bought and on the same order. `orders.refunded_amount` holds money given back, at most the total and never decreasing.
 
 **Store emails (2026-11-17, decisions D77 to D79):** `outbox_events` gains `available_at` (next try), `locked_until` (claimed by a sender) and `dedupe_key` (unique per tenant, so each email is made once). `notification_settings` holds one row per store with up to five staff addresses each for new orders and low stock (own tenant, no delete).
 
@@ -174,7 +177,7 @@ erDiagram
 | Payment | order_id (or giveaway entry payment), provider, provider_payment_id, status, amount, currency, method_brand, method_last4, idempotency_key |
 | PaymentEvent | provider, provider_event_id (unique per provider), type, payload, signature_verified, processed_at |
 
-**Built (Milestone 3.3):** `orders` (number per store via `order_counters`, status, customer_id only when signed in, cart_id, email, access_key_hash, currency and amounts with a check that total = subtotal + shipping + tax - discount, shipping_address snapshot as JSON, pay_by, placed_at, paid_at), `order_items` (name, SKU, colour, size and price copies; variant_id kept for reports), `order_events`, `payments` (provider, provider_payment_id unique, status pending, succeeded, failed or cancelled, amount, currency, method brand and last four digits only) and `payment_events` (unique per provider and event ID). Triggers allow only the defined status steps and freeze amounts, currency and number; lines, history and notifications are insert-only for the runtime role. All tenant-scoped with Row-Level Security and same-tenant triggers (decisions D66 to D70). Not built yet: refunds, returns, coupons, promotions, billing address and discount lines (shipments, delivery and tax: Milestone 3.5, see above).
+**Built (Milestone 3.3):** `orders` (number per store via `order_counters`, status, customer_id only when signed in, cart_id, email, access_key_hash, currency and amounts with a check that total = subtotal + shipping + tax - discount, shipping_address snapshot as JSON, pay_by, placed_at, paid_at), `order_items` (name, SKU, colour, size and price copies; variant_id kept for reports), `order_events`, `payments` (provider, provider_payment_id unique, status pending, succeeded, failed or cancelled, amount, currency, method brand and last four digits only) and `payment_events` (unique per provider and event ID). Triggers allow only the defined status steps and freeze amounts, currency and number; lines, history and notifications are insert-only for the runtime role. All tenant-scoped with Row-Level Security and same-tenant triggers (decisions D66 to D70). Not built yet: card refunds, coupons, promotions, billing address and discount lines (returns and recorded refunds: Milestone 3.7) (shipments, delivery and tax: Milestone 3.5, see above).
 | Refund | payment_id, return_id, amount, reason, status, provider_refund_id, actor_user_id |
 | Shipment | order_id, carrier, service, tracking_number, label_asset_id, status, shipped_at, delivered_at |
 | TrackingEvent | shipment_id, status, description, location, occurred_at |

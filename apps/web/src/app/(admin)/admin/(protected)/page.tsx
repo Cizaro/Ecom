@@ -1,20 +1,29 @@
+import { getDashboard, hasPermission } from "@ecom/core";
 import { Alert, Card, List, ListItem, PageHeader } from "@ecom/ui";
 import Link from "next/link";
-import { getAccessOutcome } from "@/server/access";
+import { getAccessOutcome, tenantDb } from "@/server/access";
 import { requireSession } from "@/server/auth";
+import { DashboardView } from "./_components/dashboard";
 
-// Placeholder home for signed-in staff. The real dashboard is Milestone 3.7.
+// Home for signed-in staff: the store dashboard for those who may see
+// reports, then their access.
 export default async function AdminHomePage() {
   const session = await requireSession();
   const { user, memberships } = session;
   const outcome = await getAccessOutcome();
+  const dashboard =
+    outcome.status === "ok" && hasPermission(outcome.context, "reports.read")
+      ? await getDashboard(tenantDb(outcome.context), outcome.context)
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Admin"
-        description={`Signed in as ${user.name || user.email}. The dashboard is under construction.`}
+        title={dashboard ? "Dashboard" : "Admin"}
+        description={`Signed in as ${user.name || user.email}.`}
       />
+
+      {dashboard ? <DashboardView data={dashboard} /> : null}
 
       {outcome.status === "choose_tenant" ? (
         <Alert tone="info">

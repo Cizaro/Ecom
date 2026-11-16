@@ -87,6 +87,7 @@ const LABELS: Record<string, string> = {
   [EMAIL_EVENTS.orderCancelled]: "Order cancelled",
   [EMAIL_EVENTS.staffNewOrder]: "New order (staff)",
   [EMAIL_EVENTS.staffLowStock]: "Low stock (staff)",
+  [EMAIL_EVENTS.returnRecorded]: "Return recorded",
 };
 
 export interface UndeliveredEmail {

@@ -125,7 +125,8 @@ export type RouteHandler<A extends RouteAccess, Q extends z.ZodType> = (
 
 /**
  * Wraps a route handler with authorization, validation and error handling.
- * The handler returns the response body; it is sent as JSON with status 200.
+ * The handler returns the response body; it is sent as JSON with status 200,
+ * unless the handler returns a Response itself (a file download).
  */
 export function apiRoute<A extends RouteAccess, Q extends z.ZodType = z.ZodObject<z.ZodRawShape>>(
   options: RouteOptions<A, Q>,
@@ -151,6 +152,12 @@ export function apiRoute<A extends RouteAccess, Q extends z.ZodType = z.ZodObjec
         requestId,
         query: parsed.data as z.infer<Q>,
       });
+      if (body instanceof Response) {
+        // A file download (for example CSV): the handler sets the body and type.
+        body.headers.set(REQUEST_ID_HEADER, requestId);
+        body.headers.set("Cache-Control", "no-store");
+        return body;
+      }
       return json(body, 200, requestId);
     } catch (error) {
       if (error instanceof ApiError) return errorResponse(error, requestId);

@@ -8,6 +8,7 @@ import {
   orderConfirmationEmail,
   orderShippedEmail,
   paymentReceivedEmail,
+  returnRecordedEmail,
   staffLowStockEmail,
   staffNewOrderEmail,
   type StoreLinks,
@@ -111,6 +112,8 @@ async function render(
       return paymentReceivedEmail(order, store, url);
     case EMAIL_EVENTS.orderCancelled:
       return orderCancelledEmail(order, store, url, payload.reason ?? "staff");
+    case EMAIL_EVENTS.returnRecorded:
+      return payload.returnId ? returnRecordedEmail(order, store, url, payload.returnId) : null;
     case EMAIL_EVENTS.staffNewOrder:
       return payload.to
         ? staffNewOrderEmail(order, store, `${admin}/admin/orders/${order.id}`, payload.to)

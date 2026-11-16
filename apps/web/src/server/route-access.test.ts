@@ -144,7 +144,11 @@ describe("API routes", () => {
           entry!.access.level === "permission"
             ? `access: { level: "permission", permission: "${entry!.access.permission}" }`
             : `access: { level: "${entry!.access.level}" }`;
-        expect(source).toContain(`export const ${method} = apiRoute({ ${declared}`);
+        // Compared without spaces and line breaks, which the formatter may move.
+        const compact = (text: string) => text.replace(/\s+/g, "");
+        expect(compact(source)).toContain(
+          compact(`export const ${method} = apiRoute({ ${declared}`),
+        );
       });
     }
   }

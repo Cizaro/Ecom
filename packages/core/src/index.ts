@@ -323,6 +323,7 @@ export {
   orderAccessKey,
   OrderError,
   orderAmountLines,
+  orderWhere,
   PAY_WITHIN_MINUTES,
   PAYMENT_METHODS,
   placeOrder,
@@ -332,6 +333,7 @@ export {
 } from "./orders/orders";
 export type {
   FulfilInput,
+  OrderFilters,
   HandledNotification,
   NotificationOutcome,
   OrderErrorCode,
@@ -383,6 +385,7 @@ export {
   orderConfirmationEmail,
   orderShippedEmail,
   paymentReceivedEmail,
+  returnRecordedEmail,
   staffLowStockEmail,
   staffNewOrderEmail,
 } from "./notifications/order-emails";
@@ -405,3 +408,15 @@ export {
 } from "./notifications/settings";
 export type { NotificationSettingsView, UndeliveredEmail } from "./notifications/settings";
 export { listTenantsWithPendingEmails } from "./platform/email-lookup";
+
+export {
+  recordReturn,
+  REFUND_METHOD_LABEL,
+  REFUND_METHODS,
+  RETURN_REASON_LABEL,
+  RETURN_REASONS,
+} from "./orders/returns";
+export type { RefundMethod, ReturnInput, ReturnReason } from "./orders/returns";
+export { csvField, EXPORT_LIMIT, exportOrdersCsv, getDashboard } from "./reports/reports";
+export type { Dashboard, PeriodFigures } from "./reports/reports";
+export { addDays, isCalendarDate, safeTimeZone, zonedDay, zonedDayStart } from "./platform/time";

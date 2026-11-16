@@ -1,4 +1,11 @@
-import { formatMoney, listOrders, ORDER_STATUSES } from "@ecom/core";
+import {
+  formatMoney,
+  hasPermission,
+  isCalendarDate,
+  listOrders,
+  ORDER_STATUSES,
+  PAYMENT_METHODS,
+} from "@ecom/core";
 import {
   Badge,
   buttonClasses,
@@ -27,26 +34,54 @@ export default async function OrdersPage({
   const params = await searchParams;
   const search = (first(params.q) ?? "").slice(0, 100);
   const status = ORDER_STATUSES.find((value) => value === first(params.status));
+  const payment = PAYMENT_METHODS.find((value) => value === first(params.payment));
+  const dayParam = (name: string) => {
+    const value = first(params[name]) ?? "";
+    return isCalendarDate(value) ? value : "";
+  };
+  const from = dayParam("from");
+  const to = dayParam("to");
   const page = Math.min(10_000, Math.max(1, Number.parseInt(first(params.page) ?? "1", 10) || 1));
-  const result = await listOrders(tenantDb(context), context, { search, status, page });
+  const result = await listOrders(tenantDb(context), context, {
+    search,
+    status,
+    paymentMethod: payment,
+    from: from || undefined,
+    to: to || undefined,
+    page,
+  });
+  const filtered = Boolean(search || status || payment || from || to);
+  const canExport = hasPermission(context, "customers.export");
   const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
   const pageLink = (target: number) => {
-    const query = new URLSearchParams();
-    if (search) query.set("q", search);
-    if (status) query.set("status", status);
+    const query = filterQuery();
     if (target > 1) query.set("page", String(target));
     const text = query.toString();
     return text ? `/admin/orders?${text}` : "/admin/orders";
   };
+  function filterQuery() {
+    const query = new URLSearchParams();
+    if (search) query.set("q", search);
+    if (status) query.set("status", status);
+    if (payment) query.set("payment", payment);
+    if (from) query.set("from", from);
+    if (to) query.set("to", to);
+    return query;
+  }
+  const exportQuery = filterQuery().toString();
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Orders"
-        description={`${result.total} ${result.total === 1 ? "order" : "orders"}${search || status ? " match" : ""}.`}
+        description={`${result.total} ${result.total === 1 ? "order" : "orders"}${filtered ? " match" : ""}.`}
       />
-      <form method="get" className="grid gap-3 sm:grid-cols-[1fr_14rem_auto] sm:items-end">
+      <form
+        method="get"
+        className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_12rem_12rem_10rem_10rem_auto] lg:items-end"
+        data-testid="order-filters"
+      >
         <Field
           label="Search"
           name="q"
@@ -63,13 +98,39 @@ export default async function OrdersPage({
             ...ORDER_STATUSES.map((value) => ({ value, label: ORDER_LABEL[value] })),
           ]}
         />
+        <Select
+          label="Payment"
+          name="payment"
+          defaultValue={payment ?? ""}
+          options={[
+            { value: "", label: "Any payment" },
+            { value: "cash_on_delivery", label: "Cash on delivery" },
+            { value: "online", label: "Online" },
+          ]}
+        />
+        <Field label="From" name="from" type="date" defaultValue={from} />
+        <Field label="To" name="to" type="date" defaultValue={to} />
         <button type="submit" className={buttonClasses("secondary")}>
           Filter
         </button>
       </form>
+      {canExport ? (
+        <p className="text-sm">
+          <a
+            href={`/api/v1/admin/orders/export${exportQuery ? `?${exportQuery}` : ""}`}
+            className="underline underline-offset-4"
+            data-testid="export-orders"
+          >
+            Download these orders as CSV
+          </a>{" "}
+          <span className="text-ink-muted">
+            (up to 5,000; includes customers&rsquo; contact details)
+          </span>
+        </p>
+      ) : null}
 
       {result.items.length === 0 ? (
-        <EmptyState title={search || status ? "No orders match" : "No orders yet"} />
+        <EmptyState title={filtered ? "No orders match" : "No orders yet"} />
       ) : (
         <List testId="order-list">
           {result.items.map((order) => (

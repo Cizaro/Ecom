@@ -13,6 +13,7 @@ import {
   settleReservationsIn,
 } from "../inventory/stock";
 import { formatMoney } from "../catalog/money";
+import { addDays, safeTimeZone, zonedDayStart } from "../platform/time";
 import { EMAIL_EVENTS, enqueueEmailIn, enqueueStaffEmailsIn } from "../notifications/enqueue";
 import type { PaymentNotification, PaymentProvider } from "../payments/provider";
 import { formatTaxRate, quoteDeliveryIn, ShippingError } from "../shipping/shipping";
@@ -101,6 +102,8 @@ export interface OrderView {
   taxAmount: number;
   discountAmount: number;
   totalAmount: number;
+  /** Money given back so far (recorded with returns). */
+  refundedAmount: number;
   shippingAddress: ValidAddress;
   /** The delivery area picked at checkout; null when the store had none. */
   shippingZoneName: string | null;
@@ -128,6 +131,15 @@ export interface OrderView {
     quantity: number;
     unitPriceAmount: number;
     lineTotalAmount: number;
+  }[];
+  /** Items given back, oldest first. */
+  returns: {
+    id: string;
+    reason: string;
+    refundAmount: number;
+    refundMethod: string | null;
+    createdAt: Date;
+    items: { orderItemId: string; quantity: number; condition: string }[];
   }[];
   /** Newest first. Only what the provider reported for display; never card numbers. */
   payments: {
@@ -167,6 +179,7 @@ const ORDER_SELECT = {
   taxAmount: true,
   discountAmount: true,
   totalAmount: true,
+  refundedAmount: true,
   shippingAddress: true,
   shippingZoneName: true,
   taxRateBasisPoints: true,
@@ -188,6 +201,17 @@ const ORDER_SELECT = {
       quantity: true,
       unitPriceAmount: true,
       lineTotalAmount: true,
+    },
+    orderBy: { createdAt: "asc" as const },
+  },
+  returns: {
+    select: {
+      id: true,
+      reason: true,
+      refundAmount: true,
+      refundMethod: true,
+      createdAt: true,
+      items: { select: { orderItemId: true, quantity: true, condition: true } },
     },
     orderBy: { createdAt: "asc" as const },
   },
@@ -661,6 +685,7 @@ export interface OrderSummary {
   currency: string;
   itemCount: number;
   placedAt: Date;
+  paymentMethod: PaymentMethodValue;
 }
 
 const SUMMARY_SELECT = {
@@ -671,12 +696,14 @@ const SUMMARY_SELECT = {
   totalAmount: true,
   currency: true,
   placedAt: true,
+  paymentMethod: true,
   items: { select: { quantity: true } },
 } as const;
 
 const toSummary = (
   row: Prisma.OrderGetPayload<{ select: typeof SUMMARY_SELECT }>,
 ): OrderSummary => ({
+  paymentMethod: row.paymentMethod,
   id: row.id,
   number: row.number,
   status: row.status,
@@ -778,32 +805,72 @@ export async function expireUnpaidOrders(db: TenantDb, now = new Date()): Promis
 
 // --- Staff ---------------------------------------------------------------------
 
-export async function listOrders(
-  db: TenantDb,
-  context: RequestContext,
-  input: { status?: OrderStatusValue; search?: string; page?: number } = {},
-): Promise<{ items: OrderSummary[]; total: number; page: number; pageCount: number }> {
-  assertPermission(context, "orders.read");
-  const search = (input.search ?? "").trim().replace(/^#/, "").slice(0, 100);
-  const page = Number.isInteger(input.page) ? Math.min(10_000, Math.max(1, input.page!)) : 1;
-  const where = {
-    ...(input.status && ORDER_STATUSES.includes(input.status) ? { status: input.status } : {}),
+export interface OrderFilters {
+  status?: OrderStatusValue;
+  /** Order number (with or without #) or part of the email. */
+  search?: string;
+  /** Placed on or after this day (YYYY-MM-DD, the store's time zone). */
+  from?: string;
+  /** Placed on or before this day (YYYY-MM-DD, the store's time zone). */
+  to?: string;
+  paymentMethod?: PaymentMethodValue;
+}
+
+/** The store's time zone, for its days (UTC if unset or unknown). */
+export async function storeTimeZoneIn(tx: AppTransaction): Promise<string> {
+  const store = await tx.store.findFirst({
+    select: { timezone: true },
+    orderBy: { createdAt: "asc" },
+  });
+  return safeTimeZone(store?.timezone);
+}
+
+/** The database filter for staff order lists and exports. Unknown values are ignored. */
+export function orderWhere(filters: OrderFilters, timeZone: string): Prisma.OrderWhereInput {
+  const search = (filters.search ?? "").trim().replace(/^#/, "").slice(0, 100);
+  const from = filters.from ? zonedDayStart(filters.from, timeZone) : null;
+  const to = filters.to ? zonedDayStart(addDaysSafe(filters.to), timeZone) : null;
+  return {
+    ...(filters.status && ORDER_STATUSES.includes(filters.status)
+      ? { status: filters.status }
+      : {}),
+    ...(filters.paymentMethod && PAYMENT_METHODS.includes(filters.paymentMethod)
+      ? { paymentMethod: filters.paymentMethod }
+      : {}),
+    ...(from || to
+      ? { placedAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } }
+      : {}),
     ...(search
       ? /^\d{1,9}$/.test(search)
         ? { number: Number(search) }
         : { email: { contains: search.toLowerCase() } }
       : {}),
   };
-  const { rows, total } = await db.run(async (tx) => ({
-    total: await tx.order.count({ where }),
-    rows: await tx.order.findMany({
-      where,
-      select: SUMMARY_SELECT,
-      orderBy: [{ placedAt: "desc" }, { id: "desc" }],
-      skip: (page - 1) * ORDER_PAGE_SIZE,
-      take: ORDER_PAGE_SIZE,
-    }),
-  }));
+}
+
+/** The day after, for an end date that includes the whole day; unchanged if not a date. */
+const addDaysSafe = (day: string) => (zonedDayStart(day, "UTC") ? addDays(day, 1) : day);
+
+export async function listOrders(
+  db: TenantDb,
+  context: RequestContext,
+  input: OrderFilters & { page?: number } = {},
+): Promise<{ items: OrderSummary[]; total: number; page: number; pageCount: number }> {
+  assertPermission(context, "orders.read");
+  const page = Number.isInteger(input.page) ? Math.min(10_000, Math.max(1, input.page!)) : 1;
+  const { rows, total } = await db.run(async (tx) => {
+    const where = orderWhere(input, await storeTimeZoneIn(tx));
+    return {
+      total: await tx.order.count({ where }),
+      rows: await tx.order.findMany({
+        where,
+        select: SUMMARY_SELECT,
+        orderBy: [{ placedAt: "desc" }, { id: "desc" }],
+        skip: (page - 1) * ORDER_PAGE_SIZE,
+        take: ORDER_PAGE_SIZE,
+      }),
+    };
+  });
   return {
     items: rows.map(toSummary),
     total,

@@ -26,6 +26,7 @@ const order = (overrides: Partial<OrderView> = {}): OrderView => ({
   taxAmount: 0,
   discountAmount: 0,
   totalAmount: 4300,
+  refundedAmount: 0,
   shippingAddress: {
     fullName: "Maya Khoury",
     phone: "+961 71 000 111",
@@ -57,6 +58,7 @@ const order = (overrides: Partial<OrderView> = {}): OrderView => ({
     },
   ],
   payments: [],
+  returns: [],
   ...overrides,
 });
 

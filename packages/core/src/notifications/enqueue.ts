@@ -13,6 +13,7 @@ export const EMAIL_EVENTS = {
   orderCancelled: "email.order_cancelled",
   staffNewOrder: "email.staff_new_order",
   staffLowStock: "email.staff_low_stock",
+  returnRecorded: "email.return_recorded",
 } as const;
 
 export type EmailEventType = (typeof EMAIL_EVENTS)[keyof typeof EMAIL_EVENTS];
@@ -20,6 +21,7 @@ export type EmailEventType = (typeof EMAIL_EVENTS)[keyof typeof EMAIL_EVENTS];
 export interface EmailPayload {
   orderId?: string;
   variantId?: string;
+  returnId?: string;
   /** Staff emails: the address it goes to. Shopper emails go to the order's email. */
   to?: string;
   /** Order cancelled: why. */

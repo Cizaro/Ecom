@@ -251,6 +251,15 @@ Each store lists up to five addresses for new orders and five for low stock (non
 ### D79. Low stock is noticed when an order takes a product down to its level (2026-11-17)
 When placing an order lowers a counted product from "in stock" to its low-stock level or to none, staff on the low-stock list are told, at most once a day per product. Held items (checkouts in progress) count as not available, as everywhere else; the email says so. Staff stock changes do not send it, since staff made them.
 
+### D80. Returns are recorded by staff, with any money given back (2026-11-17)
+Until the owner sets return rules (open decision Q22), there is no shopper-started return and no return window: staff record a return when items come back. Only an order that was sent and paid can have one (a cash parcel refused at the door is "Delivery refused"). Staff enter how many of each line came back and whether each can be sold again (back on sale) or is damaged (kept apart, not for sale); stock moves are recorded as "return". No more of a line can come back than was bought; the database enforces this with the line locked, and checks the line belongs to the return's order. Money given back (cash, bank transfer or other) is recorded on the return and added to the order's `refunded_amount`, never more than was paid less earlier refunds; the column can only grow. Recording a return needs `returns.manage`; giving money back with it also needs `orders.refund`. When everything paid has been given back, the order becomes "refunded". Card refunds through a payment provider come with the card gateway. Returns are add-only records, and the shopper gets a "return recorded" email.
+
+### D81. The dashboard counts orders taken, in the store's time zone (2026-11-17)
+"Sales" are orders the store has taken (cash orders confirmed or sent, online orders paid, refunded ones included) at their total less money given back; cancelled orders and online orders waiting for payment are not sales. Days are the store's own (`stores.timezone`; the demo store is set to Asia/Beirut). The dashboard also shows orders to send, cash still to collect, online orders waiting for payment and low-stock products, each linking to the matching list. It needs `reports.read` and is shown on the admin home. Only the store's own currency is summed.
+
+### D82. The orders export needs permission to export customer data (2026-11-17)
+The CSV holds names, emails, phones and addresses, so it needs `customers.export` as well as `orders.read`, and every export is written to the audit log with its filters and row count. It follows the Orders page filters (search, status, payment, from and to dates in the store's time zone), takes at most 5,000 rows, and protects spreadsheet users: any value starting with = + - @ is prefixed with an apostrophe so it cannot run as a formula.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

@@ -147,6 +147,37 @@ export function orderCancelledEmail(
   };
 }
 
+/** Sent when staff record items the customer gave back (and any money refunded). */
+export function returnRecordedEmail(
+  order: OrderView,
+  store: StoreLinks,
+  orderUrl: string,
+  returnId: string,
+): EmailMessage {
+  const recorded = order.returns.find((r) => r.id === returnId);
+  const names = new Map(order.items.map((item) => [item.id, item]));
+  const lines = (recorded?.items ?? []).map((line) => {
+    const item = names.get(line.orderItemId);
+    return `${line.quantity} x ${oneLine(item?.productName ?? "Item")}`;
+  });
+  const refund = recorded?.refundAmount ?? 0;
+  return {
+    to: order.email,
+    subject: oneLine(`Return recorded for order #${order.number}: ${store.name}`),
+    text: [
+      "We have received the items you sent back:",
+      ...lines,
+      "",
+      refund > 0
+        ? `We have given back ${formatMoney(refund, order.currency)}.`
+        : "No money has been given back for this return.",
+      "",
+      `See your order: ${orderUrl}`,
+      ...footer(store),
+    ].join("\n"),
+  };
+}
+
 /** Sent to the store's order addresses when an order is ready to prepare. */
 export function staffNewOrderEmail(
   order: OrderView,

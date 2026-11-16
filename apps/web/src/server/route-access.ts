@@ -124,6 +124,15 @@ const ORDER_ACTION_ENTRIES: readonly ActionEntry[] = [
   access: { level: "permission", permission: "orders.manage" } as const,
 }));
 
+// Recording a return needs returns.manage; giving money back with it also
+// needs orders.refund, which the service checks.
+const RETURN_ACTION_ENTRIES: readonly ActionEntry[] = [
+  {
+    id: `${ORDER_ACTIONS}#recordReturnAction`,
+    access: { level: "permission", permission: "returns.manage" },
+  },
+];
+
 const SETTINGS_ACTIONS = "(admin)/admin/(protected)/settings/actions.ts";
 
 const SETTINGS_ACTION_ENTRIES: readonly ActionEntry[] = [
@@ -155,11 +164,19 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...CATALOG_ACTION_ENTRIES,
   ...INVENTORY_ACTION_ENTRIES,
   ...ORDER_ACTION_ENTRIES,
+  ...RETURN_ACTION_ENTRIES,
   ...SETTINGS_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [
   { path: "/api/v1/admin/me", method: "GET", access: { level: "tenant" } },
+  // Holds customers' contact details, so it needs customers.export (the
+  // service also checks orders.read).
+  {
+    path: "/api/v1/admin/orders/export",
+    method: "GET",
+    access: { level: "permission", permission: "customers.export" },
+  },
 ];
 
 const CART_ACTIONS = "(storefront)/cart/actions.ts";

@@ -939,3 +939,51 @@ export async function returnCommittedIn(
   }
   return returned;
 }
+
+/**
+ * Puts items a customer returned back on the shelf, at the location they were
+ * sold from (or the default location). Resellable items can be sold again;
+ * damaged ones are kept apart (counted on hand and damaged, so not for sale).
+ * Does nothing for a product whose stock is not counted, or one since deleted.
+ */
+export async function restockReturnedIn(
+  tx: AppTransaction,
+  tenantId: string,
+  input: {
+    variantId: string | null;
+    quantity: number;
+    condition: "resellable" | "damaged";
+    orderId: string;
+    returnId: string;
+    actorUserId: string | null;
+  },
+): Promise<boolean> {
+  if (!input.variantId || input.quantity <= 0) return false;
+  const variant = await tx.productVariant.findUnique({
+    where: { id: input.variantId },
+    select: { trackInventory: true },
+  });
+  if (!variant?.trackInventory) return false;
+  const sold = await tx.stockReservation.findFirst({
+    where: {
+      referenceType: "order",
+      referenceId: input.orderId,
+      variantId: input.variantId,
+      status: "committed",
+    },
+    select: { locationId: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const locationId = sold?.locationId ?? (await defaultLocation(tx, tenantId)).id;
+  const level = await lockLevel(tx, tenantId, input.variantId, locationId);
+  const changes: Change[] = [{ bucket: "on_hand", delta: input.quantity }];
+  if (input.condition === "damaged") changes.push({ bucket: "damaged", delta: input.quantity });
+  await applyChanges(tx, tenantId, { ...level, variantId: input.variantId, locationId }, changes, {
+    reason: "return",
+    referenceType: "return",
+    referenceId: input.returnId,
+    actorUserId: input.actorUserId,
+    note: input.condition === "damaged" ? "Returned damaged" : "Returned by customer",
+  });
+  return true;
+}

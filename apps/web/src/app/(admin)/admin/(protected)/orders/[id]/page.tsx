@@ -4,18 +4,25 @@ import {
   getOrderForStaff,
   hasPermission,
   orderAmountLines,
+  REFUND_METHOD_LABEL,
+  REFUND_METHODS,
+  RETURN_REASON_LABEL,
+  RETURN_REASONS,
+  type RefundMethod,
+  type ReturnReason,
 } from "@ecom/core";
 import { Alert, Badge, Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
 import { orNotFound } from "@/server/catalog-forms";
-import { ActionForm, DangerForm, TextField } from "../../../_components/form";
+import { ActionForm, DangerForm, SelectField, TextField } from "../../../_components/form";
 import {
   cancelOrderAction,
   cashCollectedAction,
   deliveryRefusedAction,
   fulfilOrderAction,
+  recordReturnAction,
 } from "../actions";
 import { ORDER_LABEL, ORDER_TONE } from "../_components/order-status";
 
@@ -30,6 +37,7 @@ const EVENT_LABEL: Record<string, string> = {
   fulfilled: "Marked as sent",
   cash_collected: "Cash collected",
   delivery_refused: "Delivery refused, items back in stock",
+  returned: "Return recorded",
   cancelled: "Cancelled",
 };
 const ACTOR_LABEL: Record<string, string> = {
@@ -50,6 +58,23 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const needsRefund = order.events.some((event) => event.type === "paid_after_cancellation");
   const cod = order.paymentMethod === "cash_on_delivery";
   const cashTaken = order.payments.some((payment) => payment.status === "succeeded");
+  const paidAmount = order.payments
+    .filter((payment) => payment.status === "succeeded")
+    .reduce((sum, payment) => sum + payment.amount, 0);
+  const returned = new Map<string, number>();
+  for (const recorded of order.returns) {
+    for (const line of recorded.items) {
+      returned.set(line.orderItemId, (returned.get(line.orderItemId) ?? 0) + line.quantity);
+    }
+  }
+  const returnable = order.items.filter((item) => item.quantity > (returned.get(item.id) ?? 0));
+  const canReturn =
+    hasPermission(context, "returns.manage") &&
+    (order.status === "fulfilled" || order.status === "refunded") &&
+    paidAmount > 0 &&
+    returnable.length > 0;
+  const canRefund = hasPermission(context, "orders.refund") && paidAmount > order.refundedAmount;
+  const itemName = new Map(order.items.map((item) => [item.id, item.productName]));
 
   return (
     <div className="flex flex-col gap-6">
@@ -179,7 +204,131 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           <span>Total</span>
           <span>{money(order.totalAmount)}</span>
         </p>
+        {order.refundedAmount > 0 ? (
+          <p className="flex justify-between text-sm" data-testid="admin-refunded">
+            <span>Given back</span>
+            <span>{money(order.refundedAmount)}</span>
+          </p>
+        ) : null}
       </Card>
+
+      {order.returns.length > 0 || canReturn ? (
+        <Card title="Returns">
+          {order.returns.length > 0 ? (
+            <ul className="flex flex-col divide-y divide-line text-sm" data-testid="admin-returns">
+              {order.returns.map((recorded) => (
+                <li key={recorded.id} className="flex flex-col gap-1 py-2">
+                  <span className="font-medium">
+                    {when.format(recorded.createdAt)} ·{" "}
+                    {RETURN_REASON_LABEL[recorded.reason as ReturnReason] ?? recorded.reason}
+                  </span>
+                  <span>
+                    {recorded.items
+                      .map(
+                        (line) =>
+                          `${line.quantity} × ${itemName.get(line.orderItemId) ?? "Item"}${line.condition === "damaged" ? " (damaged)" : ""}`,
+                      )
+                      .join(", ")}
+                  </span>
+                  <span className="text-ink-muted">
+                    {recorded.refundAmount > 0
+                      ? `${money(recorded.refundAmount)} given back by ${(
+                          REFUND_METHOD_LABEL[recorded.refundMethod as RefundMethod] ?? "other"
+                        ).toLowerCase()}`
+                      : "No money given back"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {canReturn ? (
+            <details className="rounded-control border border-line p-3">
+              <summary className="cursor-pointer text-sm font-medium">Record a return</summary>
+              <div className="mt-3">
+                <ActionForm
+                  action={recordReturnAction}
+                  submitLabel="Record return"
+                  testId="return-form"
+                >
+                  <input type="hidden" name="id" value={order.id} />
+                  <p className="text-sm text-ink-muted">
+                    Enter how many of each item came back. Resellable items go back on sale; damaged
+                    ones are kept apart.
+                  </p>
+                  {returnable.map((item) => {
+                    const left = item.quantity - (returned.get(item.id) ?? 0);
+                    return (
+                      <div
+                        key={item.id}
+                        className="grid gap-3 sm:grid-cols-[1fr_8rem_10rem] sm:items-end"
+                      >
+                        <p className="text-sm">
+                          <span className="font-medium">{item.productName}</span>{" "}
+                          <span className="text-ink-muted">
+                            ({item.sku}) · up to {left}
+                          </span>
+                        </p>
+                        <TextField
+                          id={`qty-${item.id}`}
+                          label={`How many: ${item.productName}`}
+                          name={`qty-${item.id}`}
+                          inputMode="numeric"
+                          defaultValue=""
+                        />
+                        <SelectField
+                          id={`condition-${item.id}`}
+                          label={`Condition: ${item.productName}`}
+                          name={`condition-${item.id}`}
+                          defaultValue="resellable"
+                          options={[
+                            { value: "resellable", label: "Can be sold again" },
+                            { value: "damaged", label: "Damaged" },
+                          ]}
+                        />
+                      </div>
+                    );
+                  })}
+                  <SelectField
+                    label="Reason"
+                    name="reason"
+                    defaultValue=""
+                    options={[
+                      { value: "", label: "Choose a reason" },
+                      ...RETURN_REASONS.map((value) => ({
+                        value,
+                        label: RETURN_REASON_LABEL[value],
+                      })),
+                    ]}
+                  />
+                  <TextField label="Note" name="note" maxLength={500} hint="Optional, for staff." />
+                  {canRefund ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <TextField
+                        label={`Money given back (${order.currency})`}
+                        name="refund"
+                        inputMode="decimal"
+                        hint={`Optional. Up to ${money(paidAmount - order.refundedAmount)}. Card refunds through the payment provider are not built yet.`}
+                      />
+                      <SelectField
+                        label="Given back by"
+                        name="refundMethod"
+                        defaultValue=""
+                        options={[
+                          { value: "", label: "Choose" },
+                          ...REFUND_METHODS.map((value) => ({
+                            value,
+                            label: REFUND_METHOD_LABEL[value],
+                          })),
+                        ]}
+                      />
+                    </div>
+                  ) : null}
+                </ActionForm>
+              </div>
+            </details>
+          ) : null}
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Card title="Delivery address">

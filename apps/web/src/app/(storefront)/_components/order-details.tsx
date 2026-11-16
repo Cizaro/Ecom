@@ -101,6 +101,29 @@ export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey
         ))}
       </ul>
 
+      {order.returns.length > 0 ? (
+        <section aria-labelledby="order-returns" className="text-sm" data-testid="order-returns">
+          <h2 id="order-returns" className="font-medium">
+            Returns
+          </h2>
+          <ul className="mt-1 flex flex-col gap-1 text-ink-muted">
+            {order.returns.map((recorded) => (
+              <li key={recorded.id}>
+                {when.format(recorded.createdAt)}:{" "}
+                {recorded.items
+                  .map(
+                    (line) =>
+                      `${line.quantity} × ${order.items.find((item) => item.id === line.orderItemId)?.productName ?? "Item"}`,
+                  )
+                  .join(", ")}{" "}
+                received
+                {recorded.refundAmount > 0 ? `, ${money(recorded.refundAmount)} given back` : ""}.
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <div className="grid gap-6 sm:grid-cols-2">
         <dl className="flex flex-col gap-1 text-sm">
           {orderAmountLines(order).map(([label, value]) => (
@@ -113,6 +136,12 @@ export function OrderDetails({ order, accessKey }: { order: OrderView; accessKey
             <dt>Total</dt>
             <dd data-testid="order-total">{money(order.totalAmount)}</dd>
           </div>
+          {order.refundedAmount > 0 ? (
+            <div className="flex justify-between" data-testid="order-refunded">
+              <dt>Given back</dt>
+              <dd>{money(order.refundedAmount)}</dd>
+            </div>
+          ) : null}
           {cod ? (
             <div className="flex justify-between text-ink-muted">
               <dt>Payment</dt>

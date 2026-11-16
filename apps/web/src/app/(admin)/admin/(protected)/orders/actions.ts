@@ -8,6 +8,7 @@ import {
   fulfilOrder,
   NotFoundError,
   OrderError,
+  recordReturn,
 } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { forbidden, notFound } from "next/navigation";
@@ -24,11 +25,14 @@ const field = (formData: FormData, name: string): string => {
   return typeof value === "string" ? value : "";
 };
 
-async function attempt(work: () => Promise<FormState>): Promise<FormState> {
+async function attempt(
+  work: () => Promise<FormState>,
+  values?: Record<string, string>,
+): Promise<FormState> {
   try {
     return await work();
   } catch (error) {
-    if (error instanceof OrderError) return { error: error.message };
+    if (error instanceof OrderError) return { error: error.message, values };
     if (error instanceof NotFoundError) notFound();
     if (error instanceof ForbiddenError) forbidden();
     throw error;
@@ -98,4 +102,49 @@ export async function deliveryRefusedAction(
     revalidatePath(`/admin/orders/${id}`);
     return { notice: "Recorded. The order is cancelled and the items are back in stock." };
   });
+}
+
+/**
+ * Records items a customer gave back. The form has one quantity and one
+ * condition per order line ("qty-<line id>", "condition-<line id>"); the
+ * service checks the lines belong to this order.
+ */
+export async function recordReturnAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("returns.manage");
+  const id = field(formData, "id");
+  const items = [...formData.keys()]
+    .filter((key) => key.startsWith("qty-"))
+    .map((key) => {
+      const orderItemId = key.slice("qty-".length);
+      return {
+        orderItemId,
+        quantity: field(formData, key),
+        condition: field(formData, `condition-${orderItemId}`),
+      };
+    });
+  const values: Record<string, string> = {
+    reason: field(formData, "reason"),
+    note: field(formData, "note"),
+    refund: field(formData, "refund"),
+    refundMethod: field(formData, "refundMethod"),
+    ...Object.fromEntries(items.map((item) => [`qty-${item.orderItemId}`, item.quantity])),
+  };
+  return attempt(async () => {
+    const db = tenantDb(context);
+    await recordReturn(db, context, {
+      orderId: id,
+      items,
+      reason: values.reason,
+      note: values.note,
+      refund: values.refund,
+      refundMethod: values.refundMethod,
+    });
+    await sendWaitingEmails(db);
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${id}`);
+    return { notice: "Return recorded." };
+  }, values);
 }
