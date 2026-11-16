@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.6 (notifications). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3, 3.5 and 3.6 complete, plus cash on delivery.** Phases 1 and 2 are complete. Next: Milestone 3.7 (admin order tools). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -143,6 +143,12 @@ Last updated: 2026-11-12
   - A store with no delivery areas works as before: no delivery charge.
   - Fixed: after a form on a store's own domain redirected (placing an order, signing in), the next page could show the wrong store. See decision D76.
 
+- **Milestone 3.6, store emails:**
+  - Shoppers get: order confirmed (cash order placed or online payment), on its way (with the courier and tracking staff entered, and the cash to have ready), payment received (cash recorded), and cancelled (by staff, or an online order not paid in time).
+  - Staff get, at addresses listed on the new **Store emails** admin page (`settings.write`): new order ready to prepare, and low stock when an order takes a product down to its level (once a day per product).
+  - Every email is saved with the order change in one transaction, sent once only, straight away by the request and otherwise by the worker every 30 seconds, and retried after failures. Emails that could not be sent are listed on Store emails with a "Try again" button.
+  - Emails are plain text, show only what the order records, and stay within the store's own data.
+
 ## In progress
 
 Nothing.
@@ -161,7 +167,8 @@ Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Me
 - **Customers cannot yet change their email address or change their password while signed in** (only through the reset link).
 - **Staff can list customers but not open, disable or delete one** from the admin yet (Milestone 3.7). Disabling is possible in the database.
 - **Expired customer sessions and used links stay in the database** (ignored, not deleted) until a cleanup job exists.
-- **Account pages and emails are English only.**
+- **Account pages and emails are English only.** Store emails are plain text.
+- **Emails reach only the local test inbox** (Mailpit at http://localhost:8025) until a real sending service is configured for the live site.
 - **Products that existed before stock tracking are not counted** (they keep selling without a stock check) until staff switch counting on for each variant (decision D64). New variants are counted from the start and show as out of stock until stock is received.
 - **The cart does not hold stock.** Stock is held when the order is placed, so an item can sell out between adding it and checking out; the cart and checkout then say so.
 - **No transfers between locations, suppliers or purchase orders yet**, and each item in a checkout is taken from a single location.
@@ -329,24 +336,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 3.5, on the first computer)
+## Checks run this session (Milestone 3.6, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 218 tests (new: delivery and tax pricing, rounding, staff input, price fingerprint, which host a request is for) |
-| `pnpm test:int` | Pass, 226 tests, on the separate test database (5 new: areas checked and audited, kept within one store, checkout charges and refuses correctly, tax added or included and stale prices refused, shipments recorded and add-only) |
+| `pnpm test` | Pass, 230 tests (new: wording of every store email, one-line subjects, staff address lists) |
+| `pnpm test:int` | Pass, 234 tests, on the separate test database (8 new: emails along an order's life sent once each, cancellations, retry and give-up, two senders at once, low stock once, store separation and links, permissions) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 90 tests (34 skipped by design), including delivery areas at checkout on a second test store, staff managing areas and tax, and courier and tracking on a cash order |
+| `pnpm test:e2e` | Pass, 93 tests (35 skipped by design), including the shipped and payment emails of a cash order, the staff new-order email, and the Store emails page |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
-| CI on GitHub | The cash-on-delivery commit failed there: a fresh test database had no staff roles until a test file happened to create them. The test database setup now creates them first; checked locally on a freshly created test database (226 pass). See the Actions tab for this commit |
+| CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Milestone 3.6: notifications (order emails, "on its way" with tracking, staff alerts). Before that, the owner enters the real delivery areas and tax under Delivery and tax.
+Milestone 3.7: admin order tools (dashboard, CSV export, returns). Returns need the owner's return rules (open decision Q22).
 
 ## Session log
 
@@ -373,5 +380,6 @@ Milestone 3.6: notifications (order emails, "on its way" with tracking, staff al
 | 2026-11-16 | Milestone 3.3: orders and payments tables with status and amount rules, checkout, mock payment provider with signed once-only webhooks, unpaid-order expiry, order pages, account orders, admin orders |
 | 2026-11-17 | Stripe dropped (not available in Lebanon). Cash on delivery: payment method on orders, confirmed status, sent / cash received / delivery refused, cash-only mode |
 | 2026-11-17 | Milestone 3.5: delivery areas and tax set by staff, delivery area at checkout with live total, frozen on the order, shipments with courier and tracking; storefront host fix after redirects |
+| 2026-11-17 | Milestone 3.6: store emails through the outbox (confirmed, on its way, payment received, cancelled; staff new order and low stock), worker email sweep, Store emails admin page; owner: delivery $3 to $5, Lebanon only |
 
 Commit hashes: `git log --oneline`.

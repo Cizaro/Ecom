@@ -142,7 +142,7 @@ BullMQ queues, one per concern: `payments`, `notifications`, `media`, `ai`, `soc
 
 - Every job carries `tenantId` and an idempotency key. Handlers are safe to run twice.
 - Retries use exponential backoff. Jobs that exhaust retries go to a dead-letter queue visible in the admin.
-- Database change and job enqueue are made atomic with a transactional outbox table drained by the worker.
+- Database change and job enqueue are made atomic with a transactional outbox table drained by the worker. Built for store emails (decision D77): the request that saved them sends them at once, the worker sends what is left every 30 seconds, and retries back off.
 - Scheduled work (closing giveaways, releasing expired stock reservations, token refresh, metric sync) runs as repeatable jobs.
 - A `Job` status record backs the "background job status" API.
 

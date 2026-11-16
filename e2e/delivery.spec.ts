@@ -1,7 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { exact, signIn } from "./catalog-helpers";
-import { E2E_SHIPPING_HOST, E2E_SHIPPING_PRODUCT_SLUG, roleEmail } from "./users";
+import { waitForEmail } from "./mail";
+import {
+  E2E_SHIPPING_HOST,
+  E2E_SHIPPING_ORDERS_EMAIL,
+  E2E_SHIPPING_PRODUCT_SLUG,
+  roleEmail,
+} from "./users";
 
 // Delivery areas and tax. The shopper side runs on the delivery test store
 // (reached at 127.0.0.1, set up with two areas in Lebanon and 11% VAT
@@ -10,6 +16,7 @@ import { E2E_SHIPPING_HOST, E2E_SHIPPING_PRODUCT_SLUG, roleEmail } from "./users
 
 test("the shopper picks a delivery area, sees it in the total, and the order keeps it", async ({
   browser,
+  request,
 }, testInfo) => {
   const base = String(testInfo.project.use.baseURL).replace("localhost", E2E_SHIPPING_HOST);
   const context = await browser.newContext({ baseURL: base });
@@ -58,6 +65,12 @@ test("the shopper picks a delivery area, sees it in the total, and the order kee
     /VAT 11% included\s*\$4\.26/,
   );
   await expect(page.getByTestId("order-total")).toHaveText("$43.00");
+
+  // The store's staff address is told about the new order, with what they need to prepare it.
+  const number = (await page.getByRole("heading", { level: 1 }).textContent())!.replace(/\D/g, "");
+  const staffMail = await waitForEmail(request, E2E_SHIPPING_ORDERS_EMAIL, `New order #${number}`);
+  expect(staffMail).toContain("Delivery area: Beirut");
+  expect(staffMail).toContain("Phone: +961 71 000 111");
   await context.close();
 });
 
@@ -105,4 +118,25 @@ test("staff manage delivery areas and tax, with clear messages for mistakes", as
   page.once("dialog", (dialog) => void dialog.accept());
   await row.getByRole("button", { name: "Delete area" }).click();
   await expect(page.getByTestId("zone-row").filter({ hasText: name })).toHaveCount(0);
+});
+
+test("staff choose who gets store emails", async ({ page }) => {
+  await signIn(page, roleEmail("store_owner"));
+  await page.goto("/admin");
+  await page.getByRole("link", { name: "Store emails" }).first().click();
+  await expect(page.getByRole("heading", { name: "Store emails" })).toBeVisible();
+  const form = page.getByTestId("notification-settings-form");
+  await form.getByLabel("New orders").fill("orders@example.test, not-an-address");
+  await form.getByRole("button", { name: "Save email settings" }).click();
+  await expect(form.getByTestId("form-error")).toContainText(
+    '"not-an-address" is not an email address',
+  );
+  await form.getByLabel("New orders").fill("e2e-main-orders@example.test");
+  await form.getByLabel("Low stock").fill("");
+  await form.getByRole("button", { name: "Save email settings" }).click();
+  await expect(form.getByTestId("form-notice")).toHaveText("Email settings saved.");
+  await page.reload();
+  await expect(page.getByTestId("notification-settings-form").getByLabel("New orders")).toHaveValue(
+    "e2e-main-orders@example.test",
+  );
 });

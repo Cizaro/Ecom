@@ -56,6 +56,9 @@ erDiagram
 | shipping_zones | Own tenant | Own tenant |
 | checkout_settings | Own tenant | Own tenant, no delete |
 | shipments | Own tenant | Own tenant, add only |
+| notification_settings | Own tenant | Own tenant, no delete |
+
+**Store emails (2026-11-17, decisions D77 to D79):** `outbox_events` gains `available_at` (next try), `locked_until` (claimed by a sender) and `dedupe_key` (unique per tenant, so each email is made once). `notification_settings` holds one row per store with up to five staff addresses each for new orders and low stock (own tenant, no delete).
 
 **Delivery and tax (2026-11-17, decisions D74 and D75):** `shipping_zones` (name, country codes, price and optional free-delivery amount in the store currency, offered or not), `checkout_settings` (one row per store: tax rate in hundredths of a percent, included in prices or added, tax name), `shipments` (one per order: courier, tracking number, https tracking link, sent time). Orders gain `shipping_zone_name`, `tax_rate_basis_points`, `tax_included_amount` and `tax_label`, frozen with the other amounts once placed.
 

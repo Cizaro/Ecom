@@ -81,6 +81,7 @@ model Tenant {
   shippingZones           ShippingZone[]
   checkoutSettings        CheckoutSettings?
   shipments               Shipment[]
+  notificationSettings    NotificationSettings?
 
   @@map("tenants")
 }
@@ -452,11 +453,19 @@ model OutboxEvent {
   attempts    Int       @default(0)
   lastError   String?   @map("last_error")
   processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+  /// Not tried again before this time (set after a failed attempt).
+  availableAt DateTime  @default(now()) @map("available_at") @db.Timestamptz(3)
+  /// Claimed by a sender until then, so two senders never send the same event.
+  lockedUntil DateTime? @map("locked_until") @db.Timestamptz(3)
+  /// Makes the same event once only, e.g. one confirmation email per order.
+  dedupeKey   String?   @map("dedupe_key")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, dedupeKey])
   @@index([processedAt, createdAt])
+  @@index([processedAt, availableAt])
   @@index([tenantId, createdAt])
   @@map("outbox_events")
 }
@@ -1205,6 +1214,20 @@ model ShippingZone {
   @@unique([tenantId, name])
   @@index([tenantId, position])
   @@map("shipping_zones")
+}
+
+/// One row per store: which staff addresses get store emails.
+model NotificationSettings {
+  tenantId    String   @id @map("tenant_id") @db.Uuid
+  /// Told about each new order (cash on delivery placed, or paid online).
+  orderEmails String[] @map("order_emails")
+  /// Told when a product's stock drops to its low-stock level.
+  stockEmails String[] @map("stock_emails")
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
 }
 
 /// One row per store: how tax is charged at checkout.

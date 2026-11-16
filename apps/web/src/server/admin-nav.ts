@@ -16,6 +16,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: "Stock", path: "/admin/inventory" },
   { label: "Customers", path: "/admin/customers" },
   { label: "Delivery and tax", path: "/admin/settings/shipping" },
+  { label: "Store emails", path: "/admin/settings/notifications" },
   { label: "Access", path: "/admin/access" },
   { label: "Team", path: "/admin/team" },
   { label: "Security", path: "/admin/account/security" },

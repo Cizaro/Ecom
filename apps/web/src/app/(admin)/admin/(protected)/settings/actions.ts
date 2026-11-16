@@ -5,6 +5,9 @@ import {
   deleteShippingZone,
   ForbiddenError,
   NotFoundError,
+  NotificationSettingsError,
+  retryEmail,
+  saveNotificationSettings,
   saveTaxSettings,
   ShippingError,
   updateShippingZone,
@@ -12,9 +15,10 @@ import {
 import { revalidatePath } from "next/cache";
 import { forbidden, notFound } from "next/navigation";
 import { requirePermission, tenantDb } from "@/server/access";
+import { sendWaitingEmails } from "@/server/notifications";
 import type { FormState } from "../../actions";
 
-// Store settings: delivery areas and tax. Every action checks settings.write
+// Store settings: delivery areas, tax and store emails. Every action checks settings.write
 // itself; the services check it again, run inside the staff member's tenant
 // and write the audit log.
 
@@ -32,7 +36,9 @@ async function attempt(
   try {
     return await work();
   } catch (error) {
-    if (error instanceof ShippingError) return { error: error.message, values };
+    if (error instanceof ShippingError || error instanceof NotificationSettingsError) {
+      return { error: error.message, values };
+    }
     if (error instanceof NotFoundError) notFound();
     if (error instanceof ForbiddenError) forbidden();
     throw error;
@@ -112,4 +118,36 @@ export async function saveTaxSettingsAction(
     refresh();
     return { notice: "Tax settings saved." };
   }, values);
+}
+
+const EMAILS_PAGE = "/admin/settings/notifications";
+
+export async function saveNotificationSettingsAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("settings.write");
+  const values = {
+    orderEmails: field(formData, "orderEmails"),
+    stockEmails: field(formData, "stockEmails"),
+  };
+  return attempt(async () => {
+    await saveNotificationSettings(tenantDb(context), context, values);
+    revalidatePath(EMAILS_PAGE);
+    return { notice: "Email settings saved." };
+  }, values);
+}
+
+export async function retryEmailAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("settings.write");
+  return attempt(async () => {
+    const db = tenantDb(context);
+    await retryEmail(db, context, field(formData, "id"));
+    await sendWaitingEmails(db);
+    revalidatePath(EMAILS_PAGE);
+    return { notice: "Tried again." };
+  });
 }

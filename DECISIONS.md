@@ -242,6 +242,15 @@ Marking an order as sent records one shipment: courier, tracking number and trac
 ### D76. The storefront trusts X-Forwarded-Host only from this machine (2026-11-17)
 After a server action redirects, Next.js renders the next page with a request to its own localhost address and passes the shopper's host in X-Forwarded-Host. The storefront previously read only the Host header, so on any host other than the server's own name (every custom store domain) the page after a redirect showed the wrong store or a 404. The storefront now uses X-Forwarded-Host only when the Host header is a loopback address (localhost, 127.0.0.1, ::1), which public requests to a store domain never have. A request to a store domain cannot switch stores by sending the header. A reverse proxy on another machine will need its own trusted-proxy setting (launch hardening).
 
+### D77. Store emails go through the outbox, saved with the change they report (2026-11-17)
+Order emails (confirmed, on its way, payment received, cancelled) and staff emails (new order, low stock) are rows in `outbox_events`, written in the same transaction as the order or stock change. A rolled-back change never emails; a committed one always does, eventually. A dedupe key per email (for example "shipped:<order>") makes each one once only, even when a payment notification arrives twice. The request that made the change sends its store's waiting emails straight away; the worker sends anything left every 30 seconds. A sender claims a batch with `FOR UPDATE SKIP LOCKED` and a five-minute lock, so two senders never send the same email; a failure is retried after 1, 5, 30, 120 and 720 minutes, then given up (six attempts) and listed for staff, who can try it again. Emails are rendered when sent, from the order as recorded, inside the store's tenant; they state only what the order records and promise no delivery dates. This replaces sending the confirmation directly from the request.
+
+### D78. Staff emails go to addresses the store lists; shopper emails are order emails only (2026-11-17)
+Each store lists up to five addresses for new orders and five for low stock (none by default). "New order" is sent when an order is ready to prepare: a cash order when placed, an online order when paid. Shoppers get emails only about their own orders, which they need, so there is no opt-in for them; no marketing email exists yet, and when it does it will need the shopper's consent first (consent_records). Unpaid online orders that expire get a short cancellation email.
+
+### D79. Low stock is noticed when an order takes a product down to its level (2026-11-17)
+When placing an order lowers a counted product from "in stock" to its low-stock level or to none, staff on the low-stock list are told, at most once a day per product. Held items (checkouts in progress) count as not available, as everywhere else; the email says so. Staff stock changes do not send it, since staff made them.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
@@ -252,8 +261,8 @@ Until answered, the assumption shown is used and kept configurable. Items marked
 | Q2 | Currency? | USD | |
 | Q3 | Languages? | English, with multi-language and right-to-left support built in | |
 | Q4 | Card payment provider? | A Lebanese gateway (areeba or NetCommerce); Stripe and Tap are not available (D71). Cash on delivery is built. | **3.4**, waits on the merchant account |
-| Q5 | Countries served? | Same as operating country | Shipping zones |
-| Q6 | Shipping method? | Built: delivery areas with a price each and optional free delivery above an amount; courier and tracking entered by staff (D74, D75). Owner to enter the real areas, prices and couriers. | |
+| Q5 | Countries served? | Lebanon only (owner, 2026-11-17) | |
+| Q6 | Shipping method? | Built: delivery areas with a price each and optional free delivery above an amount; courier and tracking entered by staff (D74, D75). Owner, 2026-11-17: delivery costs $3 to $5 anywhere in Lebanon; which areas cost what is still to be entered under Delivery and tax. | |
 | Q7 | Inventory owned, wholesale or dropshipped? | Owned, one location | 3.2 design detail |
 | Q8 | Domain? | localhost | Launch |
 | Q9 | Logo, colors, brand assets? | Neutral placeholder theme | 1.5 polish |

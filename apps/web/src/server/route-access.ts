@@ -74,6 +74,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/orders", access: { level: "permission", permission: "orders.read" } },
   { path: "/admin/orders/[id]", access: { level: "permission", permission: "orders.read" } },
   { path: "/admin/settings/shipping", access: SETTINGS_WRITE },
+  { path: "/admin/settings/notifications", access: SETTINGS_WRITE },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -130,6 +131,8 @@ const SETTINGS_ACTION_ENTRIES: readonly ActionEntry[] = [
   "updateShippingZoneAction",
   "deleteShippingZoneAction",
   "saveTaxSettingsAction",
+  "saveNotificationSettingsAction",
+  "retryEmailAction",
 ].map((name) => ({ id: `${SETTINGS_ACTIONS}#${name}`, access: SETTINGS_WRITE }));
 
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";

@@ -22,6 +22,8 @@ export const E2E_MFA_TENANT_SLUG = "e2e-mfa";
 export const E2E_SHIPPING_TENANT_SLUG = "e2e-shipping";
 export const E2E_SHIPPING_HOST = "127.0.0.1";
 export const E2E_SHIPPING_PRODUCT_SLUG = "e2e-delivery-tote";
+/** Staff address the delivery test store tells about new orders. */
+export const E2E_SHIPPING_ORDERS_EMAIL = "e2e-shipping-orders@example.test";
 export const E2E_ROLES = [
   "store_owner",
   "store_manager",

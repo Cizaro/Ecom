@@ -100,6 +100,11 @@ test("cash on delivery: ordered, sent, paid in cash; or refused and restocked", 
   await expect(page.getByTestId("admin-shipment")).toContainText(
     `with Toters · tracking TT-${tag}`,
   );
+  // The shopper is told by email, with the tracking staff entered.
+  const shippedMail = await waitForEmail(request, email, "is on its way");
+  expect(shippedMail).toContain("Courier: Toters");
+  expect(shippedMail).toContain(`Tracking number: TT-${tag}`);
+  expect(shippedMail).toContain("Please have $15.00 in cash ready for the courier.");
   await shopper.goto(orderUrl);
   await expect(shopper.getByTestId("order-message")).toContainText("on its way");
   await expect(shopper.getByTestId("order-shipment")).toContainText(
@@ -114,6 +119,9 @@ test("cash on delivery: ordered, sent, paid in cash; or refused and restocked", 
   await expect(page.getByTestId("admin-payment-method")).toContainText("cash collected");
   await expect(page.getByRole("button", { name: "Delivery refused" })).toHaveCount(0);
   await expect(page.getByTestId("order-history")).toContainText("Cash collected");
+  expect(await waitForEmail(request, email, "Payment received")).toContain(
+    "We have received your payment of $15.00.",
+  );
   await shopper.reload();
   await expect(shopper.getByTestId("payment-method")).toHaveText("Paid in cash on delivery");
   await shopperContext.close();

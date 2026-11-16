@@ -14,12 +14,8 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { tooManyCartChanges } from "@/server/cart";
 import { cartOwner, getCurrentCustomer, safeReturnPath } from "@/server/customer";
-import {
-  deliverPaymentNotification,
-  getMockProvider,
-  getPaymentProvider,
-  sendConfirmation,
-} from "@/server/payments";
+import { deliverPaymentNotification, getMockProvider, getPaymentProvider } from "@/server/payments";
+import { sendWaitingEmails } from "@/server/notifications";
 import { storefrontDb } from "@/server/storefront";
 import type { AccountFormState } from "../account/actions";
 
@@ -106,10 +102,9 @@ export async function placeOrderAction(
     }
     const returnPath = returnPathFor(placed.orderId, customer ? null : placed.accessKey);
     if (placed.order) {
-      // Cash on delivery: nothing to pay now. Confirm by email and show the order.
-      await sendConfirmation(db, placed.order).catch(() => {
-        // Logged by the email provider; the order stands either way.
-      });
+      // Cash on delivery: nothing to pay now. Send the confirmation (saved
+      // with the order) and show the order.
+      await sendWaitingEmails(db);
       next = returnPath;
     } else {
       ({ payUrl: next } = await startPayment(db, provider!, placed.orderId, returnPath));

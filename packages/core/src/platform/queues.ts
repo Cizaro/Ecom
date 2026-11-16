@@ -19,6 +19,8 @@ export const MAINTENANCE_JOBS = {
   stockSweep: "stock-sweep",
   /** Cancels orders not paid in time and gives their stock back. */
   orderSweep: "order-sweep",
+  /** Sends store emails left over or failed (most are sent by the request that saved them). */
+  emailSweep: "email-sweep",
 } as const;
 
 export const MEDIA_JOBS = {

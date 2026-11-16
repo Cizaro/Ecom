@@ -1,13 +1,16 @@
 import { getEnv } from "@ecom/config";
 import {
+  createEmailProvider,
   createLogger,
   createS3Storage,
   createTenantDb,
   closeQueues,
+  deliverPendingEmails,
   enqueueMediaProcessing,
   expireUnpaidOrders,
   listTenantsWithExpiredOrders,
   listTenantsWithExpiredReservations,
+  listTenantsWithPendingEmails,
   listUnprocessedMedia,
   MAINTENANCE_JOBS,
   markMediaAssetFailed,
@@ -28,6 +31,7 @@ const logger = createLogger("worker", env.LOG_LEVEL);
 const connection = { ...redisConnectionOptions(env.REDIS_URL), maxRetriesPerRequest: null };
 
 const storage = createS3Storage(env);
+const email = createEmailProvider(env, logger);
 const appPrisma = getAppPrisma(env.DATABASE_URL);
 /** Tenant-bound database handle: Row-Level Security applies to the worker too. */
 const tenantDb = (tenantId: string) => createTenantDb(appPrisma, { tenantId });
@@ -65,6 +69,22 @@ const maintenanceWorker = new Worker(
         for (const tenantId of tenants) cancelled += await expireUnpaidOrders(tenantDb(tenantId));
         if (cancelled > 0) logger.info({ cancelled }, "order sweep cancelled unpaid orders");
         return { cancelled };
+      }
+      case MAINTENANCE_JOBS.emailSweep: {
+        const tenants = await listTenantsWithPendingEmails(env.DATABASE_ADMIN_URL);
+        let sent = 0;
+        let failed = 0;
+        for (const tenantId of tenants) {
+          const result = await deliverPendingEmails(tenantDb(tenantId), email, {
+            appUrl: env.APP_URL,
+            accessSecret: env.ENCRYPTION_KEY,
+            limit: 50,
+          });
+          sent += result.sent;
+          failed += result.failed;
+        }
+        if (sent > 0 || failed > 0) logger.info({ sent, failed }, "email sweep");
+        return { sent, failed };
       }
       default:
         throw new Error(`Unknown maintenance job: ${job.name}`);
@@ -129,6 +149,12 @@ await maintenanceQueue.upsertJobScheduler(
   MAINTENANCE_JOBS.orderSweep,
   { every: 60_000 },
   { name: MAINTENANCE_JOBS.orderSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.emailSweep,
+  { every: 30_000 },
+  { name: MAINTENANCE_JOBS.emailSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
 logger.info({ queues: Object.values(QUEUES) }, "worker started");

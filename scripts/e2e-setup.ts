@@ -15,6 +15,7 @@ import {
   E2E_PURPOSES,
   E2E_ROLES,
   E2E_SHIPPING_HOST,
+  E2E_SHIPPING_ORDERS_EMAIL,
   E2E_SHIPPING_PRODUCT_SLUG,
   E2E_SHIPPING_TENANT_SLUG,
   E2E_TENANT_SLUG,
@@ -158,6 +159,11 @@ try {
     where: { tenantId: shipping.id },
     create: { tenantId: shipping.id, taxRateBasisPoints: 1100, taxIncluded: true, taxLabel: "VAT" },
     update: { taxRateBasisPoints: 1100, taxIncluded: true, taxLabel: "VAT" },
+  });
+  await prisma.notificationSettings.upsert({
+    where: { tenantId: shipping.id },
+    create: { tenantId: shipping.id, orderEmails: [E2E_SHIPPING_ORDERS_EMAIL], stockEmails: [] },
+    update: { orderEmails: [E2E_SHIPPING_ORDERS_EMAIL], stockEmails: [] },
   });
   if (
     !(await prisma.product.findFirst({

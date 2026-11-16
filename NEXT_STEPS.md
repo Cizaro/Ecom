@@ -9,21 +9,21 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 3. Review the default role permissions (decision D24 in DECISIONS.md): who can refund, launch ads, run giveaway draws, export or delete customers.
 4. Answer what you can in the open decisions table in DECISIONS.md.
 
-## Owner: set up delivery and tax
+## Owner: set up delivery, tax and store emails
 
-Sign in to the admin and open **Delivery and tax**:
+Sign in to the admin:
 
-1. Add your delivery areas, for example "Beirut" (country code LB, $3.00), "Mount Lebanon" (LB, $4.00), "Other areas" (LB, $5.00). Leave "Free delivery over" empty or enter an amount.
-2. Enter your tax rate and whether your prices already include it. It is 0% until you set it; confirm the rate with your accountant.
-3. When you mark an order as sent, you can add the courier, tracking number and tracking link; the shopper sees them on their order.
+1. **Delivery and tax**: you said delivery is $3 to $5 anywhere in Lebanon. Add one area per price, for example "Beirut" (LB, $3.00), "Mount Lebanon" (LB, $4.00), "Other areas" (LB, $5.00); tell me which places cost what and I can enter them. Then set your tax rate (0% until you set it; confirm it with your accountant).
+2. **Store emails**: add the address(es) that should hear about new orders and low stock.
+3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 
-## Next development task: Milestone 3.6, notifications
+## Next development task: Milestone 3.7, admin order tools
 
-1. Email templates in one place (order confirmed, sent with tracking, cash received, cancelled, delivery refused), with the store's name and links.
-2. A "your order is on its way" email when staff mark it sent, including courier and tracking.
-3. Staff notifications: a new order, and low stock (carried over from 3.2).
-4. Shopper email preferences where the law requires them (marketing email stays off until asked for).
-5. Tests: each email goes to the right person, once, with the right store and no data from another store; a failed email never undoes the order change.
+1. A dashboard for staff: today's and this week's orders and sales, orders waiting to be sent, cash still to collect, low stock. Figures come only from recorded orders.
+2. Orders CSV export (permission-checked, audited, own store only), and filters by date and payment method.
+3. Returns: a shopper or staff starts a return, staff approve and receive it, stock goes back. Needs your return rules (open decision Q22: how many days, which items).
+4. Refunds wait for the card gateway; a cash refund can be recorded by staff.
+5. Tests: figures match the orders; another store's orders never appear in totals or exports.
 
 ## Card payments (Milestone 3.4), waiting on the owner
 
@@ -33,7 +33,7 @@ Stripe and Tap Payments do not accept Lebanese merchants (decision D71). Apply t
 
 | Order | Milestone | Notes |
 | --- | --- | --- |
-| 2 | 3.7 and 3.8 Admin order tools (returns, dashboard, CSV export), promotions | 3.7 needs the return rules (open decision Q22) |
+| 2 | 3.8 Coupons and promotions | |
 | 2a | 3.4 Card gateway (areeba or NetCommerce) | When the merchant account exists |
 | 3 | Launch hardening pulled forward from Phase 10 | Backups, monitoring, proxy configuration for client addresses |
 
@@ -42,6 +42,9 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 ## Small follow-ups carried forward
 
 - Cash on delivery: a maximum order amount for cash, and a store setting to switch cash on delivery off.
+- Emails: an HTML version with the store's logo, and Arabic wording (with right-to-left layout).
+- Emails: a "delivery refused" note to the shopper, if the owner wants one.
+- Emails: an outbox clean-up job that removes sent rows after some months.
 - Delivery: correcting a shipment's tracking after it was recorded, and more than one parcel per order.
 - Delivery: offer only the areas for the country chosen in the checkout form (today every area is listed and a mismatch is refused with a message).
 - Delivery: a delivery time per area, once the owner can state one truthfully.
@@ -56,7 +59,6 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 - Checkout: show stock holds per order to staff, and let staff extend a hold.
 
 - Stock: transfers between locations, suppliers and purchase orders (receive against an order), CSV import of counts.
-- Stock: a low-stock email to staff (with notifications, Milestone 3.6).
 - Stock: "notify me when back in stock" for shoppers (needs consent; Phase 4).
 - Stock: splitting one item across locations when no single location has enough (today each item comes from one location).
 - Stock: a worker job to delete old released and committed holds (they are kept, not removed).

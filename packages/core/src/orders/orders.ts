@@ -4,20 +4,16 @@ import { assertPermission, NotFoundError, type RequestContext } from "../access/
 import { audit, type TenantDb } from "../access/tenant-db";
 import { checkoutCartIn, convertCartIn, type CartOwner } from "../cart/cart";
 import { normalizeEmail } from "../customers/accounts";
+import { validateAddress, type AddressInput, type ValidAddress } from "../customers/addresses";
 import {
-  formatAddress,
-  validateAddress,
-  type AddressInput,
-  type ValidAddress,
-} from "../customers/addresses";
-import {
+  availabilityIn,
   InventoryError,
   reserveStockIn,
   returnCommittedIn,
   settleReservationsIn,
 } from "../inventory/stock";
 import { formatMoney } from "../catalog/money";
-import type { EmailMessage } from "../notifications/email";
+import { EMAIL_EVENTS, enqueueEmailIn, enqueueStaffEmailsIn } from "../notifications/enqueue";
 import type { PaymentNotification, PaymentProvider } from "../payments/provider";
 import { formatTaxRate, quoteDeliveryIn, ShippingError } from "../shipping/shipping";
 
@@ -216,6 +212,32 @@ const toView = (row: OrderRow): OrderView => ({
   shippingAddress: row.shippingAddress as unknown as ValidAddress,
 });
 
+/** An order as emails show it, inside the caller's transaction (and tenant). */
+export async function orderViewIn(tx: AppTransaction, orderId: string): Promise<OrderView | null> {
+  if (!UUID.test(orderId)) return null;
+  const row = await tx.order.findUnique({ where: { id: orderId }, select: ORDER_SELECT });
+  return row ? toView(row) : null;
+}
+
+/** The emails for an order the store can now prepare: the shopper's confirmation and staff's notice. */
+async function enqueueOrderReadyIn(tx: AppTransaction, tenantId: string, orderId: string) {
+  await enqueueEmailIn(
+    tx,
+    tenantId,
+    EMAIL_EVENTS.orderConfirmed,
+    { orderId },
+    `confirmed:${orderId}`,
+  );
+  await enqueueStaffEmailsIn(
+    tx,
+    tenantId,
+    "order",
+    EMAIL_EVENTS.staffNewOrder,
+    { orderId },
+    `new-order:${orderId}`,
+  );
+}
+
 // --- Placing an order --------------------------------------------------------
 
 export interface PlaceOrderInput {
@@ -371,12 +393,31 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
           actorType: input.customer ? "customer" : "guest",
         },
       });
+      const variantIds = view.lines.map((line) => line.variantId);
+      const before = await availabilityIn(tx, variantIds);
       await reserveStockIn(tx, db.tenantId, {
         referenceType: "order",
         referenceId: order.id,
         items: view.lines.map((line) => ({ variantId: line.variantId, quantity: line.quantity })),
         holdMinutes: cod ? COD_HOLD_DAYS * 24 * 60 : PAY_WITHIN_MINUTES,
       });
+      // Tell staff when this order takes a product down to its low-stock level.
+      const after = await availabilityIn(tx, variantIds);
+      const today = new Date().toISOString().slice(0, 10);
+      for (const [variantId, now] of after) {
+        const was = before.get(variantId);
+        if (was?.status === "in_stock" && (now.status === "low" || now.status === "out_of_stock")) {
+          await enqueueStaffEmailsIn(
+            tx,
+            db.tenantId,
+            "stock",
+            EMAIL_EVENTS.staffLowStock,
+            { variantId, available: now.available ?? 0 },
+            `low-stock:${variantId}:${today}`,
+          );
+        }
+      }
+      if (cod) await enqueueOrderReadyIn(tx, db.tenantId, order.id);
       const placed = cod
         ? toView(
             await tx.order.findUniqueOrThrow({ where: { id: order.id }, select: ORDER_SELECT }),
@@ -574,6 +615,7 @@ export async function handlePaymentNotification(
       "commit",
     );
     if (order.cartId) await convertCartIn(tx, order.cartId);
+    await enqueueOrderReadyIn(tx, db.tenantId, payment.orderId);
     const paid = await tx.order.findUniqueOrThrow({
       where: { id: payment.orderId },
       select: ORDER_SELECT,
@@ -701,6 +743,13 @@ async function cancelIn(
       note: actor.note ?? null,
     },
   });
+  await enqueueEmailIn(
+    tx,
+    tenantId,
+    EMAIL_EVENTS.orderCancelled,
+    { orderId, reason: actor.type === "system" ? "expired" : "staff" },
+    `cancelled:${orderId}`,
+  );
   return true;
 }
 
@@ -903,6 +952,13 @@ export async function fulfilOrder(
         note: text,
       },
     });
+    await enqueueEmailIn(
+      tx,
+      db.tenantId,
+      EMAIL_EVENTS.orderShipped,
+      { orderId },
+      `shipped:${orderId}`,
+    );
     await audit(tx, context, "orders.fulfilled", { type: "order", id: orderId });
   });
 }
@@ -971,46 +1027,6 @@ export function orderAmountLines(
     );
   }
   return rows;
-}
-
-// --- Email ---------------------------------------------------------------------
-
-/** The confirmation sent when an order is paid. */
-export function orderConfirmationEmail(
-  order: OrderView,
-  store: { name: string; url: string },
-  orderUrl: string,
-): EmailMessage {
-  const money = (amount: number) => formatMoney(amount, order.currency);
-  const lines = order.items.map((item) => {
-    const options = [item.color, item.size].filter(Boolean).join(", ");
-    return `${item.quantity} x ${item.productName}${options ? ` (${options})` : ""}: ${money(item.lineTotalAmount)}`;
-  });
-  return {
-    to: order.email,
-    subject: `Order #${order.number} confirmed: ${store.name}`,
-    text: [
-      order.paymentMethod === "cash_on_delivery"
-        ? `Thank you for your order. You pay in cash when it arrives.`
-        : `Thank you for your order. We have received your payment.`,
-      "",
-      `Order #${order.number}`,
-      ...lines,
-      ...orderAmountLines(order).map(([label, value]) => `${label}: ${value}`),
-      "",
-      order.paymentMethod === "cash_on_delivery"
-        ? `To pay the courier in cash: ${money(order.totalAmount)}`
-        : `Total paid: ${money(order.totalAmount)}`,
-      "",
-      "Delivering to:",
-      ...formatAddress(order.shippingAddress),
-      "",
-      `See your order: ${orderUrl}`,
-      "",
-      store.name,
-      store.url,
-    ].join("\n"),
-  };
 }
 
 // --- For the mock provider's payment page ---------------------------------------
@@ -1099,6 +1115,13 @@ export async function recordCashCollected(
         actorUserId: context.userId,
       },
     });
+    await enqueueEmailIn(
+      tx,
+      db.tenantId,
+      EMAIL_EVENTS.paymentReceived,
+      { orderId },
+      `payment-received:${orderId}`,
+    );
     await audit(tx, context, "orders.cash_collected", { type: "order", id: orderId });
   });
 }

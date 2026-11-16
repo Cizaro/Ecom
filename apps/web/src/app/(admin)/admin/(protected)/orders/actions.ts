@@ -12,6 +12,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { forbidden, notFound } from "next/navigation";
 import { requirePermission, tenantDb } from "@/server/access";
+import { sendWaitingEmails } from "@/server/notifications";
 import type { FormState } from "../../actions";
 
 // Order changes by staff. Each action checks orders.manage itself; the
@@ -47,6 +48,7 @@ export async function fulfilOrderAction(
       trackingReference: field(formData, "trackingReference"),
       trackingUrl: field(formData, "trackingUrl"),
     });
+    await sendWaitingEmails(tenantDb(context));
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${id}`);
     return { notice: "Marked as sent." };
@@ -61,6 +63,7 @@ export async function cancelOrderAction(
   const id = field(formData, "id");
   return attempt(async () => {
     await cancelUnpaidOrder(tenantDb(context), context, id);
+    await sendWaitingEmails(tenantDb(context));
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${id}`);
     return { notice: "Cancelled. The items are back in stock." };
@@ -75,6 +78,7 @@ export async function cashCollectedAction(
   const id = field(formData, "id");
   return attempt(async () => {
     await recordCashCollected(tenantDb(context), context, id);
+    await sendWaitingEmails(tenantDb(context));
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${id}`);
     return { notice: "Cash recorded. The order is paid." };
@@ -89,6 +93,7 @@ export async function deliveryRefusedAction(
   const id = field(formData, "id");
   return attempt(async () => {
     await recordDeliveryRefused(tenantDb(context), context, id, field(formData, "note"));
+    await sendWaitingEmails(tenantDb(context));
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${id}`);
     return { notice: "Recorded. The order is cancelled and the items are back in stock." };

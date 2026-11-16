@@ -320,7 +320,6 @@ export {
   listOrders,
   ORDER_PAGE_SIZE,
   ORDER_STATUSES,
-  orderConfirmationEmail,
   orderAccessKey,
   OrderError,
   orderAmountLines,
@@ -376,3 +375,33 @@ export type {
   TaxSettings,
   ZoneInput,
 } from "./shipping/shipping";
+
+export { EMAIL_EVENTS, enqueueEmailIn } from "./notifications/enqueue";
+export type { EmailEventType, EmailPayload } from "./notifications/enqueue";
+export {
+  orderCancelledEmail,
+  orderConfirmationEmail,
+  orderShippedEmail,
+  paymentReceivedEmail,
+  staffLowStockEmail,
+  staffNewOrderEmail,
+} from "./notifications/order-emails";
+export type { LowStockItem, StoreLinks } from "./notifications/order-emails";
+export {
+  deliverPendingEmails,
+  MAX_EMAIL_ATTEMPTS,
+  shopperOrderUrl,
+  storeLinksIn,
+} from "./notifications/delivery";
+export type { EmailDeliveryOptions } from "./notifications/delivery";
+export {
+  getNotificationSettings,
+  listUndeliveredEmails,
+  MAX_STAFF_ADDRESSES,
+  NotificationSettingsError,
+  parseAddressList,
+  retryEmail,
+  saveNotificationSettings,
+} from "./notifications/settings";
+export type { NotificationSettingsView, UndeliveredEmail } from "./notifications/settings";
+export { listTenantsWithPendingEmails } from "./platform/email-lookup";
