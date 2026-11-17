@@ -259,6 +259,16 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
     id: "(admin)/admin/(protected)/ai/actions.ts#tryAnswerAction",
     access: { level: "permission", permission: "ai.use" },
   },
+  // AI drafts for a product: the services also require ai.use.
+  ...[
+    "draftProductCopyAction",
+    "draftProductTranslationAction",
+    "applyProductSuggestionAction",
+    "dismissProductSuggestionAction",
+  ].map((name) => ({
+    id: `(admin)/admin/(protected)/catalog/ai-actions.ts#${name}`,
+    access: CATALOG_WRITE,
+  })),
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [

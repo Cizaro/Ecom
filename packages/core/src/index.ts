@@ -604,3 +604,20 @@ export {
   tryCustomerAnswer,
 } from "./ai/ai-admin";
 export type { AiOverview } from "./ai/ai-admin";
+export {
+  applyProductSuggestion,
+  COPY_FIELDS,
+  dismissProductSuggestion,
+  draftProductCopy,
+  draftProductTranslation,
+  listProductSuggestions,
+  TRANSLATION_FIELDS,
+} from "./ai/product-content";
+export type {
+  CopyField,
+  CopyProposal,
+  DraftResult,
+  ProductSuggestionView,
+  TranslationField,
+  TranslationProposal,
+} from "./ai/product-content";

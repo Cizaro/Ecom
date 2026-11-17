@@ -100,6 +100,7 @@ model Tenant {
   aiSettings              AiSettings?
   businessProfile         BusinessProfile?
   aiEvents                AiEvent[]
+  productSuggestions      ProductSuggestion[]
 
   @@map("tenants")
 }
@@ -627,6 +628,8 @@ model Product {
   reviews ProductReview[]
 
   ugcItems UgcItem[]
+
+  suggestions ProductSuggestion[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status, createdAt])
@@ -1815,8 +1818,41 @@ model AiEvent {
   userId       String?  @map("user_id") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  suggestions ProductSuggestion[]
 
   @@index([tenantId, createdAt])
   @@map("ai_events")
+}
+
+/// An AI draft for a product (wording, search text, tags and category, or a
+/// translation), waiting for staff to apply or dismiss it. Never applied by
+/// itself (decision D99).
+model ProductSuggestion {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  productId       String    @map("product_id") @db.Uuid
+  /// copy (wording, search text, tags, category) or translation.
+  kind            String
+  /// The language the draft is written in.
+  locale          String
+  /// pending, applied, dismissed, or replaced by a newer draft.
+  status          String    @default("pending")
+  /// The checked AI output.
+  proposal        Json
+  /// The parts staff chose to apply.
+  appliedFields   String[]  @default([]) @map("applied_fields")
+  aiEventId       String?   @map("ai_event_id") @db.Uuid
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  decidedByUserId String?   @map("decided_by_user_id") @db.Uuid
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  aiEvent AiEvent? @relation(fields: [aiEventId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, productId, status])
+  @@map("product_suggestions")
 }

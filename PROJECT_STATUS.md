@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-11-12
+Last updated: 2026-11-22
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 started: Milestone 5.1, the AI gateway, built.** Next: Milestone 5.2 (product copy and translation drafts). The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 started: Milestones 5.1 (the AI gateway) and 5.2 (AI product drafts) built.** Next: Milestone 5.3 (support message classification and reply drafts). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -207,6 +207,11 @@ Last updated: 2026-11-12
   - The shop's knowledge source: published products (no stock counts), delivery prices, policy pages, contact details.
   - Admin **AI assistant**: status and spend, try a customer question and see the facts used, business profile, settings, recent runs. Nothing is sent to customers yet.
   - Launch check reports the AI set-up.
+- **Milestone 5.2, AI product drafts:**
+  - Two tasks in `packages/ai`, written for "items" of any business: `item.copy` (summary, description, search-engine title and description, tags, category) and `item.translate` (name and descriptions in another language).
+  - Checked: drafts use the product's own details only; no number that is not in them; translations keep exactly the original's numbers and are in Arabic letters; only the store's own categories. Always for a person to approve.
+  - Product page: an **AI drafts** panel to draft the wording and search text, or the Arabic wording, then tick the parts to apply or dismiss the draft. Tags are added to the current ones.
+  - Table `product_suggestions` with Row-Level Security; drafting and deciding need `catalog.write` and `ai.use`.
 
 ## In progress
 
@@ -395,23 +400,21 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 5.1, on the first computer)
+## Checks run this session (Milestone 5.2, on the second computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 333 tests (new: the AI gateway against a made-up clinic: answers cite facts, invented numbers and unknown citations refused after a second try, pause for everyone and per store, budgets, customer text kept as data, personal details removed, risky topics routed to a person, no shop words in prompts, no imports from the rest of the platform; launch check AI line) |
-| `pnpm test:int` | Pass, 274 tests, on the separate test database (3 new: the shop's facts reach the AI with no stock counts and the run is recorded; settings and profile per store, ai.configure needed, pause works, one store never sees another's runs; the budget stops runs and the audit trail cannot be deleted) |
+| `pnpm test` | Pass, 350 tests (new: the two content tasks against the made-up clinic: drafts from the item's own details, always for a person; invented numbers, unknown categories, bad tags and English in an Arabic draft refused after a second try; translations keep exactly the original's numbers, Arabic-Indic digits accepted; text from the item's page kept as data; no shop words in the prompts) |
+| `pnpm test:int` | Pass, 281 tests, on the separate test database (7 new: drafts and replacement, applying ticked parts only with tags added and an audit entry, Arabic draft replacing only chosen parts, dismissing, no draft while AI is paused, catalog.write and ai.use both needed, one store never sees or decides another's drafts and the database refuses a draft under another store's product) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 132 tests (48 skipped by design), including staff trying the AI assistant (the draft quotes the product's price and shows the fact it used), the owner saving the profile and settings, and a role without AI access refused |
-| `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Real AI provider | Not called: no API key on this computer; the Anthropic provider is built and type-checked but untested against the live API |
-| CI on GitHub | See the Actions tab for this commit |
+| `pnpm test:e2e` | 131 passed, 5 failed, 48 skipped on the first full run. 2 failures were the new AI test (fixed: the editor now signs in in a browser session of their own, and the draft buttons got their own test ids). 3 were timeouts in sitemap, stock and storefront tests while the database stalled (one transaction waited over 10 minutes); all 3 passed on rerun. After the fix, `e2e/ai.spec.ts` passed, 8 tests on desktop and mobile. The full suite was not rerun end to end after the fix. |
+| Real AI provider | Not called: no API key on this computer |
 
 ## Recommended next task
 
-Milestone 5.2 (product copy and Arabic translation drafts). Owner: fill in the AI business profile; add an Anthropic API key when ready.
+Milestone 5.3 (classifying support messages and drafting replies in the inbox, with approval). Owner: fill in the AI business profile; add an Anthropic API key when ready; try the AI drafts on a product.
 
 ## Session log
 
@@ -449,5 +452,6 @@ Milestone 5.2 (product copy and Arabic translation drafts). Owner: fill in the A
 | 2026-11-19 | Launch readiness: policy pages, launch check, database backups, production Docker image, deployment guide |
 | 2026-11-20 | Arabic shop: language switch, right to left, every shop text and customer email in Arabic, Arabic product and category names, policy pages per language |
 | 2026-11-21 | Milestone 5.1: AI gateway package, shop knowledge source, AI settings, business profile and audit trail, admin AI assistant page |
+| 2026-11-22 | Milestone 5.2: AI product drafts (wording, search text, tags, category, Arabic), applied part by part from the product page (second computer) |
 
 Commit hashes: `git log --oneline`.

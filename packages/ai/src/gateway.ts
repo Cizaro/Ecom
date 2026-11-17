@@ -37,6 +37,10 @@ export interface RunContext {
   knowledge: KnowledgeSource;
 }
 
+/** What a task, by name, answers. */
+export type TaskOutput<Name extends TaskName> =
+  (typeof TASKS)[Name] extends TaskDefinition<infer _Input, infer Output> ? Output : never;
+
 export type RunResult<Output> =
   | { ok: true; output: Output; facts: Fact[]; route: Route; eventId: string }
   | { ok: false; status: Exclude<RunStatus, "ok">; message: string; eventId: string };
@@ -173,8 +177,15 @@ export function createGateway(options: GatewayOptions) {
     providerName: options.provider.name,
     model: options.model,
     /** Runs a task by name. */
-    run<Name extends TaskName>(name: Name, input: unknown, context: RunContext) {
-      return run(TASKS[name], input, context);
+    run<Name extends TaskName>(
+      name: Name,
+      input: unknown,
+      context: RunContext,
+    ): Promise<RunResult<TaskOutput<Name>>> {
+      // TASKS[name] is a union once there is more than one task; the name ties
+      // it to one definition, which TypeScript cannot follow by itself.
+      const task = TASKS[name] as unknown as TaskDefinition<unknown, TaskOutput<Name>>;
+      return run(task, input, context);
     },
     /** Runs a task definition directly (tests and future tasks). */
     runTask: run,

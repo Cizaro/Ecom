@@ -28,11 +28,12 @@ The demo store offers Arabic already. For each product and category, open it in 
 ## Owner: the AI assistant
 
 1. Open **AI assistant** in the admin, fill in the **Business profile** (what you sell, your tone, what the AI must never promise) and try a few customer questions. Today it runs on the built-in test stand-in, which only quotes the first matching fact.
-2. To use the real AI: create an API key at console.anthropic.com, set a monthly spending limit there too, and put `AI_PROVIDER=anthropic` and `AI_API_KEY=...` in the server's settings (never in the repository). Choose a monthly budget per store on the AI page.
+2. On any product, open **AI drafts**, try **Draft wording and search text** and **Draft Arabic wording**, and apply only the parts you like. With the test stand-in the Arabic draft is the English marked "[test translation]": dismiss it.
+3. To use the real AI: create an API key at console.anthropic.com, set a monthly spending limit there too, and put `AI_PROVIDER=anthropic` and `AI_API_KEY=...` in the server's settings (never in the repository). Choose a monthly budget per store on the AI page.
 
-## Next development task: Milestone 5.2 (product copy, SEO, tags, translation)
+## Next development task: Milestone 5.3 (support classification and reply drafts)
 
-Next AI tasks, each with the same checks: product descriptions and search-engine text from the product's own details, Arabic drafts of product names and descriptions for staff to approve, tags and categories. Then 5.3 (classifying support messages and drafting replies in the inbox, with approval) and 5.4 (a fixed evaluation set and prompt-injection tests, runnable against the real provider on demand).
+Milestone 5.2 is done: AI drafts of a product's wording, search text, tags, category and Arabic wording, applied part by part from the product page (D99). Next: classify each support message (question, complaint, spam, abuse, and the always-a-person subjects) and draft a reply in the inbox from the shop's facts, which staff edit and send; nothing is sent by the AI. Then 5.4 (a fixed evaluation set and prompt-injection tests, runnable against the real provider on demand).
 
 ## Return rules (owner)
 

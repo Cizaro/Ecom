@@ -5,6 +5,7 @@ export * from "./profile";
 export * from "./prompt";
 export * from "./pricing";
 export * from "./tasks";
+export * from "./content-tasks";
 export * from "./gateway";
 export { createMockProvider } from "./providers/mock";
 export { createAnthropicProvider } from "./providers/anthropic";

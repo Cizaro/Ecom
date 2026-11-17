@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { asData, factsSection, GROUNDING_RULES, profileSection, redactPersonal } from "./prompt";
+import { itemCopyTask, itemTranslateTask } from "./content-tasks";
 import type { BusinessProfile, Fact, KnowledgeSource } from "./types";
 
 // AI tasks: each is a name, a checked input, a prompt built from the
@@ -160,6 +161,8 @@ export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAns
 /** Every task the gateway runs, by name. */
 export const TASKS = {
   "customer.answer": customerAnswerTask,
+  "item.copy": itemCopyTask,
+  "item.translate": itemTranslateTask,
 } as const;
 
 export type TaskName = keyof typeof TASKS;

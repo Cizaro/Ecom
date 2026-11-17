@@ -7,6 +7,7 @@ import {
   listBrands,
   listCategories,
   listProductImages,
+  listProductSuggestions,
   type ProductStatusValue,
 } from "@ecom/core";
 import {
@@ -30,6 +31,7 @@ import {
   TextAreaField,
   TextField,
 } from "../../../../_components/form";
+import { ProductAiDrafts } from "../../_components/product-ai-drafts";
 import { ProductImages } from "../../_components/product-images";
 import {
   saveProductTranslationAction,
@@ -74,7 +76,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const db = tenantDb(context);
   const product = await orNotFound(getProduct(db, context, id));
   const canSeeStock = hasPermission(context, "inventory.read");
-  const [categories, brands, images, stock, arabic] = await Promise.all([
+  const [categories, brands, images, stock, arabic, drafts] = await Promise.all([
     listCategories(db, context),
     listBrands(db, context),
     listProductImages(db, context, id),
@@ -85,8 +87,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         )
       : new Map(),
     getProductTranslation(db, context, id, "ar"),
+    listProductSuggestions(db, context, id),
   ]);
   const canWrite = hasPermission(context, "catalog.write");
+  const canUseAi = hasPermission(context, "ai.use");
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,6 +205,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </div>
         ) : null}
       </Card>
+
+      {canUseAi ? (
+        <ProductAiDrafts productId={product.id} drafts={drafts} canDraft={canWrite} />
+      ) : null}
 
       <Card title="Details">
         <ActionForm
