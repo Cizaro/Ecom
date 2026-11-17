@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM): Milestones 4.1 (reviews) and 4.2 (customer photos and videos) complete.** Next: 4.3 or launch readiness, to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** Next: launch readiness or Phase 5 (AI), to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -178,6 +178,12 @@ Last updated: 2026-11-12
   - Account page **My photos**: a customer who received a product shares a photo or a short video (MP4 or MOV, 8 MB) with a caption and the name to show, after ticking a clear permission sentence. They see each item's status and can **withdraw permission and delete** at any time.
   - Admin **Customer photos** (`reviews.moderate`): waiting, shown, hidden, rejected, withdrawn and removed; approve, hide, reject, feature, remove for good; each item's permission record. Staff with `content.write` can add a creator's content with where it was posted and how permission was given.
   - Shop: customer photos on the product page with a "Share your photo" link for buyers, and a **Customer photos** gallery (featured first), linked from the menu once there are any. Videos are muted and start only when tapped.
+
+- **Milestone 4.3, support and customer timeline:**
+  - Shop: **Contact us** page (footer link); signed-in customers find their conversations under Account, Messages; guests get a private link by email. An order can be named if it is theirs.
+  - Admin **Inbox** (`inbox.read`, `inbox.reply`): to answer, waiting for customer, closed, mine only, search; reply (emailed), internal notes (staff only, never emailed), close, reopen, take or give up.
+  - Admin customer page (`customers.read`): orders, spent, account status and a timeline of everything (orders, reviews, photos, messages, notes) linking to each; staff notes with `customers.write`.
+  - Store emails: a new list for staff told about each customer message.
 
 ## In progress
 
@@ -366,24 +372,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 4.2, on the first computer)
+## Checks run this session (Milestone 4.3, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 289 tests (new: videos recognised by their bytes, picture size read, stored under the store prefix, refused when not a video or too large) |
-| `pnpm test:int` | Pass, 261 tests, on the separate test database (6 new: sharing needs a received product and permission, wording and consent recorded; videos; withdrawing deletes the file, keeps the record and cannot be undone; moderation, featuring and removal; creator content needs a permission record; store separation) |
+| `pnpm test` | Pass, 297 tests (route and permission registry cover the new pages and actions) |
+| `pnpm test:int` | Pass, 265 tests, on the separate test database (4 new: guest private link, staff reply and note, emails without the note, add-only messages; someone else's order cannot be linked; account conversations, inbox sorting, taking and closing, permissions and store separation; customer timeline and notes) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 115 tests (43 skipped by design), including a customer sharing a photo after delivery, staff approving it, it showing on the product page and gallery, and the customer withdrawing it |
+| `pnpm test:e2e` | Pass, 122 tests (46 skipped by design), including a guest writing in, staff replying with a private note, the guest answering from the emailed link, and a customer timeline note |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
 | CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Milestone 4.3 (support conversations and customer timeline) or launch readiness, as the owner prefers.
+Launch readiness (policy pages, Arabic, real email service, backups, monitoring) or Phase 5 (AI), as the owner prefers.
 
 ## Session log
 
@@ -417,5 +423,6 @@ Milestone 4.3 (support conversations and customer timeline) or launch readiness,
 | 2026-11-18 | Milestone 4.1: verified-buyer reviews with approval, replies, reports, ratings on product pages and in search data |
 | 2026-11-18 | Per-store look (colours, corners, font, logo, contact) and store settings page; reuse guide; AI reusability rules recorded (D88) |
 | 2026-11-18 | Milestone 4.2: customer photos and short videos with recorded, withdrawable permission; staff moderation and creator content; product page photos and gallery |
+| 2026-11-19 | Milestone 4.3: contact page, support inbox with internal notes, guest private links, customer timeline and notes; Phase 4 complete |
 
 Commit hashes: `git log --oneline`.

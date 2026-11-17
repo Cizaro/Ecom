@@ -64,6 +64,10 @@ erDiagram
 | product_reviews | Own tenant | Own tenant, no delete |
 | review_reports | Own tenant | Own tenant, add only |
 | ugc_items | Own tenant | Own tenant, no delete |
+| support_conversations | Own tenant | Own tenant, no delete |
+| support_messages, customer_notes | Own tenant | Own tenant, add only |
+
+**Support and customer notes (2026-11-19, decisions D90 and D91):** `support_conversations` (customer or guest email and name, subject, status open, waiting or closed, linked order, assigned staff, hash of the guest link key, last message time), `support_messages` (author customer, staff or internal note, author name, text; add-only), `customer_notes` (staff notes on a customer; add-only). `notification_settings.support_emails` lists staff told about new messages.
 
 **Customer photos and videos (2026-11-18, decision D89):** `ugc_items` (the media asset, kind, source customer or staff, customer, product, caption, credit name, status pending, approved, rejected, hidden, withdrawn or removed, featured, exact permission wording and version, when given and withdrawn, the original post link for staff-added items, who added and moderated it). Checks: nothing approved without a file and live permission; withdrawn or removed items have no file; staff items need their source link. Never deleted by the application. Videos are media assets of kind `video`.
 

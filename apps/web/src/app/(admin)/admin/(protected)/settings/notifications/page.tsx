@@ -65,6 +65,13 @@ export default async function NotificationSettingsPage() {
             hint="Told when an order takes a product down to its low-stock level (at most once a day per product)."
             defaultValue={settings.stockEmails.join(", ")}
           />
+          <TextAreaField
+            label="Customer messages"
+            name="supportEmails"
+            rows={2}
+            hint="Told about each new message from a customer (Inbox)."
+            defaultValue={settings.supportEmails.join(", ")}
+          />
         </ActionForm>
       </Card>
 

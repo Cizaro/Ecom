@@ -165,6 +165,13 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
             <span>
               © {new Date().getFullYear()} {store.name}
             </span>
+            <Link
+              href="/contact"
+              className="underline underline-offset-4"
+              data-testid="contact-link"
+            >
+              Contact us
+            </Link>
             {store.branding.tagline ? (
               <span data-testid="store-tagline">{store.branding.tagline}</span>
             ) : null}

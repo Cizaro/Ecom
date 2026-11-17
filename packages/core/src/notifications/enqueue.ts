@@ -14,6 +14,9 @@ export const EMAIL_EVENTS = {
   staffNewOrder: "email.staff_new_order",
   staffLowStock: "email.staff_low_stock",
   returnRecorded: "email.return_recorded",
+  supportReceived: "email.support_received",
+  supportReply: "email.support_reply",
+  staffSupportMessage: "email.staff_support_message",
 } as const;
 
 export type EmailEventType = (typeof EMAIL_EVENTS)[keyof typeof EMAIL_EVENTS];
@@ -22,6 +25,8 @@ export interface EmailPayload {
   orderId?: string;
   variantId?: string;
   returnId?: string;
+  conversationId?: string;
+  messageId?: string;
   /** Staff emails: the address it goes to. Shopper emails go to the order's email. */
   to?: string;
   /** Order cancelled: why. */
@@ -53,19 +58,24 @@ export async function enqueueEmailIn(
 /** The store's staff addresses for a kind of email (none until staff add some). */
 export async function staffAddressesIn(
   tx: AppTransaction,
-  kind: "order" | "stock",
+  kind: "order" | "stock" | "support",
 ): Promise<string[]> {
   const settings = await tx.notificationSettings.findFirst({
-    select: { orderEmails: true, stockEmails: true },
+    select: { orderEmails: true, stockEmails: true, supportEmails: true },
   });
-  return (kind === "order" ? settings?.orderEmails : settings?.stockEmails) ?? [];
+  const lists = {
+    order: settings?.orderEmails,
+    stock: settings?.stockEmails,
+    support: settings?.supportEmails,
+  };
+  return lists[kind] ?? [];
 }
 
 /** A staff email for each address on the store's list, once each. */
 export async function enqueueStaffEmailsIn(
   tx: AppTransaction,
   tenantId: string,
-  kind: "order" | "stock",
+  kind: "order" | "stock" | "support",
   type: EmailEventType,
   payload: Omit<EmailPayload, "to">,
   dedupeKey: string,

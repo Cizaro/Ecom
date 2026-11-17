@@ -540,3 +540,25 @@ export {
   videoDimensions,
   VideoError,
 } from "./media/video";
+
+export {
+  getConversationForShopper,
+  getConversationForStaff,
+  listConversations,
+  listCustomerConversations,
+  replyAsShopper,
+  replyAsStaff,
+  startConversation,
+  SUPPORT_STATUSES,
+  supportAccessKey,
+  SupportError,
+  updateConversation,
+} from "./support/support";
+export type {
+  ConversationSummary,
+  ConversationView,
+  SupportMessageView,
+  SupportStatus,
+} from "./support/support";
+export { addCustomerNote, CustomerNoteError, getCustomerForStaff } from "./customers/profile";
+export type { StaffCustomerView, TimelineEntry, TimelineKind } from "./customers/profile";

@@ -17,9 +17,12 @@ Sign in to the admin:
 2. **Store emails**: add the address(es) that should hear about new orders and low stock.
 3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 
-## Next development task: Milestone 4.3, support conversations and customer timeline, or launch readiness
+## Next development task: launch readiness, or Phase 5 (AI)
 
-Reviews (4.1), customer photos and videos (4.2) and per-store branding are done. Per PROJECT_PLAN.md the next is 4.3 (support conversations, a customer profile timeline, staff notes). The owner may prefer launch readiness first: policy pages, Arabic, a real email sending service, backups and monitoring.
+Phase 4 (reviews, customer photos, support and customer timeline) is complete, as is per-store branding. Two good next steps:
+
+1. **Launch readiness** (recommended before real customers): policy pages (returns, delivery, privacy, terms), Arabic and right-to-left storefront, a real email sending service, backups and monitoring, production deployment guide.
+2. **Phase 5, AI foundation**: the AI gateway built to the reusability rules below, then product copy and reply drafts with approval.
 
 **When Phase 5 (AI) starts:** follow the reusability rules in docs/REUSE.md and decision D88. The first deliverable is the interfaces (knowledge source, business profile, abilities) and a non-shop test business, before any prompt is written.
 
@@ -49,6 +52,7 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 - Import: update existing products by SKU (today a known SKU is reported, not changed); variant pictures (a picture per colour).
 - Reviews: an email asking customers to review a few days after their order is sent (with an unsubscribe); guest buyers reviewing through their order link; photos in reviews.
 - Customer photos: a poster frame for videos (needs a video tool on the server); longer videos through direct upload to storage; asking Instagram creators for permission through the official API (Phase 6).
+- Support: saved replies (inbox.configure), attachments, customers replying by answering the email, Instagram and Facebook messages in the same inbox (Phase 6).
 - Dashboard: compare with the previous period; best-selling products.
 - Returns: shopper-started return requests once the return rules are known; card refunds with the gateway.
 - Emails: an HTML version with the store's logo, and Arabic wording (with right-to-left layout).

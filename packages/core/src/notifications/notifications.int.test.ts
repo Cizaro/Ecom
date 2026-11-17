@@ -301,6 +301,7 @@ describe("store separation", () => {
     expect(await getNotificationSettings(b.owner.db, b.owner.context)).toEqual({
       orderEmails: [],
       stockEmails: [],
+      supportEmails: [],
     });
 
     // Store B cannot see or retry store A's failed email.

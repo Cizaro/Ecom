@@ -22,6 +22,7 @@ export class NotificationSettingsError extends Error {
 export interface NotificationSettingsView {
   orderEmails: string[];
   stockEmails: string[];
+  supportEmails: string[];
 }
 
 /** "a@x.com, b@y.com" (commas, spaces or new lines) -> checked, lowercased, once each. */
@@ -47,27 +48,34 @@ export async function getNotificationSettings(
 ): Promise<NotificationSettingsView> {
   assertPermission(context, "settings.write");
   const row = await db.run((tx) =>
-    tx.notificationSettings.findFirst({ select: { orderEmails: true, stockEmails: true } }),
+    tx.notificationSettings.findFirst({
+      select: { orderEmails: true, stockEmails: true, supportEmails: true },
+    }),
   );
-  return { orderEmails: row?.orderEmails ?? [], stockEmails: row?.stockEmails ?? [] };
+  return {
+    orderEmails: row?.orderEmails ?? [],
+    stockEmails: row?.stockEmails ?? [],
+    supportEmails: row?.supportEmails ?? [],
+  };
 }
 
 export async function saveNotificationSettings(
   db: TenantDb,
   context: RequestContext,
-  input: { orderEmails: unknown; stockEmails: unknown },
+  input: { orderEmails: unknown; stockEmails: unknown; supportEmails?: unknown },
 ): Promise<void> {
   assertPermission(context, "settings.write");
   const orderEmails = parseAddressList(input.orderEmails, "orderEmails");
   const stockEmails = parseAddressList(input.stockEmails, "stockEmails");
+  const supportEmails = parseAddressList(input.supportEmails ?? "", "supportEmails");
   await db.run(async (tx) => {
     const before = await tx.notificationSettings.findFirst({
       select: { orderEmails: true, stockEmails: true },
     });
     await tx.notificationSettings.upsert({
       where: { tenantId: db.tenantId },
-      create: { tenantId: db.tenantId, orderEmails, stockEmails },
-      update: { orderEmails, stockEmails },
+      create: { tenantId: db.tenantId, orderEmails, stockEmails, supportEmails },
+      update: { orderEmails, stockEmails, supportEmails },
     });
     await audit(
       tx,
@@ -88,6 +96,9 @@ const LABELS: Record<string, string> = {
   [EMAIL_EVENTS.staffNewOrder]: "New order (staff)",
   [EMAIL_EVENTS.staffLowStock]: "Low stock (staff)",
   [EMAIL_EVENTS.returnRecorded]: "Return recorded",
+  [EMAIL_EVENTS.supportReceived]: "Message received",
+  [EMAIL_EVENTS.supportReply]: "Support reply",
+  [EMAIL_EVENTS.staffSupportMessage]: "New message (staff)",
 };
 
 export interface UndeliveredEmail {

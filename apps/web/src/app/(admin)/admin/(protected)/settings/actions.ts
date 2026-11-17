@@ -142,6 +142,7 @@ export async function saveNotificationSettingsAction(
   const values = {
     orderEmails: field(formData, "orderEmails"),
     stockEmails: field(formData, "stockEmails"),
+    supportEmails: field(formData, "supportEmails"),
   };
   return attempt(async () => {
     await saveNotificationSettings(tenantDb(context), context, values);

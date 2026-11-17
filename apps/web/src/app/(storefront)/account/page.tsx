@@ -93,6 +93,15 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>
       </Card>
 
+      <Card title="Messages">
+        <p className="text-sm text-ink-muted">Your conversations with the store.</p>
+        <div>
+          <Link href="/account/messages" className={buttonClasses("secondary")}>
+            See your messages
+          </Link>
+        </div>
+      </Card>
+
       <Card title="Photos">
         <p className="text-sm text-ink-muted">
           Share photos and videos of what you bought, and manage your permission.

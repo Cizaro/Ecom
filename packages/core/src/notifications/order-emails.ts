@@ -246,3 +246,76 @@ export function staffLowStockEmail(
     ].join("\n"),
   };
 }
+
+// --- Support conversations -----------------------------------------------------
+
+export interface SupportEmailData {
+  subject: string;
+  name: string;
+  email: string;
+  /** The message the email is about. */
+  message: { authorName: string; body: string };
+}
+
+/** Sent to the shopper when they start a conversation: proof it arrived, and their link. */
+export function supportReceivedEmail(
+  conversation: SupportEmailData,
+  store: StoreLinks,
+  link: string,
+): EmailMessage {
+  return {
+    to: conversation.email,
+    subject: oneLine(`We received your message: ${conversation.subject}`),
+    text: [
+      `Hello ${oneLine(conversation.name)},`,
+      "",
+      `Thank you for writing to ${oneLine(store.name)}. We will reply as soon as we can.`,
+      "",
+      "Your message:",
+      conversation.message.body,
+      "",
+      `See the conversation and reply: ${link}`,
+      ...footer(store),
+    ].join("\n"),
+  };
+}
+
+/** Sent to the shopper when staff reply. */
+export function supportReplyEmail(
+  conversation: SupportEmailData,
+  store: StoreLinks,
+  link: string,
+): EmailMessage {
+  return {
+    to: conversation.email,
+    subject: oneLine(`Re: ${conversation.subject}`),
+    text: [
+      `${oneLine(conversation.message.authorName)} from ${oneLine(store.name)} replied:`,
+      "",
+      conversation.message.body,
+      "",
+      `Reply or see the whole conversation: ${link}`,
+      ...footer(store),
+    ].join("\n"),
+  };
+}
+
+/** Sent to the store's support addresses for each message from a shopper. */
+export function staffSupportMessageEmail(
+  conversation: SupportEmailData,
+  store: StoreLinks,
+  adminUrl: string,
+  to: string,
+): EmailMessage {
+  return {
+    to,
+    subject: oneLine(`New message: ${conversation.subject}`),
+    text: [
+      `${oneLine(conversation.name)} (${conversation.email}) wrote to ${oneLine(store.name)}:`,
+      "",
+      conversation.message.body,
+      "",
+      `Answer it: ${adminUrl}`,
+    ].join("\n"),
+  };
+}

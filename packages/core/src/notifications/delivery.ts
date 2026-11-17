@@ -1,6 +1,7 @@
 import type { AppTransaction } from "@ecom/db";
 import type { TenantDb } from "../access/tenant-db";
 import { orderAccessKey, orderViewIn, type OrderView } from "../orders/orders";
+import { supportAccessKey } from "../support/support";
 import type { EmailMessage, EmailProvider } from "./email";
 import { EMAIL_EVENTS, type EmailPayload } from "./enqueue";
 import {
@@ -9,6 +10,9 @@ import {
   orderShippedEmail,
   paymentReceivedEmail,
   returnRecordedEmail,
+  staffSupportMessageEmail,
+  supportReceivedEmail,
+  supportReplyEmail,
   staffLowStockEmail,
   staffNewOrderEmail,
   type StoreLinks,
@@ -98,6 +102,48 @@ async function render(
       `${admin}/admin/inventory/${payload.variantId}`,
       payload.to,
     );
+  }
+
+  if (payload.conversationId) {
+    const conversation = await tx.supportConversation.findUnique({
+      where: { id: payload.conversationId },
+      select: {
+        id: true,
+        subject: true,
+        name: true,
+        email: true,
+        customerId: true,
+        messages: {
+          where: payload.messageId ? { id: payload.messageId } : { authorType: "customer" },
+          select: { authorName: true, body: true },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 1,
+        },
+      },
+    });
+    const message = conversation?.messages[0];
+    if (!conversation || !message) return null;
+    const data = { ...conversation, message };
+    const link = conversation.customerId
+      ? `${store.url}/account/messages/${conversation.id}`
+      : `${store.url}/support/${conversation.id}?key=${supportAccessKey(options.accessSecret, conversation.id)}`;
+    switch (event.type) {
+      case EMAIL_EVENTS.supportReceived:
+        return supportReceivedEmail(data, store, link);
+      case EMAIL_EVENTS.supportReply:
+        return supportReplyEmail(data, store, link);
+      case EMAIL_EVENTS.staffSupportMessage:
+        return payload.to
+          ? staffSupportMessageEmail(
+              data,
+              store,
+              `${admin}/admin/inbox/${conversation.id}`,
+              payload.to,
+            )
+          : null;
+      default:
+        return null;
+    }
   }
 
   if (!payload.orderId) return null;

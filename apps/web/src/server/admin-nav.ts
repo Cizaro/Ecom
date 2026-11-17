@@ -10,6 +10,7 @@ export interface NavItem {
 export const ADMIN_NAV: readonly NavItem[] = [
   { label: "Home", path: "/admin" },
   { label: "Orders", path: "/admin/orders" },
+  { label: "Inbox", path: "/admin/inbox" },
   { label: "Products", path: "/admin/catalog/products" },
   { label: "Categories", path: "/admin/catalog/categories" },
   { label: "Brands", path: "/admin/catalog/brands" },

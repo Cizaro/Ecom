@@ -70,6 +70,12 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/catalog/import", access: CATALOG_WRITE },
   { path: "/admin/catalog/import/[id]", access: CATALOG_WRITE },
   { path: "/admin/customers", access: { level: "permission", permission: "customers.read" } },
+  {
+    path: "/admin/customers/[id]",
+    access: { level: "permission", permission: "customers.read" },
+  },
+  { path: "/admin/inbox", access: { level: "permission", permission: "inbox.read" } },
+  { path: "/admin/inbox/[id]", access: { level: "permission", permission: "inbox.read" } },
   { path: "/admin/inventory", access: INVENTORY_READ },
   { path: "/admin/inventory/[variantId]", access: INVENTORY_READ },
   { path: "/admin/inventory/locations", access: INVENTORY_READ },
@@ -196,6 +202,21 @@ const CONTENT_ACTION_ENTRIES: readonly ActionEntry[] = [
   },
 ];
 
+const INBOX_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "replyToConversationStaffAction",
+  "updateConversationAction",
+].map((name) => ({
+  id: `(admin)/admin/(protected)/inbox/actions.ts#${name}`,
+  access: { level: "permission", permission: "inbox.reply" } as const,
+}));
+
+const CUSTOMER_ACTION_ENTRIES: readonly ActionEntry[] = [
+  {
+    id: "(admin)/admin/(protected)/customers/actions.ts#addCustomerNoteAction",
+    access: { level: "permission", permission: "customers.write" },
+  },
+];
+
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 
 export const ADMIN_ACTIONS: readonly ActionEntry[] = [
@@ -222,6 +243,8 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...PROMOTION_ACTION_ENTRIES,
   ...REVIEW_ACTION_ENTRIES,
   ...CONTENT_ACTION_ENTRIES,
+  ...INBOX_ACTION_ENTRIES,
+  ...CUSTOMER_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [
@@ -276,6 +299,12 @@ export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
   // they received the product; reports are once per customer.
   // Sharing photos: the customer comes from their own session; the service
   // checks they received the product and records their permission.
+  // Writing to the store: a guest's conversation opens only with its key,
+  // a customer's only from their own session.
+  ...["startConversationAction", "replyToConversationAction"].map((name) => ({
+    id: `(storefront)/support/actions.ts#${name}`,
+    access: { level: "public" } as const,
+  })),
   ...["shareUgcAction", "withdrawUgcAction"].map((name) => ({
     id: `(storefront)/ugc/actions.ts#${name}`,
     access: { level: "public" } as const,

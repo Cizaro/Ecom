@@ -91,6 +91,9 @@ model Tenant {
   productReviews          ProductReview[]
   reviewReports           ReviewReport[]
   ugcItems                UgcItem[]
+  supportConversations    SupportConversation[]
+  supportMessages         SupportMessage[]
+  customerNotes           CustomerNote[]
 
   @@map("tenants")
 }
@@ -877,6 +880,9 @@ model Customer {
 
   ugcItems UgcItem[]
 
+  supportConversations SupportConversation[]
+  notes                CustomerNote[]
+
   @@unique([tenantId, email])
   @@index([tenantId, createdAt])
   @@map("customers")
@@ -1173,6 +1179,8 @@ model Order {
 
   reviews ProductReview[]
 
+  supportConversations SupportConversation[]
+
   @@unique([tenantId, number])
   @@index([tenantId, placedAt])
   @@index([customerId, placedAt])
@@ -1249,6 +1257,74 @@ model ShippingZone {
   @@unique([tenantId, name])
   @@index([tenantId, position])
   @@map("shipping_zones")
+}
+
+/// A conversation between a shopper and the store. A signed-in customer's
+/// belongs to their account; a guest opens theirs with the private link
+/// emailed to them (only the hash of its key is stored).
+model SupportConversation {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  customerId     String?  @map("customer_id") @db.Uuid
+  /// Always lowercase.
+  email          String
+  name           String
+  subject        String
+  /// open (store to answer), waiting (customer to answer) or closed.
+  status         String   @default("open")
+  orderId        String?  @map("order_id") @db.Uuid
+  assignedUserId String?  @map("assigned_user_id") @db.Uuid
+  accessKeyHash  String   @unique @map("access_key_hash")
+  lastMessageAt  DateTime @default(now()) @map("last_message_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order    Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  messages SupportMessage[]
+
+  @@index([tenantId, status, lastMessageAt])
+  @@index([customerId, lastMessageAt])
+  @@map("support_conversations")
+}
+
+/// One message in a conversation. "note" messages are internal: staff only.
+model SupportMessage {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  /// customer, staff or note.
+  authorType     String   @map("author_type")
+  authorUserId   String?  @map("author_user_id") @db.Uuid
+  /// The staff member's name as shown with a reply.
+  authorName     String   @map("author_name")
+  body           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([tenantId])
+  @@map("support_messages")
+}
+
+/// A staff note on a customer, for other staff. Added, never edited.
+model CustomerNote {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  customerId   String   @map("customer_id") @db.Uuid
+  authorUserId String?  @map("author_user_id") @db.Uuid
+  authorName   String   @map("author_name")
+  body         String
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@map("customer_notes")
 }
 
 /// A photo or short video from a customer or a creator, shown only with
@@ -1495,12 +1571,14 @@ model OrderReturnItem {
 
 /// One row per store: which staff addresses get store emails.
 model NotificationSettings {
-  tenantId    String   @id @map("tenant_id") @db.Uuid
+  tenantId      String   @id @map("tenant_id") @db.Uuid
   /// Told about each new order (cash on delivery placed, or paid online).
-  orderEmails String[] @map("order_emails")
+  orderEmails   String[] @map("order_emails")
   /// Told when a product's stock drops to its low-stock level.
-  stockEmails String[] @map("stock_emails")
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  stockEmails   String[] @map("stock_emails")
+  /// Told about each new message from a customer.
+  supportEmails String[] @map("support_emails")
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

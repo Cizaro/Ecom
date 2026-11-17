@@ -76,9 +76,13 @@ export default async function CustomersPage({
             return (
               <ListItem key={customer.id} testId="customer-row">
                 <div className="min-w-0">
-                  <p className="truncate font-medium" data-testid="customer-email">
+                  <Link
+                    href={`/admin/customers/${customer.id}`}
+                    className="block truncate font-medium underline-offset-4 hover:underline"
+                    data-testid="customer-email"
+                  >
                     {customer.email}
-                  </p>
+                  </Link>
                   <p className="truncate text-sm text-ink-muted">
                     {customer.name || "No name given"}
                   </p>
