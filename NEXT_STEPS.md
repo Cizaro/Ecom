@@ -17,9 +17,9 @@ Sign in to the admin:
 2. **Store emails**: add the address(es) that should hear about new orders and low stock.
 3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 
-## Next development task: Milestone 4.2, customer photos and videos (UGC), or launch readiness
+## Next development task: Milestone 4.3, support conversations and customer timeline, or launch readiness
 
-Reviews (4.1) and per-store branding are done. Per PROJECT_PLAN.md the next is 4.2 (customer uploads with permission tracking, a reels gallery), then 4.3 (support conversations and customer timeline). The owner may prefer launch readiness first: policy pages, Arabic, a real email sending service, backups and monitoring.
+Reviews (4.1), customer photos and videos (4.2) and per-store branding are done. Per PROJECT_PLAN.md the next is 4.3 (support conversations, a customer profile timeline, staff notes). The owner may prefer launch readiness first: policy pages, Arabic, a real email sending service, backups and monitoring.
 
 **When Phase 5 (AI) starts:** follow the reusability rules in docs/REUSE.md and decision D88. The first deliverable is the interfaces (knowledge source, business profile, abilities) and a non-shop test business, before any prompt is written.
 
@@ -47,7 +47,8 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 - Store look: a home page banner image and text per store; more ready-made looks; a preview before saving.
 - A script or admin screen for the platform owner to create a new store (tenant, store, web address, first owner) in one step.
 - Import: update existing products by SKU (today a known SKU is reported, not changed); variant pictures (a picture per colour).
-- Reviews: an email asking customers to review a few days after their order is sent (with an unsubscribe); guest buyers reviewing through their order link; photos in reviews (with 4.2).
+- Reviews: an email asking customers to review a few days after their order is sent (with an unsubscribe); guest buyers reviewing through their order link; photos in reviews.
+- Customer photos: a poster frame for videos (needs a video tool on the server); longer videos through direct upload to storage; asking Instagram creators for permission through the official API (Phase 6).
 - Dashboard: compare with the previous period; best-selling products.
 - Returns: shopper-started return requests once the return rules are known; card refunds with the gateway.
 - Emails: an HTML version with the store's logo, and Arabic wording (with right-to-left layout).

@@ -80,6 +80,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/settings/store", access: SETTINGS_WRITE },
   { path: "/admin/promotions", access: { level: "permission", permission: "promotions.write" } },
   { path: "/admin/reviews", access: { level: "permission", permission: "reviews.moderate" } },
+  { path: "/admin/content", access: { level: "permission", permission: "reviews.moderate" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -181,6 +182,20 @@ const REVIEW_ACTION_ENTRIES: readonly ActionEntry[] = [
   access: { level: "permission", permission: "reviews.moderate" } as const,
 }));
 
+const CONTENT_ACTIONS = "(admin)/admin/(protected)/content/actions.ts";
+
+// Adding a creator's content needs content.write; moderating needs reviews.moderate.
+const CONTENT_ACTION_ENTRIES: readonly ActionEntry[] = [
+  ...["moderateUgcAction", "removeUgcAction"].map((name) => ({
+    id: `${CONTENT_ACTIONS}#${name}`,
+    access: { level: "permission", permission: "reviews.moderate" } as const,
+  })),
+  {
+    id: `${CONTENT_ACTIONS}#addStaffUgcAction`,
+    access: { level: "permission", permission: "content.write" },
+  },
+];
+
 const AUTH_ACTIONS = "(admin)/admin/actions.ts";
 
 export const ADMIN_ACTIONS: readonly ActionEntry[] = [
@@ -206,6 +221,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...SETTINGS_ACTION_ENTRIES,
   ...PROMOTION_ACTION_ENTRIES,
   ...REVIEW_ACTION_ENTRIES,
+  ...CONTENT_ACTION_ENTRIES,
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [
@@ -258,6 +274,12 @@ export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
   // previewing a discount code reads only the shopper's own cart.
   // Reviews: the customer comes from their own session and the service checks
   // they received the product; reports are once per customer.
+  // Sharing photos: the customer comes from their own session; the service
+  // checks they received the product and records their permission.
+  ...["shareUgcAction", "withdrawUgcAction"].map((name) => ({
+    id: `(storefront)/ugc/actions.ts#${name}`,
+    access: { level: "public" } as const,
+  })),
   ...["submitReviewAction", "reportReviewAction"].map((name) => ({
     id: `(storefront)/reviews/actions.ts#${name}`,
     access: { level: "public" } as const,

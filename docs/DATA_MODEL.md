@@ -63,6 +63,9 @@ erDiagram
 | product_imports, product_import_images | Own tenant | Own tenant, no delete |
 | product_reviews | Own tenant | Own tenant, no delete |
 | review_reports | Own tenant | Own tenant, add only |
+| ugc_items | Own tenant | Own tenant, no delete |
+
+**Customer photos and videos (2026-11-18, decision D89):** `ugc_items` (the media asset, kind, source customer or staff, customer, product, caption, credit name, status pending, approved, rejected, hidden, withdrawn or removed, featured, exact permission wording and version, when given and withdrawn, the original post link for staff-added items, who added and moderated it). Checks: nothing approved without a file and live permission; withdrawn or removed items have no file; staff items need their source link. Never deleted by the application. Videos are media assets of kind `video`.
 
 **Store look (2026-11-18, decision D87):** `stores.branding` (JSON: brand and accent colours, corners, font, tagline, contact email and phone; read with safe defaults) and `stores.logo_asset_id` (a media asset of the same tenant).
 

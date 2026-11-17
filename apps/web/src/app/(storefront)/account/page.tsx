@@ -93,6 +93,17 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>
       </Card>
 
+      <Card title="Photos">
+        <p className="text-sm text-ink-muted">
+          Share photos and videos of what you bought, and manage your permission.
+        </p>
+        <div>
+          <Link href="/account/photos" className={buttonClasses("secondary")}>
+            My photos
+          </Link>
+        </div>
+      </Card>
+
       <ButtonForm action={signOutAction} label="Sign out" />
     </>
   );

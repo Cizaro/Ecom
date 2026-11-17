@@ -90,6 +90,7 @@ model Tenant {
   productImportImages     ProductImportImage[]
   productReviews          ProductReview[]
   reviewReports           ReviewReport[]
+  ugcItems                UgcItem[]
 
   @@map("tenants")
 }
@@ -611,6 +612,8 @@ model Product {
 
   reviews ProductReview[]
 
+  ugcItems UgcItem[]
+
   @@unique([tenantId, slug])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, categoryId])
@@ -742,6 +745,8 @@ model MediaAsset {
   brand        Brand?
   store        Store?
 
+  ugcItem UgcItem?
+
   @@index([tenantId, createdAt])
   @@index([status, createdAt])
   @@map("media_assets")
@@ -869,6 +874,8 @@ model Customer {
 
   reviews       ProductReview[]
   reviewReports ReviewReport[]
+
+  ugcItems UgcItem[]
 
   @@unique([tenantId, email])
   @@index([tenantId, createdAt])
@@ -1242,6 +1249,49 @@ model ShippingZone {
   @@unique([tenantId, name])
   @@index([tenantId, position])
   @@map("shipping_zones")
+}
+
+/// A photo or short video from a customer or a creator, shown only with
+/// recorded permission and after staff approve it. The record is kept after
+/// permission is withdrawn (the file is deleted), as proof of what happened.
+model UgcItem {
+  id                    String    @id @default(uuid(7)) @db.Uuid
+  tenantId              String    @map("tenant_id") @db.Uuid
+  /// Null once the file is deleted (permission withdrawn or removed by staff).
+  mediaAssetId          String?   @unique @map("media_asset_id") @db.Uuid
+  kind                  MediaKind
+  /// customer (shared from their account) or staff (added with the creator's permission).
+  source                String
+  customerId            String?   @map("customer_id") @db.Uuid
+  productId             String?   @map("product_id") @db.Uuid
+  caption               String?
+  /// The name shown with it, e.g. "Maya K." or "@maya.style".
+  creditName            String    @map("credit_name")
+  /// pending, approved, rejected, hidden, withdrawn or removed.
+  status                String    @default("pending")
+  featured              Boolean   @default(false)
+  /// The exact permission wording agreed to (customer) or the staff's note of it.
+  permissionText        String    @map("permission_text")
+  permissionVersion     String    @map("permission_version")
+  permissionGrantedAt   DateTime  @map("permission_granted_at") @db.Timestamptz(3)
+  permissionWithdrawnAt DateTime? @map("permission_withdrawn_at") @db.Timestamptz(3)
+  /// Staff-added: where the content was first posted.
+  sourceUrl             String?   @map("source_url")
+  createdByUserId       String?   @map("created_by_user_id") @db.Uuid
+  moderatedAt           DateTime? @map("moderated_at") @db.Timestamptz(3)
+  moderatedBy           String?   @map("moderated_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  asset    MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  customer Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  product  Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status, createdAt])
+  @@index([productId, status])
+  @@index([customerId, createdAt])
+  @@map("ugc_items")
 }
 
 /// A customer's review of a product they bought and received. Shown only once staff approve it.

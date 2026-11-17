@@ -12,6 +12,7 @@ import {
   type MediaDeps,
   type StorageProvider,
   type StoredImage,
+  type UgcMedia,
 } from "@ecom/core";
 
 // Uploaded files for the web app: the storage connection, what the upload
@@ -55,4 +56,15 @@ export async function uploadedImage(formData: FormData, name = "image"): Promise
     );
   }
   return new Uint8Array(await file.arrayBuffer());
+}
+
+/** What a page needs to show a customer photo or video. */
+export function ugcView(media: UgcMedia): {
+  kind: "image" | "video";
+  image: ImageView;
+  url: string;
+  mimeType: string;
+} {
+  const image = imageView(getStorage(), media);
+  return { kind: media.kind, image, url: image.url, mimeType: media.mimeType };
 }

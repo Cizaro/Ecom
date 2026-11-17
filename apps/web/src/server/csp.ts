@@ -45,6 +45,8 @@ export function buildCsp(
     // data: for the two-factor QR code; blob: for previews of a chosen file.
     "img-src": ["'self'", "data:", "blob:", ...(options.mediaOrigin ? [options.mediaOrigin] : [])],
     "font-src": ["'self'"],
+    // Customer videos are served from the same storage as images.
+    "media-src": ["'self'", ...(options.mediaOrigin ? [options.mediaOrigin] : [])],
     // Development hot reload uses a websocket to the dev server.
     "connect-src": ["'self'", ...(options.development ? ["ws:"] : [])],
     "object-src": ["'none'"],

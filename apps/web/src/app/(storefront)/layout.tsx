@@ -1,4 +1,4 @@
-import { getCartCount, listTopCategories, themeVariables } from "@ecom/core";
+import { countApprovedUgc, getCartCount, listTopCategories, themeVariables } from "@ecom/core";
 import { buttonClasses, inputClasses } from "@ecom/ui";
 import { getEnv } from "@ecom/config";
 import type { Metadata } from "next";
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   const { store, db } = await storefrontDb();
   const [cartToken, customer] = await Promise.all([readCartToken(), getCurrentCustomer()]);
-  const [categories, cartCount] = await Promise.all([
+  const [categories, cartCount, photoCount] = await Promise.all([
     listTopCategories(db),
     customer
       ? getCartCount(db, { customerId: customer.id })
@@ -40,6 +40,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         cartToken
         ? getCartCount(db, { token: cartToken })
         : 0,
+    countApprovedUgc(db),
   ]);
 
   const theme = themeVariables(store.branding);
@@ -132,6 +133,16 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                 Shop all
               </Link>
             </li>
+            {photoCount > 0 ? (
+              <li>
+                <Link
+                  href="/gallery"
+                  className="flex min-h-11 items-center rounded-control px-3 text-ink-muted hover:bg-surface-muted hover:text-ink"
+                >
+                  Customer photos
+                </Link>
+              </li>
+            ) : null}
             {categories.map((category) => (
               <li key={category.id}>
                 <Link

@@ -2,6 +2,7 @@ import {
   currencyExponent,
   getPublicProduct,
   listPublicProductsBySlug,
+  listApprovedUgc,
   listProductReviews,
   listRelatedProducts,
   reviewEligibility,
@@ -27,6 +28,7 @@ import { Price, ProductGrid } from "../../_components/product-card";
 import { RememberProduct, ShareButton } from "../../_components/product-extras";
 import { ProductGallery } from "../../_components/product-gallery";
 import { ProductReviews, RatingLine } from "../../_components/product-reviews";
+import { UgcGrid } from "../../_components/ugc-grid";
 import { VariantPicker } from "../../_components/variant-picker";
 import { addToCartAction } from "../../cart/actions";
 
@@ -122,12 +124,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
     Math.max(1, Number.parseInt(first(query.reviews) ?? "1", 10) || 1),
   );
   const customer = await getCurrentCustomer();
-  const [related, recent, origin, reviews, eligibility] = await Promise.all([
+  const [related, recent, origin, reviews, eligibility, customerPhotos] = await Promise.all([
     listRelatedProducts(db, { id: product.id, categoryId: product.category?.id ?? null }),
     listPublicProductsBySlug(db, recentSlugs),
     storefrontOrigin(),
     listProductReviews(db, product.id, reviewPage),
     reviewEligibility(db, customer?.id ?? null, product.id),
+    listApprovedUgc(db, { productId: product.id, limit: 8 }),
   ]);
 
   const details = [
@@ -287,6 +290,33 @@ export default async function ProductPage({ params, searchParams }: Props) {
         eligibility={eligibility}
         signedIn={customer !== null}
       />
+
+      {customerPhotos.length > 0 ||
+      eligibility.state === "reviewed" ||
+      eligibility.state === "can_review" ? (
+        <section
+          aria-labelledby="customer-photos"
+          className="flex flex-col gap-4"
+          data-testid="customer-photos"
+        >
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="customer-photos" className="text-xl font-semibold">
+              Customer photos
+            </h2>
+            {eligibility.state === "reviewed" || eligibility.state === "can_review" ? (
+              <a
+                href={`/account/photos?product=${product.id}`}
+                className="text-sm underline underline-offset-4"
+              >
+                Share your photo
+              </a>
+            ) : null}
+          </div>
+          {customerPhotos.length > 0 ? (
+            <UgcGrid items={customerPhotos} showProduct={false} />
+          ) : null}
+        </section>
+      ) : null}
 
       {related.length > 0 && product.category ? (
         <section

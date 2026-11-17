@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM): Milestone 4.1 (reviews) complete.** Next: 4.2 or launch readiness, to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM): Milestones 4.1 (reviews) and 4.2 (customer photos and videos) complete.** Next: 4.3 or launch readiness, to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -173,6 +173,11 @@ Last updated: 2026-11-12
   - Admin page **Store and look** (`settings.write`, audited): store name, time zone, tagline, contact email and phone; logo; main and accent colours, corner style, font, or one of four ready-made looks, with a preview.
   - The storefront is one template that takes each store's values, so two stores on the same installation look different. Button text stays readable on any colour; unreadable accents are refused. The admin keeps its neutral look.
   - `docs/REUSE.md`: what can be reused for other shops and businesses today, what needs work, and the rules that keep it reusable, including the rules the AI module must follow.
+
+- **Milestone 4.2, customer photos and videos:**
+  - Account page **My photos**: a customer who received a product shares a photo or a short video (MP4 or MOV, 8 MB) with a caption and the name to show, after ticking a clear permission sentence. They see each item's status and can **withdraw permission and delete** at any time.
+  - Admin **Customer photos** (`reviews.moderate`): waiting, shown, hidden, rejected, withdrawn and removed; approve, hide, reject, feature, remove for good; each item's permission record. Staff with `content.write` can add a creator's content with where it was posted and how permission was given.
+  - Shop: customer photos on the product page with a "Share your photo" link for buyers, and a **Customer photos** gallery (featured first), linked from the menu once there are any. Videos are muted and start only when tapped.
 
 ## In progress
 
@@ -361,24 +366,24 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (store look and reuse guide, on the first computer)
+## Checks run this session (Milestone 4.2, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 280 tests (new: colours as people write them, readable button text on any colour, safe design tokens, ready-made looks) |
-| `pnpm test:int` | Pass, 255 tests, on the separate test database (2 new: two stores on one installation keep their own name, look, logo and contact details; bad values and staff without permission refused) |
+| `pnpm test` | Pass, 289 tests (new: videos recognised by their bytes, picture size read, stored under the store prefix, refused when not a video or too large) |
+| `pnpm test:int` | Pass, 261 tests, on the separate test database (6 new: sharing needs a received product and permission, wording and consent recorded; videos; withdrawing deletes the file, keeps the record and cannot be undone; moderation, featuring and removal; creator content needs a permission record; store separation) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 112 tests (42 skipped by design), including staff changing the look and contact details and the shop showing them |
+| `pnpm test:e2e` | Pass, 115 tests (43 skipped by design), including a customer sharing a photo after delivery, staff approving it, it showing on the product page and gallery, and the customer withdrawing it |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
 | CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Milestone 4.2 (customer photos and videos) or launch readiness, as the owner prefers.
+Milestone 4.3 (support conversations and customer timeline) or launch readiness, as the owner prefers.
 
 ## Session log
 
@@ -411,5 +416,6 @@ Milestone 4.2 (customer photos and videos) or launch readiness, as the owner pre
 | 2026-11-18 | Bulk product import: store template with category and brand dropdowns, check then import, safe picture downloads by request and worker |
 | 2026-11-18 | Milestone 4.1: verified-buyer reviews with approval, replies, reports, ratings on product pages and in search data |
 | 2026-11-18 | Per-store look (colours, corners, font, logo, contact) and store settings page; reuse guide; AI reusability rules recorded (D88) |
+| 2026-11-18 | Milestone 4.2: customer photos and short videos with recorded, withdrawable permission; staff moderation and creator content; product page photos and gallery |
 
 Commit hashes: `git log --oneline`.

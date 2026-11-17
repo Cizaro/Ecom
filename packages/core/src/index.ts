@@ -514,3 +514,29 @@ export {
   updateStoreDetails,
 } from "./tenancy/store-settings";
 export type { StoreSettingsView } from "./tenancy/store-settings";
+
+export {
+  addStaffUgc,
+  countApprovedUgc,
+  listApprovedUgc,
+  listMyUgc,
+  listUgcForModeration,
+  MAX_PENDING_PER_CUSTOMER,
+  moderateUgc,
+  productsCustomerReceived,
+  removeUgc,
+  shareUgc,
+  UGC_PERMISSION_VERSION,
+  UGC_STATUSES,
+  UgcError,
+  ugcPermissionText,
+  withdrawUgc,
+} from "./ugc/ugc";
+export type { ModerationUgcItem, MyUgcItem, PublicUgcItem, UgcMedia, UgcStatus } from "./ugc/ugc";
+export {
+  MAX_VIDEO_BYTES,
+  sniffVideoType,
+  storeVideo,
+  videoDimensions,
+  VideoError,
+} from "./media/video";

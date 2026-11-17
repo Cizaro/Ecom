@@ -6,3 +6,4 @@ export { totpCode, totpSecretFromUri } from "./totp";
 export { makeTestImage } from "./images";
 export type { TestImageOptions } from "./images";
 export { fieldsAndNumbers } from "./inspect";
+export { makeTestVideo } from "./videos";
