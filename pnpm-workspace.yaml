@@ -34,3 +34,9 @@ minimumReleaseAgeExclude:
 overrides:
   # exceljs pins an old uuid with an advisory (GHSA-w5hq-g745-h8pq); 11.1.1+ is fixed.
   "exceljs>uuid": "^11.1.1"
+auditConfig:
+  ignoreGhsas:
+    # picomatch ReDoS (high), no fixed version yet. Reached only through
+    # developer tools (lint, build and test tooling); `pnpm audit --prod` is
+    # clean. Decision D100: remove this line once a fix is released.
+    - GHSA-fc5q-39xc-vjpf

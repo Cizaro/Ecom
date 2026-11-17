@@ -31,6 +31,10 @@ The demo store offers Arabic already. For each product and category, open it in 
 2. On any product, open **AI drafts**, try **Draft wording and search text** and **Draft Arabic wording**, and apply only the parts you like. With the test stand-in the Arabic draft is the English marked "[test translation]": dismiss it.
 3. To use the real AI: create an API key at console.anthropic.com, set a monthly spending limit there too, and put `AI_PROVIDER=anthropic` and `AI_API_KEY=...` in the server's settings (never in the repository). Choose a monthly budget per store on the AI page.
 
+## Housekeeping
+
+- When `picomatch` releases a fix for GHSA-fc5q-39xc-vjpf, update it and remove the entry from `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` (decision D100).
+
 ## Next development task: Milestone 5.3 (support classification and reply drafts)
 
 Milestone 5.2 is done: AI drafts of a product's wording, search text, tags, category and Arabic wording, applied part by part from the product page (D99). Next: classify each support message (question, complaint, spam, abuse, and the always-a-person subjects) and draft a reply in the inbox from the shop's facts, which staff edit and send; nothing is sent by the AI. Then 5.4 (a fixed evaluation set and prompt-injection tests, runnable against the real provider on demand).
