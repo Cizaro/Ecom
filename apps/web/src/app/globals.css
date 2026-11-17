@@ -11,7 +11,8 @@
  */
 @theme {
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans Arabic", Tahoma, sans-serif;
 
   /* Brand: a warm near-black with a gold accent, suited to accessories. */
   --color-brand: #1c1917;
@@ -59,4 +60,12 @@
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
+}
+
+/*
+ * Arabic letters join up; extra letter spacing breaks them apart. Outside any
+ * layer, so it wins over the tracking-* utilities.
+ */
+:lang(ar) [class*="tracking-"] {
+  letter-spacing: 0;
 }

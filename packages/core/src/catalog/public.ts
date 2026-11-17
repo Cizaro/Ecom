@@ -232,6 +232,12 @@ async function listProductsIn(
           WHERE s.product_id = p.id AND s.status = 'active' AND s.sku ILIKE ${phrase}
         )
         OR EXISTS (SELECT 1 FROM brands sb WHERE sb.id = p.brand_id AND sb.name ILIKE ${phrase})
+        -- The product's Arabic name and summary, for shoppers searching in Arabic.
+        OR EXISTS (
+          SELECT 1 FROM product_translations pt
+          WHERE pt.product_id = p.id
+            AND to_tsvector('simple', pt.name || ' ' || pt.short_description) @@ ${query}
+        )
       )`);
     }
 

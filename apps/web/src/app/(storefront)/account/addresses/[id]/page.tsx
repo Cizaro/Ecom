@@ -7,10 +7,15 @@ import { storefrontDb } from "@/server/storefront";
 import { AccountForm } from "../../../_components/account-form";
 import { AddressFields } from "../../../_components/address-fields";
 import { updateAddressAction } from "../../actions";
+import { shopT } from "@/server/i18n";
 
-export const metadata: Metadata = { title: "Edit address" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await shopT();
+  return { title: t("Edit address") };
+}
 
 export default async function EditAddressPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await shopT();
   const { id } = await params;
   const customer = await requireCustomer(`/account/addresses/${encodeURIComponent(id)}`);
   const { db } = await storefrontDb();
@@ -24,11 +29,17 @@ export default async function EditAddressPage({ params }: { params: Promise<{ id
     <>
       <div>
         <Link href="/account/addresses" className="text-sm underline underline-offset-4">
-          Back to your addresses
+          {t("Back to your addresses")}
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Edit address</h1>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          {t("Edit address")}
+        </h1>
       </div>
-      <AccountForm action={updateAddressAction} submitLabel="Save address" testId="address-form">
+      <AccountForm
+        action={updateAddressAction}
+        submitLabel={t("Save address")}
+        testId="address-form"
+      >
         <input type="hidden" name="id" value={address.id} />
         <AddressFields address={address} />
       </AccountForm>

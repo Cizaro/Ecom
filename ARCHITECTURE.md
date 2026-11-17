@@ -43,6 +43,7 @@ packages/
   db/             Prisma schema, migrations, seed, tenant-scoped client, RLS SQL
   config/         Environment validation, feature flags
   ui/             Design system components
+  i18n/           Shop languages: Arabic wording keyed by its English, plural forms, money and date formats (no dependencies)
   testing/        Factories, test database helpers, mock providers
 docs/             Data model, API, security, compliance
 scripts/          healthcheck (environment health check), backup, restore

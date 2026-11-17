@@ -1,3 +1,5 @@
+import type { Locale } from "@ecom/i18n";
+import { storeLanguages } from "./store-host";
 import type { AppTransaction, Prisma } from "@ecom/db";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
@@ -46,6 +48,8 @@ export interface StoreSettingsView {
   currency: string;
   branding: StoreBranding;
   logo: StoredImage | null;
+  /** Languages the shop is offered in, the default first. */
+  languages: Locale[];
 }
 
 const SELECT = {
@@ -53,6 +57,8 @@ const SELECT = {
   name: true,
   timezone: true,
   defaultCurrency: true,
+  defaultLocale: true,
+  languages: true,
   branding: true,
   logo: { select: ASSET_SELECT },
 } as const;
@@ -70,6 +76,7 @@ const toView = (store: Awaited<ReturnType<typeof storeIn>>): StoreSettingsView =
   currency: store.defaultCurrency,
   branding: parseBranding(store.branding),
   logo: store.logo ? toStoredImage(store.logo) : null,
+  languages: storeLanguages(store.defaultLocale, store.languages).languages,
 });
 
 export async function getStoreSettings(
@@ -92,6 +99,8 @@ export async function updateStoreDetails(
     tagline?: unknown;
     contactEmail?: unknown;
     contactPhone?: unknown;
+    /** Whether shoppers can switch the shop to Arabic. Left as it is when not given. */
+    arabic?: unknown;
   },
 ): Promise<void> {
   assertPermission(context, "settings.write");
@@ -120,17 +129,28 @@ export async function updateStoreDetails(
   await db.run(async (tx) => {
     const store = await storeIn(tx);
     const branding = { ...parseBranding(store.branding), tagline, contactEmail, contactPhone };
+    const { defaultLocale, languages: before } = storeLanguages(
+      store.defaultLocale,
+      store.languages,
+    );
+    const languages =
+      input.arabic === undefined
+        ? before
+        : [
+            defaultLocale,
+            ...(input.arabic === true || input.arabic === "on" ? (["ar"] as const) : []),
+          ].filter((l, i, all) => all.indexOf(l) === i);
     await tx.store.update({
       where: { id: store.id },
-      data: { name, timezone, branding: branding as unknown as Prisma.InputJsonObject },
+      data: { name, timezone, languages, branding: branding as unknown as Prisma.InputJsonObject },
     });
     await audit(
       tx,
       context,
       "settings.store_details_updated",
       { type: "store", id: store.id },
-      { name: store.name, timezone: store.timezone },
-      { name, timezone },
+      { name: store.name, timezone: store.timezone, languages: before },
+      { name, timezone, languages },
     );
   });
 }

@@ -67,6 +67,9 @@ erDiagram
 | support_conversations | Own tenant | Own tenant, no delete |
 | support_messages, customer_notes | Own tenant | Own tenant, add only |
 | store_pages | Own tenant | Own tenant, no delete |
+| product_translations, category_translations | Own tenant | Own tenant |
+
+**Languages (2026-11-20, decisions D94 and D95):** `stores.languages` (the languages the shop is offered in: English, and Arabic when the store turns it on; the default is always one of them). `product_translations` and `category_translations` (one per product or category and language, Arabic only: name and descriptions; empty parts show the English). `orders.locale`, `support_conversations.locale` (the language the shopper used; their emails use it). `store_pages.locale` (one page per slug and language).
 
 **Policy pages (2026-11-19, decision D92):** `store_pages` (one per store and page: returns, delivery, privacy or terms; title, plain text, published and when). A published page must have at least 50 characters.
 

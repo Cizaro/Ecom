@@ -10,6 +10,8 @@ The owner wants the system built "like a puzzle": pieces that can be used again 
 | **A different look for that shop** | Admin, **Store and look**: logo, main colour, accent colour, corner style, font, tagline, contact details, or a ready-made look. The storefront is one template; each store supplies its own values. | Minutes. No code. |
 | **A deeper redesign for one client** (different layout, new sections) | The storefront pages are in `apps/web/src/app/(storefront)`. They use the shared components in `packages/ui` and named design tokens, never fixed colours. Change the pages or add a second set of pages; the business logic underneath does not change. | Days. Front-end code only. |
 | **A separate copy for a client who wants their own server** | Deploy the same code again with its own database and `.env`. Nothing is tied to one company. | Hours. No code. |
+| **The shop in Arabic** (or not) | Admin, **Store and look**: tick "Offer the shop in Arabic too". Shoppers get a button in the header; English stays the default. Add Arabic names to products and categories, and Arabic policy pages. All shop wording is already translated in `packages/i18n`. | Minutes. No code. |
+| **Another language** (French, for example) | Add a catalog file beside `packages/i18n/src/ar.ts` and the language to the list there and in the database checks; the completeness test lists every phrase to translate. | Days. Translation work, little code. |
 | **A different kind of product** (clothes, shoes, cosmetics, home goods, electronics accessories) | Nothing in the code knows it sells bags. Products have variants (colour, size), free-form details, categories and brands that staff define. | None. Just enter the catalog. |
 
 ## What needs new work

@@ -1,16 +1,20 @@
 import type { OptionChoice } from "@ecom/core";
 import { cx } from "@ecom/ui";
 import Link from "next/link";
+import { shopT } from "@/server/i18n";
 
 const CHIP =
   "flex min-h-11 min-w-11 items-center justify-center rounded-control border px-4 text-sm";
 
 function Choices({
+  id,
   legend,
   choices,
   hrefFor,
   unavailableNote,
 }: {
+  /** Stable, whatever the language. */
+  id: string;
   legend: string;
   choices: readonly OptionChoice[];
   hrefFor: (variantId: string) => string;
@@ -19,7 +23,7 @@ function Choices({
   if (choices.length === 0) return null;
   const selected = choices.find((choice) => choice.selected);
   return (
-    <div data-testid={`options-${legend.toLowerCase()}`}>
+    <div data-testid={`options-${id}`}>
       <p className="text-sm">
         <span className="font-medium">{legend}:</span>{" "}
         <span className="text-ink-muted">{selected?.label ?? "—"}</span>
@@ -68,7 +72,7 @@ function Choices({
  * variant selected, so it works without JavaScript and the selection can be
  * shared or bookmarked.
  */
-export function VariantPicker({
+export async function VariantPicker({
   colors,
   sizes,
   hrefFor,
@@ -80,18 +84,28 @@ export function VariantPicker({
   selectedColor: string | null;
 }) {
   if (colors.length <= 1 && sizes.length <= 1) return null;
+  const t = await shopT();
   return (
     <div className="flex flex-col gap-4">
       {colors.length > 1 ? (
-        <Choices legend="Colour" choices={colors} hrefFor={hrefFor} unavailableNote="" />
+        <Choices
+          id="colour"
+          legend={t("Colour")}
+          choices={colors}
+          hrefFor={hrefFor}
+          unavailableNote=""
+        />
       ) : null}
       {sizes.length > 1 ? (
         <Choices
-          legend="Size"
+          id="size"
+          legend={t("Size")}
           choices={sizes}
           hrefFor={hrefFor}
           unavailableNote={
-            selectedColor ? `not made in ${selectedColor}` : "not available with this choice"
+            selectedColor
+              ? t("not made in {colour}", { colour: selectedColor })
+              : t("not available with this choice")
           }
         />
       ) : null}

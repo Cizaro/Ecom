@@ -18,6 +18,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { CART_COOKIE, readCartToken } from "./cart";
+import { shopLocale } from "./i18n";
 import { storefrontDb, storefrontOrigin } from "./storefront";
 
 // A shopper's account session. Customers are not staff: their cookie has its
@@ -107,11 +108,17 @@ export async function customerDeps(): Promise<CustomerDeps> {
     env,
     createLogger("web", env.LOG_LEVEL),
   );
-  const [{ store }, storeUrl] = await Promise.all([storefrontDb(), storefrontOrigin()]);
+  const [{ store }, storeUrl, locale] = await Promise.all([
+    storefrontDb(),
+    storefrontOrigin(),
+    shopLocale(),
+  ]);
   return {
     email: globalForCustomers.__customerEmail,
     limiter: globalForCustomers.__customerLimiter,
     storeUrl,
     storeName: store.name,
+    // Account emails are written in the language the shopper is using.
+    locale,
   };
 }

@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, type Locale } from "@ecom/i18n";
 import { createHash, createHmac, randomUUID } from "node:crypto";
 import type { AppTransaction } from "@ecom/db";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
@@ -121,6 +122,8 @@ export async function startConversation(
     message: unknown;
     orderNumber?: unknown;
     accessSecret: string;
+    /** The shop language the shopper is using; emails to them are written in it. */
+    locale?: Locale;
   },
 ): Promise<{ id: string; accessKey: string }> {
   const email = input.customer ? input.customer.email : normalizeEmail(input.email);
@@ -170,6 +173,7 @@ export async function startConversation(
         name,
         subject,
         orderId,
+        locale: input.locale ?? DEFAULT_LOCALE,
         accessKeyHash: hash(accessKey),
         messages: {
           create: [{ tenantId: db.tenantId, authorType: "customer", authorName: name, body }],

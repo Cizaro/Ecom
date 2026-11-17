@@ -1,5 +1,5 @@
+import { msg } from "@ecom/i18n";
 import {
-  formatMoney,
   listPublicProducts,
   type PublicListInput,
   type PublicSort,
@@ -14,15 +14,16 @@ import {
   toListInput,
   type ListingState,
 } from "@/server/listing";
+import { shopT } from "@/server/i18n";
 import { ProductGrid } from "./product-card";
 import { SortSelect } from "./sort-select";
 
 const SORT_LABELS: Record<PublicSort, string> = {
-  relevance: "Best match",
-  newest: "Newest",
-  price_asc: "Price: low to high",
-  price_desc: "Price: high to low",
-  name: "Name",
+  relevance: msg("Best match"),
+  newest: msg("Newest"),
+  price_asc: msg("Price: low to high"),
+  price_desc: msg("Price: high to low"),
+  name: msg("Name"),
 };
 
 function CheckboxGroup({
@@ -84,7 +85,10 @@ export async function ProductListing({
   scope: Pick<PublicListInput, "categoryId" | "flag">;
   emptyTitle: string;
 }) {
-  const list = await listPublicProducts(db, { ...scope, ...toListInput(state, currency) });
+  const [list, t] = await Promise.all([
+    listPublicProducts(db, { ...scope, ...toListInput(state, currency) }),
+    shopT(),
+  ]);
   const filterCount = activeFilterCount(state);
   const sorts = (Object.keys(SORT_LABELS) as PublicSort[]).filter(
     (sort) => sort !== "relevance" || state.q !== "",
@@ -100,18 +104,18 @@ export async function ProductListing({
         <form
           method="get"
           action={basePath}
-          aria-label="Sort and filter"
+          aria-label={t("Sort and filter")}
           className="flex flex-col gap-3"
           data-testid="listing-controls"
         >
           {state.q ? <input type="hidden" name="q" value={state.q} /> : null}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-ink-muted" data-testid="result-count" role="status">
-              {list.total} {list.total === 1 ? "product" : "products"}
+              {t("{count} products", { count: list.total })}
             </p>
             <SortSelect
               value={currentSort}
-              options={sorts.map((sort) => ({ value: sort, label: SORT_LABELS[sort] }))}
+              options={sorts.map((sort) => ({ value: sort, label: t(SORT_LABELS[sort]) }))}
             />
           </div>
 
@@ -122,11 +126,12 @@ export async function ProductListing({
               data-testid="filters"
             >
               <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm font-medium">
-                Filters{filterCount > 0 ? ` (${filterCount})` : ""}
+                {t("Filters")}
+                {filterCount > 0 ? ` (${filterCount})` : ""}
               </summary>
               <div className="grid gap-6 border-t border-line p-4 sm:grid-cols-3">
                 <CheckboxGroup
-                  legend="Brand"
+                  legend={t("Brand")}
                   name="brand"
                   selected={state.brands}
                   options={list.facets.brands.map((brand) => ({
@@ -136,7 +141,7 @@ export async function ProductListing({
                   }))}
                 />
                 <CheckboxGroup
-                  legend="Colour"
+                  legend={t("Colour")}
                   name="color"
                   selected={state.colors}
                   options={list.facets.colors.map((color) => ({
@@ -147,11 +152,13 @@ export async function ProductListing({
                 />
                 {list.facets.price ? (
                   <fieldset className="min-w-0">
-                    <legend className="text-sm font-medium">Price ({currency})</legend>
+                    <legend className="text-sm font-medium">
+                      {t("Price ({currency})", { currency })}
+                    </legend>
                     <div className="mt-2 flex items-end gap-2">
                       <div className="flex min-w-0 flex-col gap-1">
                         <label htmlFor="min" className="text-sm text-ink-muted">
-                          From
+                          {t("From")}
                         </label>
                         <input
                           id="min"
@@ -163,7 +170,7 @@ export async function ProductListing({
                       </div>
                       <div className="flex min-w-0 flex-col gap-1">
                         <label htmlFor="max" className="text-sm text-ink-muted">
-                          To
+                          {t("To")}
                         </label>
                         <input
                           id="max"
@@ -175,22 +182,23 @@ export async function ProductListing({
                       </div>
                     </div>
                     <p className="mt-1 text-sm text-ink-muted">
-                      Prices here run from{" "}
-                      {formatMoney(list.facets.price.min, list.facets.price.currency)} to{" "}
-                      {formatMoney(list.facets.price.max, list.facets.price.currency)}.
+                      {t("Prices here run from {min} to {max}.", {
+                        min: t.money(list.facets.price.min, list.facets.price.currency),
+                        max: t.money(list.facets.price.max, list.facets.price.currency),
+                      })}
                     </p>
                   </fieldset>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-3 sm:col-span-3">
                   <button type="submit" className={buttonClasses()}>
-                    Apply filters
+                    {t("Apply filters")}
                   </button>
                   {filterCount > 0 ? (
                     <Link
                       href={clearedHref(basePath, state)}
                       className="text-sm underline underline-offset-4"
                     >
-                      Clear filters
+                      {t("Clear filters")}
                     </Link>
                   ) : null}
                 </div>
@@ -203,43 +211,43 @@ export async function ProductListing({
       {list.items.length > 0 ? (
         <ProductGrid products={list.items} priorityCount={4} />
       ) : beyondLastPage ? (
-        <EmptyState title="There is no such page">
+        <EmptyState title={t("There is no such page")}>
           <Link
             href={listingHref(basePath, state, { page: 1 })}
             className="underline underline-offset-4"
           >
-            Go to the first page
+            {t("Go to the first page")}
           </Link>
         </EmptyState>
       ) : filterCount > 0 ? (
-        <EmptyState title="Nothing matches these filters">
+        <EmptyState title={t("Nothing matches these filters")}>
           <Link href={clearedHref(basePath, state)} className="underline underline-offset-4">
-            Clear filters
+            {t("Clear filters")}
           </Link>
         </EmptyState>
       ) : (
         <EmptyState title={emptyTitle}>
           <Link href="/products" className="underline underline-offset-4">
-            See all products
+            {t("See all products")}
           </Link>
         </EmptyState>
       )}
 
       {list.pageCount > 1 && list.items.length > 0 ? (
-        <nav aria-label="Pages" className="flex items-center justify-between gap-3 text-sm">
+        <nav aria-label={t("Pages")} className="flex items-center justify-between gap-3 text-sm">
           {list.page > 1 ? (
             <Link
               rel="prev"
               href={listingHref(basePath, state, { page: list.page - 1 })}
               className={buttonClasses("secondary")}
             >
-              Previous
+              {t("Previous")}
             </Link>
           ) : (
             <span />
           )}
           <span className="text-ink-muted">
-            Page {list.page} of {list.pageCount}
+            {t("Page {page} of {pages}", { page: list.page, pages: list.pageCount })}
           </span>
           {list.page < list.pageCount ? (
             <Link
@@ -247,7 +255,7 @@ export async function ProductListing({
               href={listingHref(basePath, state, { page: list.page + 1 })}
               className={buttonClasses("secondary")}
             >
-              Next
+              {t("Next")}
             </Link>
           ) : (
             <span />

@@ -113,6 +113,8 @@ const CATALOG_ACTION_ENTRIES: readonly ActionEntry[] = [
   "removeCategoryImageAction",
   "setBrandLogoAction",
   "removeBrandLogoAction",
+  "saveProductTranslationAction",
+  "saveCategoryTranslationAction",
 ].map((name) => ({ id: `${CATALOG_ACTIONS}#${name}`, access: CATALOG_WRITE }));
 
 const IMPORT_ACTIONS = "(admin)/admin/(protected)/catalog/import/actions.ts";
@@ -315,6 +317,8 @@ export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
     id: `(storefront)/reviews/actions.ts#${name}`,
     access: { level: "public" } as const,
   })),
+  // The language switch: keeps one of the store's languages in a cookie.
+  { id: "(storefront)/language/actions.ts#setLanguageAction", access: { level: "public" } },
   ...["placeOrderAction", "retryPaymentAction", "mockPayAction", "previewDiscountAction"].map(
     (name) => ({
       id: `${CHECKOUT_ACTIONS}#${name}`,

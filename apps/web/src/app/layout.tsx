@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
+import { LOCALE_INFO } from "@ecom/i18n";
+import { documentLocale } from "@/server/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,8 +21,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // the Content Security Policy needs: a page built ahead of time would carry
   // no nonce and its scripts would be blocked.
   await headers();
+  const locale = await documentLocale();
   return (
-    <html lang="en">
+    <html lang={locale} dir={LOCALE_INFO[locale].dir}>
       <body className="min-h-dvh bg-surface font-sans text-ink antialiased">{children}</body>
     </html>
   );

@@ -71,6 +71,7 @@ export {
   normalizeHost,
   resolveStoreHost,
   storefrontRequestHost,
+  storeLanguages,
 } from "./tenancy/store-host";
 export type { StoreHost, Storefront } from "./tenancy/store-host";
 export { listTeamMembers } from "./identity/team";
@@ -190,6 +191,19 @@ export type {
   PublicVariant,
   SitemapSource,
 } from "./catalog/public";
+export {
+  getCategoryTranslation,
+  getProductTranslation,
+  localizeCategory,
+  localizeCategoryLinks,
+  localizeProduct,
+  localizeProducts,
+  productNamesBySlug,
+  saveCategoryTranslation,
+  saveProductTranslation,
+  TRANSLATED_LOCALES,
+} from "./catalog/translations";
+export type { CategoryText, ProductText } from "./catalog/translations";
 export { selectVariant } from "./catalog/variant-selection";
 export type {
   OptionChoice,
@@ -565,6 +579,7 @@ export type { StaffCustomerView, TimelineEntry, TimelineKind } from "./customers
 
 export {
   DEFAULT_PAGE_TITLES,
+  DEFAULT_PAGE_TITLES_AR,
   getPublishedPage,
   listPublishedPages,
   listStorePages,

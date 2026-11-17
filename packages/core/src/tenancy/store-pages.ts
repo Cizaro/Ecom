@@ -1,5 +1,6 @@
 import { assertPermission, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@ecom/i18n";
 
 // A store's policy pages: returns, delivery, privacy and terms. Staff write
 // them; the platform never invents a store's rules. Templates help staff
@@ -16,6 +17,17 @@ export const DEFAULT_PAGE_TITLES: Record<PageSlug, string> = {
   privacy: "Privacy",
   terms: "Terms of sale",
 };
+
+/** Starting titles for pages in Arabic. */
+export const DEFAULT_PAGE_TITLES_AR: Record<PageSlug, string> = {
+  returns: "الإرجاع والاسترداد",
+  delivery: "التوصيل",
+  privacy: "الخصوصية",
+  terms: "شروط البيع",
+};
+
+const defaultTitle = (slug: PageSlug, locale: Locale) =>
+  locale === "ar" ? DEFAULT_PAGE_TITLES_AR[slug] : DEFAULT_PAGE_TITLES[slug];
 
 export class StorePageError extends Error {
   constructor(
@@ -154,6 +166,7 @@ export function pageBlocks(body: string): PageBlock[] {
 
 export interface StorePageView {
   slug: PageSlug;
+  locale: Locale;
   title: string;
   body: string;
   published: boolean;
@@ -161,16 +174,21 @@ export interface StorePageView {
   updatedAt: Date | null;
 }
 
-/** All four pages for staff, with empty ones where nothing is written yet. */
+/**
+ * All four pages for staff, in each of the given languages, with empty ones
+ * where nothing is written yet.
+ */
 export async function listStorePages(
   db: TenantDb,
   context: RequestContext,
+  locales: readonly Locale[] = [DEFAULT_LOCALE],
 ): Promise<StorePageView[]> {
   assertPermission(context, "settings.write");
   const rows = await db.run((tx) =>
     tx.storePage.findMany({
       select: {
         slug: true,
+        locale: true,
         title: true,
         body: true,
         published: true,
@@ -179,30 +197,35 @@ export async function listStorePages(
       },
     }),
   );
-  return PAGE_SLUGS.map((slug) => {
-    const row = rows.find((r) => r.slug === slug);
-    return row
-      ? { ...row, slug }
-      : {
-          slug,
-          title: DEFAULT_PAGE_TITLES[slug],
-          body: "",
-          published: false,
-          publishedAt: null,
-          updatedAt: null,
-        };
-  });
+  return locales.flatMap((locale) =>
+    PAGE_SLUGS.map((slug): StorePageView => {
+      const row = rows.find((r) => r.slug === slug && r.locale === locale);
+      return row
+        ? { ...row, slug, locale }
+        : {
+            slug,
+            locale,
+            title: defaultTitle(slug, locale),
+            body: "",
+            published: false,
+            publishedAt: null,
+            updatedAt: null,
+          };
+    }),
+  );
 }
 
 export async function saveStorePage(
   db: TenantDb,
   context: RequestContext,
   slugInput: unknown,
-  input: { title: unknown; body: unknown; publish: unknown },
+  input: { title: unknown; body: unknown; publish: unknown; locale?: unknown },
 ): Promise<void> {
   assertPermission(context, "settings.write");
   const slug = PAGE_SLUGS.find((value) => value === slugInput);
   if (!slug) throw new StorePageError("Unknown page.");
+  const locale = input.locale === undefined ? DEFAULT_LOCALE : input.locale;
+  if (!isLocale(locale)) throw new StorePageError("Unknown language.");
   const title = typeof input.title === "string" ? input.title.replace(/\s+/g, " ").trim() : "";
   if (!title) throw new StorePageError("Enter the page title.", "title");
   if (title.length > 100)
@@ -228,15 +251,16 @@ export async function saveStorePage(
   }
   await db.run(async (tx) => {
     const before = await tx.storePage.findUnique({
-      where: { tenantId_slug: { tenantId: db.tenantId, slug } },
+      where: { tenantId_slug_locale: { tenantId: db.tenantId, slug, locale } },
       select: { published: true, publishedAt: true },
     });
     const publishedAt = publish ? (before?.published ? before.publishedAt : new Date()) : null;
     await tx.storePage.upsert({
-      where: { tenantId_slug: { tenantId: db.tenantId, slug } },
+      where: { tenantId_slug_locale: { tenantId: db.tenantId, slug, locale } },
       create: {
         tenantId: db.tenantId,
         slug,
+        locale,
         title,
         body,
         published: publish,
@@ -247,42 +271,69 @@ export async function saveStorePage(
     });
     await audit(tx, context, "settings.page_saved", { type: "store_page", id: null }, undefined, {
       slug,
+      locale,
       published: publish,
     });
   });
 }
 
-/** A published page for shoppers; null when it is not published. */
+/**
+ * A published page for shoppers, in their language when the store has
+ * published it in that language, otherwise in the default one; null when it
+ * is not published at all.
+ */
 export async function getPublishedPage(
   db: TenantDb,
   slugInput: string,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<{
   slug: PageSlug;
   title: string;
   body: string;
   publishedAt: Date | null;
   updatedAt: Date;
+  /** The language the page is shown in. */
+  locale: Locale;
 } | null> {
   const slug = PAGE_SLUGS.find((value) => value === slugInput);
   if (!slug) return null;
-  const row = await db.run((tx) =>
-    tx.storePage.findFirst({
+  const rows = await db.run((tx) =>
+    tx.storePage.findMany({
       where: { slug, published: true },
-      select: { title: true, body: true, publishedAt: true, updatedAt: true },
+      select: { locale: true, title: true, body: true, publishedAt: true, updatedAt: true },
     }),
   );
-  return row ? { slug, ...row } : null;
+  const row = pickLanguage(rows, locale);
+  if (!row) return null;
+  const { locale: shownIn, ...page } = row;
+  return { slug, locale: isLocale(shownIn) ? shownIn : DEFAULT_LOCALE, ...page };
 }
 
-/** The published pages' titles, for the shop's footer. */
+/** The row in the shopper's language, else the one in the default language, else any. */
+function pickLanguage<T extends { locale: string }>(rows: T[], locale: Locale): T | undefined {
+  return (
+    rows.find((r) => r.locale === locale) ??
+    rows.find((r) => r.locale === DEFAULT_LOCALE) ??
+    rows[0]
+  );
+}
+
+/** The published pages' titles, for the shop's footer, in the shopper's language where written. */
 export async function listPublishedPages(
   db: TenantDb,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<{ slug: PageSlug; title: string }[]> {
   const rows = await db.run((tx) =>
-    tx.storePage.findMany({ where: { published: true }, select: { slug: true, title: true } }),
+    tx.storePage.findMany({
+      where: { published: true },
+      select: { slug: true, locale: true, title: true },
+    }),
   );
   return PAGE_SLUGS.flatMap((slug) => {
-    const row = rows.find((r) => r.slug === slug);
+    const row = pickLanguage(
+      rows.filter((r) => r.slug === slug),
+      locale,
+    );
     return row ? [{ slug, title: row.title }] : [];
   });
 }

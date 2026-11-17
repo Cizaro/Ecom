@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { buildCsp, createNonce, CSP_HEADER, NONCE_HEADER, originOf } from "./server/csp";
+import { AREA_HEADER, areaOf, PATH_HEADER } from "./server/area";
 import { REQUEST_ID_HEADER, requestIdFrom } from "./server/request-id";
 
 // Runs before every page and API request:
@@ -22,6 +23,10 @@ export function proxy(request: NextRequest) {
   requestHeaders.set(REQUEST_ID_HEADER, requestId);
   requestHeaders.set(NONCE_HEADER, nonce);
   requestHeaders.set(CSP_HEADER, csp);
+  // Which part of the site and which page, for the page language and the
+  // language switch (see server/i18n.ts). Set here, so never from the client.
+  requestHeaders.set(AREA_HEADER, areaOf(request.nextUrl.pathname));
+  requestHeaders.set(PATH_HEADER, request.nextUrl.pathname + request.nextUrl.search);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set(REQUEST_ID_HEADER, requestId);

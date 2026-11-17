@@ -16,6 +16,7 @@ const url = "https://cedar.example.test/order/1?key=abc";
 const order = (overrides: Partial<OrderView> = {}): OrderView => ({
   id: "00000000-0000-4000-8000-000000000001",
   number: 1042,
+  locale: "en",
   status: "confirmed",
   paymentMethod: "cash_on_delivery",
   email: "maya@example.test",
@@ -177,5 +178,20 @@ describe("staff address lists", () => {
     expect(() =>
       parseAddressList("a@e.test b@e.test c@e.test d@e.test e@e.test f@e.test", "x"),
     ).toThrow(/up to 5/);
+  });
+});
+
+describe("emails in the shopper's language", () => {
+  it("writes the confirmation in Arabic for an order placed in Arabic", () => {
+    const email = orderConfirmationEmail(order({ locale: "ar" }), store, url);
+    expect(email.subject).toBe("تم تأكيد الطلب رقم 1042: Cedar Bags");
+    expect(email.text).toContain("شكرًا على طلبك. تدفع نقدًا عند وصوله.");
+    expect(email.text).toContain("المجموع: $43.00");
+    expect(email.text).toContain(`اطّلع على طلبك: ${url}`);
+  });
+
+  it("keeps staff emails in English", () => {
+    const email = staffNewOrderEmail(order({ locale: "ar" }), store, url, "orders@example.test");
+    expect(email.text).toContain("A new order is ready to prepare");
   });
 });

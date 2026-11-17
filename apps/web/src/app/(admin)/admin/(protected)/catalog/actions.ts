@@ -32,6 +32,8 @@ import {
   type ProductStatusValue,
   type VariantInput,
   type VariantStatusValue,
+  saveCategoryTranslation,
+  saveProductTranslation,
 } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -506,4 +508,49 @@ export async function removeBrandLogoAction(
   if (!result.ok) return result.state;
   revalidatePath(`${BRANDS}/${id}`);
   return {};
+}
+
+// --- Arabic wording --------------------------------------------------------------
+
+/** A product's name and descriptions in Arabic, shown when a shopper picks Arabic. */
+export async function saveProductTranslationAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const id = field(formData, "id");
+  const result = await attempt(
+    () =>
+      saveProductTranslation(tenantDb(context), context, id, "ar", {
+        name: field(formData, "nameAr"),
+        shortDescription: field(formData, "shortDescriptionAr"),
+        description: field(formData, "descriptionAr"),
+      }),
+    echo(formData, ["nameAr", "shortDescriptionAr", "descriptionAr"]),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(`${PRODUCTS}/${id}`);
+  revalidatePath("/", "layout");
+  return { notice: "Arabic wording saved." };
+}
+
+/** A category's name and description in Arabic. */
+export async function saveCategoryTranslationAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("catalog.write");
+  const id = field(formData, "id");
+  const result = await attempt(
+    () =>
+      saveCategoryTranslation(tenantDb(context), context, id, "ar", {
+        name: field(formData, "nameAr"),
+        description: field(formData, "descriptionAr"),
+      }),
+    echo(formData, ["nameAr", "descriptionAr"]),
+  );
+  if (!result.ok) return result.state;
+  revalidatePath(`${CATEGORIES}/${id}`);
+  revalidatePath("/", "layout");
+  return { notice: "Arabic wording saved." };
 }

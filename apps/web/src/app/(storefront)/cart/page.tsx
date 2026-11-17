@@ -1,9 +1,10 @@
-import { formatMoney, getCart, MAX_LINE_QUANTITY } from "@ecom/core";
+import { getCart, MAX_LINE_QUANTITY, productNamesBySlug } from "@ecom/core";
 import { Alert, buttonClasses, EmptyState } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MediaImage } from "@/components/media-image";
 import { cartOwner } from "@/server/customer";
+import { shopT } from "@/server/i18n";
 import { viewOf } from "@/server/media";
 import { storefrontDb } from "@/server/storefront";
 import { Breadcrumbs } from "../_components/breadcrumbs";
@@ -11,7 +12,10 @@ import { CartLineControls } from "../_components/cart-forms";
 import { removeCartItemAction, updateCartItemAction } from "./actions";
 
 // A cart is personal: keep it out of search engines.
-export const metadata: Metadata = { title: "Your cart", robots: { index: false, follow: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await shopT();
+  return { title: t("Your cart"), robots: { index: false, follow: false } };
+}
 
 /** The product page address with this line's colour and size chosen. */
 function linePath(line: { productSlug: string; color: string | null; size: string | null }) {
@@ -23,19 +27,26 @@ function linePath(line: { productSlug: string; color: string | null; size: strin
 }
 
 export default async function CartPage() {
-  const { db } = await storefrontDb();
+  const [{ db }, t] = await Promise.all([storefrontDb(), shopT()]);
   const cart = await getCart(db, await cartOwner());
   const currency = cart.currency ?? "USD";
+  const names = await productNamesBySlug(
+    db,
+    t.locale,
+    cart.lines.map((line) => line.productSlug),
+  );
+  const nameOf = (line: { productSlug: string; productName: string }) =>
+    names.get(line.productSlug) ?? line.productName;
 
   return (
     <div className="flex flex-col gap-6">
-      <Breadcrumbs trail={[{ name: "Home", href: "/" }]} current="Your cart" />
-      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Your cart</h1>
+      <Breadcrumbs trail={[{ name: t("Home"), href: "/" }]} current={t("Your cart")} />
+      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("Your cart")}</h1>
 
       {cart.lines.length === 0 ? (
-        <EmptyState title="Your cart is empty">
+        <EmptyState title={t("Your cart is empty")}>
           <Link href="/products" className="underline underline-offset-4">
-            See all products
+            {t("See all products")}
           </Link>
         </EmptyState>
       ) : (
@@ -65,36 +76,42 @@ export default async function CartPage() {
                           href={linePath(line)}
                           className="font-medium underline-offset-4 hover:underline"
                         >
-                          {line.productName}
+                          {nameOf(line)}
                         </Link>
                         {options ? <p className="text-sm text-ink-muted">{options}</p> : null}
                         <p className="text-sm text-ink-muted">
-                          {formatMoney(line.unitPriceAmount, currency)} each
+                          {t("{price} each", { price: t.money(line.unitPriceAmount, currency) })}
                         </p>
                       </div>
                       {line.available ? (
                         <p className="font-medium" data-testid="line-total">
-                          {formatMoney(line.lineTotalAmount, currency)}
+                          {t.money(line.lineTotalAmount, currency)}
                         </p>
                       ) : null}
                     </div>
                     {line.outOfStock ? (
                       <Alert tone="error" testId="line-out-of-stock">
-                        This item has sold out since you added it. It is not included in the total.
+                        {t(
+                          "This item has sold out since you added it. It is not included in the total.",
+                        )}
                       </Alert>
                     ) : !line.available ? (
                       <Alert tone="error" testId="line-unavailable">
-                        This item is no longer available. It is not included in the total.
+                        {t("This item is no longer available. It is not included in the total.")}
                       </Alert>
                     ) : line.onlyLeft !== null ? (
                       <Alert tone="warning" testId="line-only-left">
-                        Only {line.onlyLeft} left. Lower the quantity to {line.onlyLeft} or fewer to
-                        buy this item.
+                        {t(
+                          "Only {count} left. Lower the quantity to {count} or fewer to buy this item.",
+                          { count: line.onlyLeft },
+                        )}
                       </Alert>
                     ) : line.priceWas !== null ? (
                       <Alert tone="info" testId="line-price-changed">
-                        The price changed from {formatMoney(line.priceWas, currency)} to{" "}
-                        {formatMoney(line.unitPriceAmount, currency)} since you added this.
+                        {t("The price changed from {was} to {now} since you added this.", {
+                          was: t.money(line.priceWas, currency),
+                          now: t.money(line.unitPriceAmount, currency),
+                        })}
                       </Alert>
                     ) : null}
                     <CartLineControls
@@ -103,7 +120,7 @@ export default async function CartPage() {
                       itemId={line.id}
                       quantity={line.quantity}
                       maxQuantity={MAX_LINE_QUANTITY}
-                      label={[line.productName, options].filter(Boolean).join(", ")}
+                      label={[nameOf(line), options].filter(Boolean).join(", ")}
                     />
                   </div>
                 </li>
@@ -116,26 +133,28 @@ export default async function CartPage() {
             className="flex h-fit flex-col gap-4 rounded-card border border-line p-5"
           >
             <h2 id="cart-summary" className="text-lg font-semibold">
-              Summary
+              {t("Summary")}
             </h2>
             <div className="flex items-baseline justify-between gap-4">
-              <span>Subtotal</span>
+              <span>{t("Subtotal")}</span>
               <span className="text-lg font-semibold" data-testid="cart-subtotal">
-                {formatMoney(cart.subtotalAmount, currency)}
+                {t.money(cart.subtotalAmount, currency)}
               </span>
             </div>
-            <p className="text-sm text-ink-muted">Shipping and taxes are worked out at checkout.</p>
+            <p className="text-sm text-ink-muted">
+              {t("Shipping and taxes are worked out at checkout.")}
+            </p>
             {cart.hasUnavailable || cart.lines.some((line) => line.onlyLeft !== null) ? (
               <p className="rounded-control bg-surface-muted px-3 py-2 text-sm text-ink-muted">
-                Remove or change the items marked above to check out.
+                {t("Remove or change the items marked above to check out.")}
               </p>
             ) : (
               <Link href="/checkout" className={buttonClasses()} data-testid="checkout-link">
-                Check out
+                {t("Check out")}
               </Link>
             )}
             <Link href="/products" className={buttonClasses("secondary")}>
-              Continue shopping
+              {t("Continue shopping")}
             </Link>
           </section>
         </div>

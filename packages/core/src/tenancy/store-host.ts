@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, isLocale, LOCALES, type Locale } from "@ecom/i18n";
 import { withTenant, type AppPrismaClient } from "@ecom/db";
 import { ASSET_SELECT, toStoredImage, type StoredImage } from "../media/assets";
 import { parseBranding, type StoreBranding } from "./branding";
@@ -64,7 +65,9 @@ export async function resolveStoreHost(
 
 export interface Storefront extends StoreHost {
   name: string;
-  defaultLocale: string;
+  defaultLocale: Locale;
+  /** Languages the shop is offered in, the default first. */
+  languages: Locale[];
   defaultCurrency: string;
   /** The store's own look and contact details (defaults when it has set none). */
   branding: StoreBranding;
@@ -75,6 +78,16 @@ export interface Storefront extends StoreHost {
  * The store for a storefront request, with what the shell needs to render.
  * Null when no active store answers to this host name.
  */
+/** The store's languages, the default first; English when the values are not known. */
+export function storeLanguages(
+  defaultLocale: string,
+  languages: readonly string[],
+): { defaultLocale: Locale; languages: Locale[] } {
+  const fallback = isLocale(defaultLocale) ? defaultLocale : DEFAULT_LOCALE;
+  const rest = LOCALES.filter((l) => l !== fallback && languages.includes(l));
+  return { defaultLocale: fallback, languages: [fallback, ...rest] };
+}
+
 export async function loadStorefront(
   prisma: AppPrismaClient,
   hostHeader: string | null | undefined,
@@ -87,6 +100,7 @@ export async function loadStorefront(
       select: {
         name: true,
         defaultLocale: true,
+        languages: true,
         defaultCurrency: true,
         branding: true,
         logo: { select: ASSET_SELECT },
@@ -97,7 +111,7 @@ export async function loadStorefront(
     ? {
         ...host,
         name: store.name,
-        defaultLocale: store.defaultLocale,
+        ...storeLanguages(store.defaultLocale, store.languages),
         defaultCurrency: store.defaultCurrency,
         branding: parseBranding(store.branding),
         logo: store.logo ? toStoredImage(store.logo) : null,

@@ -1,3 +1,4 @@
+import { isLocale } from "@ecom/i18n";
 import type { AppTransaction } from "@ecom/db";
 import type { TenantDb } from "../access/tenant-db";
 import { orderAccessKey, orderViewIn, type OrderView } from "../orders/orders";
@@ -113,6 +114,7 @@ async function render(
         name: true,
         email: true,
         customerId: true,
+        locale: true,
         messages: {
           where: payload.messageId ? { id: payload.messageId } : { authorType: "customer" },
           select: { authorName: true, body: true },
@@ -123,7 +125,11 @@ async function render(
     });
     const message = conversation?.messages[0];
     if (!conversation || !message) return null;
-    const data = { ...conversation, message };
+    const data = {
+      ...conversation,
+      message,
+      locale: isLocale(conversation.locale) ? conversation.locale : undefined,
+    };
     const link = conversation.customerId
       ? `${store.url}/account/messages/${conversation.id}`
       : `${store.url}/support/${conversation.id}?key=${supportAccessKey(options.accessSecret, conversation.id)}`;

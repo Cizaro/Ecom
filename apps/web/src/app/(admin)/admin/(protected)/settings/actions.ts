@@ -187,9 +187,13 @@ export async function updateStoreDetailsAction(
     tagline: field(formData, "tagline"),
     contactEmail: field(formData, "contactEmail"),
     contactPhone: field(formData, "contactPhone"),
+    arabic: formData.get("arabic") === "on" ? "on" : "",
   };
   return attempt(async () => {
-    await updateStoreDetails(tenantDb(context), context, values);
+    await updateStoreDetails(tenantDb(context), context, {
+      ...values,
+      arabic: values.arabic === "on",
+    });
     refreshStore();
     return { notice: "Store details saved." };
   }, values);
@@ -244,6 +248,7 @@ export async function saveStorePageAction(
 ): Promise<FormState> {
   const { context } = await requirePermission("settings.write");
   const slug = field(formData, "slug");
+  const locale = field(formData, "locale") || "en";
   const publish = formData.get("publish") === "on";
   const values = {
     title: field(formData, "title"),
@@ -251,7 +256,7 @@ export async function saveStorePageAction(
     publish: publish ? "on" : "",
   };
   return attempt(async () => {
-    await saveStorePage(tenantDb(context), context, slug, { ...values, publish });
+    await saveStorePage(tenantDb(context), context, slug, { ...values, publish, locale });
     revalidatePath("/admin/settings/pages");
     revalidatePath(`/policies/${slug}`);
     revalidatePath("/", "layout");

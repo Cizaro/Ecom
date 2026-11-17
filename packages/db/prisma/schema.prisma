@@ -62,6 +62,8 @@ model Tenant {
   productAttributes       ProductAttribute[]
   mediaAssets             MediaAsset[]
   productImages           ProductImage[]
+  productTranslations     ProductTranslation[]
+  categoryTranslations    CategoryTranslation[]
   carts                   Cart[]
   cartItems               CartItem[]
   customers               Customer[]
@@ -105,6 +107,8 @@ model Store {
   name            String
   slug            String
   defaultLocale   String   @default("en") @map("default_locale")
+  /// Languages the shop is offered in; shoppers can switch between them.
+  languages       String[] @default(["en"])
   defaultCurrency String   @default("USD") @map("default_currency") @db.Char(3)
   timezone        String   @default("UTC")
   branding        Json     @default("{}")
@@ -545,6 +549,8 @@ model Category {
   children Category[]  @relation("CategoryTree")
   products Product[]
 
+  translations CategoryTranslation[]
+
   @@unique([tenantId, slug])
   @@index([tenantId, parentId, position])
   @@map("categories")
@@ -605,12 +611,13 @@ model Product {
   createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  brand      Brand?             @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  category   Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  variants   ProductVariant[]
-  attributes ProductAttribute[]
-  images     ProductImage[]
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  brand        Brand?               @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  category     Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants     ProductVariant[]
+  attributes   ProductAttribute[]
+  images       ProductImage[]
+  translations ProductTranslation[]
 
   importImages ProductImportImage[]
 
@@ -757,6 +764,47 @@ model MediaAsset {
 }
 
 /// A product's picture. The lowest position is the main image.
+/// A product's name and descriptions in a language other than the store's
+/// default. Shown in the shop when a shopper picks that language; anything
+/// left empty shows the default wording.
+model ProductTranslation {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  productId        String   @map("product_id") @db.Uuid
+  locale           String
+  name             String   @default("")
+  shortDescription String   @default("") @map("short_description")
+  description      String   @default("")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locale])
+  @@index([tenantId, locale])
+  @@map("product_translations")
+}
+
+/// A category's name and description in another language (see ProductTranslation).
+model CategoryTranslation {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  categoryId  String   @map("category_id") @db.Uuid
+  locale      String
+  name        String   @default("")
+  description String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@index([tenantId])
+  @@map("category_translations")
+}
+
 model ProductImage {
   id           String   @id @default(uuid(7)) @db.Uuid
   tenantId     String   @map("tenant_id") @db.Uuid
@@ -1143,6 +1191,8 @@ model Order {
   /// SHA-256 of the key in the confirmation link (the only way a guest can view the order).
   accessKeyHash      String        @unique @map("access_key_hash")
   currency           String        @db.Char(3)
+  /// The shop language the order was placed in; its emails use it.
+  locale             String        @default("en")
   subtotalAmount     Int           @map("subtotal_amount")
   shippingAmount     Int           @default(0) @map("shipping_amount")
   taxAmount          Int           @default(0) @map("tax_amount")
@@ -1271,6 +1321,8 @@ model SupportConversation {
   email          String
   name           String
   subject        String
+  /// The shop language the shopper wrote in; emails to them use it.
+  locale         String   @default("en")
   /// open (store to answer), waiting (customer to answer) or closed.
   status         String   @default("open")
   orderId        String?  @map("order_id") @db.Uuid
@@ -1576,6 +1628,8 @@ model StorePage {
   tenantId        String    @map("tenant_id") @db.Uuid
   /// returns, delivery, privacy or terms.
   slug            String
+  /// One page per language the shop is offered in.
+  locale          String    @default("en")
   title           String
   body            String    @default("")
   published       Boolean   @default(false)
@@ -1586,7 +1640,7 @@ model StorePage {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, slug])
+  @@unique([tenantId, slug, locale])
   @@map("store_pages")
 }
 

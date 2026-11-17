@@ -5,6 +5,7 @@ import {
   listApprovedUgc,
   listProductReviews,
   listRelatedProducts,
+  localizeProduct,
   reviewEligibility,
   selectVariant,
   type StockStatus,
@@ -14,6 +15,7 @@ import {
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { getCurrentCustomer } from "@/server/customer";
+import { shopT } from "@/server/i18n";
 import { viewOf } from "@/server/media";
 import { parseRecent, RECENT_COOKIE } from "@/server/recently-viewed";
 import { publicOrNotFound, storefrontDb, storefrontOrigin } from "@/server/storefront";
@@ -40,14 +42,15 @@ import { addToCartAction } from "../../cart/actions";
 type Params = Record<string, string | string[] | undefined>;
 
 /** What a shopper is told about stock. Nothing for items whose stock is not counted. */
-function StockNote({ status }: { status: StockStatus }) {
+async function StockNote({ status }: { status: StockStatus }) {
   if (status === "untracked" || status === "out_of_stock") return null;
+  const t = await shopT();
   return (
     <p className="text-sm font-medium" data-testid="stock-note">
       {status === "low" ? (
-        <span className="text-warning-ink">Only a few left</span>
+        <span className="text-warning-ink">{t("Only a few left")}</span>
       ) : (
-        <span className="text-success-ink">In stock</span>
+        <span className="text-success-ink">{t("In stock")}</span>
       )}
     </p>
   );
@@ -71,11 +74,22 @@ function variantPath(product: PublicProduct, variant: PublicVariant): string {
   return text ? `${path}?${text}` : path;
 }
 
+/** The product in the shopper's language, and its own (default-language) record. */
+async function loadProduct(slug: string): Promise<{ raw: PublicProduct; shown: PublicProduct }> {
+  const [{ db }, t] = await Promise.all([storefrontDb(), shopT()]);
+  const raw = await publicOrNotFound(getPublicProduct(db, slug));
+  return { raw, shown: await localizeProduct(db, t.locale, raw) };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { db } = await storefrontDb();
-  const product = await publicOrNotFound(getPublicProduct(db, (await params).slug));
-  const title = product.seoTitle ?? product.name;
-  const description = product.seoDescription ?? (product.shortDescription || undefined);
+  const { raw, shown: product } = await loadProduct((await params).slug);
+  // The search-engine wording is written in the default language: a
+  // translated name or summary takes its place.
+  const title = product.name !== raw.name ? product.name : (raw.seoTitle ?? raw.name);
+  const description =
+    product.shortDescription !== raw.shortDescription
+      ? product.shortDescription
+      : (raw.seoDescription ?? (raw.shortDescription || undefined));
   const image = product.images[0] ? viewOf(product.images[0].image).url : undefined;
   return {
     title,
@@ -93,9 +107,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params, searchParams }: Props) {
-  const { db } = await storefrontDb();
+  const [{ db }, t] = await Promise.all([storefrontDb(), shopT()]);
   const [{ slug }, query] = await Promise.all([params, searchParams]);
-  const product = await publicOrNotFound(getPublicProduct(db, slug));
+  const { shown: product } = await loadProduct(slug);
 
   const selection = selectVariant(product.variants, {
     color: first(query.color),
@@ -134,11 +148,11 @@ export default async function ProductPage({ params, searchParams }: Props) {
   ]);
 
   const details = [
-    ...(product.material ? [{ key: "Material", value: product.material }] : []),
+    ...(product.material ? [{ key: t("Material"), value: product.material }] : []),
     ...product.attributes,
   ];
   const trail = [
-    { name: "Home", href: "/" },
+    { name: t("Home"), href: "/" },
     ...(product.category
       ? [{ name: product.category.name, href: `/c/${product.category.slug}` }]
       : []),
@@ -192,7 +206,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
               aria-hidden="true"
               className="flex aspect-[4/5] items-center justify-center rounded-card bg-surface-muted text-sm text-ink-subtle"
             >
-              No photo yet
+              {t("No photo yet")}
             </div>
           )}
 
@@ -238,18 +252,18 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 data-testid="sold-out"
               >
                 {selection.colors.length > 1 || selection.sizes.length > 1
-                  ? "This choice is sold out. Another colour or size may be available."
-                  : "Sold out for now."}
+                  ? t("This choice is sold out. Another colour or size may be available.")
+                  : t("Sold out for now.")}
               </p>
             )}
             <p className="text-sm text-ink-muted" data-testid="sku">
-              SKU: {variant.sku}
+              {t("SKU: {sku}", { sku: variant.sku })}
             </p>
             <ShareButton title={product.name} />
 
             {product.description ? (
               <div className="border-t border-line pt-5">
-                <h2 className="font-medium">Description</h2>
+                <h2 className="font-medium">{t("Description")}</h2>
                 <p className="mt-2 max-w-prose whitespace-pre-line text-ink-muted">
                   {product.description}
                 </p>
@@ -257,7 +271,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             ) : null}
             {details.length > 0 ? (
               <div className="border-t border-line pt-5">
-                <h2 className="font-medium">Details</h2>
+                <h2 className="font-medium">{t("Details")}</h2>
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
                   {details.map((detail) => (
                     <div key={detail.key} className="contents">
@@ -270,7 +284,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             ) : null}
             {product.careInfo ? (
               <div className="border-t border-line pt-5">
-                <h2 className="font-medium">Care</h2>
+                <h2 className="font-medium">{t("Care")}</h2>
                 <p className="mt-2 text-sm whitespace-pre-line text-ink-muted">
                   {product.careInfo}
                 </p>
@@ -301,14 +315,14 @@ export default async function ProductPage({ params, searchParams }: Props) {
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="customer-photos" className="text-xl font-semibold">
-              Customer photos
+              {t("Customer photos")}
             </h2>
             {eligibility.state === "reviewed" || eligibility.state === "can_review" ? (
               <a
                 href={`/account/photos?product=${product.id}`}
                 className="text-sm underline underline-offset-4"
               >
-                Share your photo
+                {t("Share your photo")}
               </a>
             ) : null}
           </div>
@@ -325,7 +339,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
           data-testid="related-products"
         >
           <h2 id="related" className="text-xl font-semibold tracking-tight">
-            More from {product.category.name}
+            {t("More from {category}", { category: product.category.name })}
           </h2>
           <ProductGrid products={related} />
         </section>
@@ -338,7 +352,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
           data-testid="recently-viewed"
         >
           <h2 id="recent" className="text-xl font-semibold tracking-tight">
-            Recently viewed
+            {t("Recently viewed")}
           </h2>
           <ProductGrid products={recent.slice(0, 4)} />
         </section>

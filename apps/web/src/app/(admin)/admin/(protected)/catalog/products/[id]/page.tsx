@@ -2,6 +2,7 @@ import {
   formatMoney,
   getAvailability,
   getProduct,
+  getProductTranslation,
   hasPermission,
   listBrands,
   listCategories,
@@ -30,7 +31,11 @@ import {
   TextField,
 } from "../../../../_components/form";
 import { ProductImages } from "../../_components/product-images";
-import { setProductStatusAction, updateProductAction } from "../../actions";
+import {
+  saveProductTranslationAction,
+  setProductStatusAction,
+  updateProductAction,
+} from "../../actions";
 
 export const metadata: Metadata = { title: "Product" };
 
@@ -69,7 +74,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const db = tenantDb(context);
   const product = await orNotFound(getProduct(db, context, id));
   const canSeeStock = hasPermission(context, "inventory.read");
-  const [categories, brands, images, stock] = await Promise.all([
+  const [categories, brands, images, stock, arabic] = await Promise.all([
     listCategories(db, context),
     listBrands(db, context),
     listProductImages(db, context, id),
@@ -79,6 +84,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           product.variants.map((variant) => variant.id),
         )
       : new Map(),
+    getProductTranslation(db, context, id, "ar"),
   ]);
   const canWrite = hasPermission(context, "catalog.write");
 
@@ -313,6 +319,40 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             maxLength={500}
             defaultValue={product.seoDescription ?? ""}
           />
+        </ActionForm>
+      </Card>
+
+      <Card
+        title="Arabic"
+        description="Shown to shoppers who switch the shop to Arabic. Anything left empty shows the English."
+      >
+        <ActionForm
+          action={saveProductTranslationAction}
+          submitLabel="Save Arabic"
+          testId="product-arabic-form"
+        >
+          <input type="hidden" name="id" value={product.id} />
+          <div dir="rtl" lang="ar" className="flex flex-col gap-4">
+            <TextField
+              label="الاسم (Name)"
+              name="nameAr"
+              maxLength={200}
+              defaultValue={arabic.name}
+            />
+            <TextAreaField
+              label="وصف قصير (Short description)"
+              name="shortDescriptionAr"
+              rows={2}
+              maxLength={500}
+              defaultValue={arabic.shortDescription}
+            />
+            <TextAreaField
+              label="الوصف (Description)"
+              name="descriptionAr"
+              rows={6}
+              defaultValue={arabic.description}
+            />
+          </div>
         </ActionForm>
       </Card>
     </div>

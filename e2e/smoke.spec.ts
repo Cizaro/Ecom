@@ -59,10 +59,12 @@ for (const path of ["/", "/admin/sign-in", "/admin/forgot-password"]) {
     const response = await page.goto(path);
     const nonce = /'nonce-([^']+)'/.exec(response!.headers()["content-security-policy"]!)![1];
 
-    // Every script Next.js rendered carries this response's nonce...
-    const scripts = await page
-      .locator("script")
-      .evaluateAll((elements) => elements.map((element) => (element as HTMLScriptElement).nonce));
+    // Every script the server rendered carries this response's nonce. (Code
+    // chunks Next.js's own runtime loads later need none: 'strict-dynamic'
+    // trusts scripts added by trusted scripts, and nothing else.)
+    const scripts = [...(await response!.text()).matchAll(/<script\b[^>]*>/g)].map(
+      ([tag]) => /\snonce="([^"]*)"/.exec(tag)?.[1] ?? "",
+    );
     expect(scripts.length).toBeGreaterThan(0);
     for (const scriptNonce of scripts) expect(scriptNonce).toBe(nonce);
 

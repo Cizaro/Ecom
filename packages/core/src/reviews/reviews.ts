@@ -1,3 +1,4 @@
+import { msg } from "@ecom/i18n";
 import type { AppTransaction } from "@ecom/db";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
@@ -22,10 +23,10 @@ export const REPORT_REASONS = ["spam", "offensive", "not_about_product", "other"
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
 export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
-  spam: "Spam or advertising",
-  offensive: "Offensive or abusive",
-  not_about_product: "Not about this product",
-  other: "Something else",
+  spam: msg("Spam or advertising"),
+  offensive: msg("Offensive or abusive"),
+  not_about_product: msg("Not about this product"),
+  other: msg("Something else"),
 };
 
 export const REVIEWS_PAGE_SIZE = 10;

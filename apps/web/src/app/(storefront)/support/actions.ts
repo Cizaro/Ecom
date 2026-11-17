@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { tooManyCartChanges } from "@/server/cart";
 import { getCurrentCustomer } from "@/server/customer";
+import { shopLocale } from "@/server/i18n";
 import { sendWaitingEmails } from "@/server/notifications";
 import { storefrontDb } from "@/server/storefront";
 import type { AccountFormState } from "../account/actions";
@@ -43,6 +44,7 @@ export async function startConversationAction(
       customer: customer ? { id: customer.id, email: customer.email, name: customer.name } : null,
       ...values,
       accessSecret: getEnv().ENCRYPTION_KEY,
+      locale: await shopLocale(),
     });
     next = customer
       ? `/account/messages/${started.id}?sent=1`

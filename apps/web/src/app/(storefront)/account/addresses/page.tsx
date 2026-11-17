@@ -6,12 +6,17 @@ import { requireCustomer } from "@/server/customer";
 import { storefrontDb } from "@/server/storefront";
 import { ButtonForm } from "../../_components/account-form";
 import { deleteAddressAction, setDefaultAddressAction } from "../actions";
+import { shopT } from "@/server/i18n";
 
-export const metadata: Metadata = { title: "Your addresses" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await shopT();
+  return { title: t("Your addresses") };
+}
 
 type Params = Record<string, string | string[] | undefined>;
 
 export default async function AddressesPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const t = await shopT();
   const customer = await requireCustomer("/account/addresses");
   const { db } = await storefrontDb();
   const [addresses, params] = await Promise.all([listAddresses(db, customer.id), searchParams]);
@@ -20,19 +25,21 @@ export default async function AddressesPage({ searchParams }: { searchParams: Pr
     <>
       <div>
         <Link href="/account" className="text-sm underline underline-offset-4">
-          Back to your account
+          {t("Back to your account")}
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Your addresses</h1>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          {t("Your addresses")}
+        </h1>
       </div>
       {params.saved ? (
         <Alert tone="success" testId="account-notice">
-          Address saved.
+          {t("Address saved.")}
         </Alert>
       ) : null}
 
       {addresses.length === 0 ? (
-        <EmptyState title="No saved addresses yet">
-          Save one now to check out faster later.
+        <EmptyState title={t("No saved addresses yet")}>
+          {t("Save one now to check out faster later.")}
         </EmptyState>
       ) : (
         <ul className="flex flex-col gap-4" data-testid="address-list">
@@ -43,8 +50,12 @@ export default async function AddressesPage({ searchParams }: { searchParams: Pr
               data-testid="address"
             >
               <div className="flex flex-wrap gap-2">
-                {address.isDefaultShipping ? <Badge tone="success">Default delivery</Badge> : null}
-                {address.isDefaultBilling ? <Badge tone="neutral">Default billing</Badge> : null}
+                {address.isDefaultShipping ? (
+                  <Badge tone="success">{t("Default delivery")}</Badge>
+                ) : null}
+                {address.isDefaultBilling ? (
+                  <Badge tone="neutral">{t("Default billing")}</Badge>
+                ) : null}
               </div>
               <address className="text-sm not-italic">
                 {formatAddress(address).map((line) => (
@@ -58,25 +69,26 @@ export default async function AddressesPage({ searchParams }: { searchParams: Pr
                   href={`/account/addresses/${address.id}`}
                   className={buttonClasses("secondary")}
                 >
-                  Edit<span className="sr-only"> {address.line1}</span>
+                  {t("Edit")}
+                  <span className="sr-only"> {address.line1}</span>
                 </Link>
                 {!address.isDefaultShipping ? (
                   <ButtonForm
                     action={setDefaultAddressAction}
-                    label="Use for delivery"
+                    label={t("Use for delivery")}
                     fields={{ id: address.id, use: "shipping" }}
                   />
                 ) : null}
                 {!address.isDefaultBilling ? (
                   <ButtonForm
                     action={setDefaultAddressAction}
-                    label="Use for billing"
+                    label={t("Use for billing")}
                     fields={{ id: address.id, use: "billing" }}
                   />
                 ) : null}
                 <ButtonForm
                   action={deleteAddressAction}
-                  label="Remove"
+                  label={t("Remove")}
                   fields={{ id: address.id }}
                 />
               </div>
@@ -88,12 +100,14 @@ export default async function AddressesPage({ searchParams }: { searchParams: Pr
       {addresses.length < MAX_ADDRESSES ? (
         <div>
           <Link href="/account/addresses/new" className={buttonClasses()}>
-            Add an address
+            {t("Add an address")}
           </Link>
         </div>
       ) : (
         <p className="text-sm text-ink-muted">
-          You have saved the most addresses allowed ({MAX_ADDRESSES}). Remove one to add another.
+          {t("You have saved the most addresses allowed ({count}). Remove one to add another.", {
+            count: MAX_ADDRESSES,
+          })}
         </p>
       )}
     </>

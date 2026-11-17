@@ -1,7 +1,7 @@
 import "server-only";
 
+import type { Translator } from "@ecom/i18n";
 import {
-  formatMoney,
   orderAmountLines,
   priceOrder,
   type AppliedDiscount,
@@ -22,18 +22,22 @@ function pricedRows(
   tax: TaxSettings,
   hasZones: boolean,
   discount: AppliedDiscount | null,
+  t: Translator,
 ): PricedRows {
   const pricing = priceOrder(subtotal, zone, tax, discount);
-  const rows = orderAmountLines({
-    ...pricing,
-    currency,
-    shippingZoneName: zone?.name ?? null,
-    taxRateBasisPoints: tax.rateBasisPoints,
-    taxLabel: tax.label,
-    discountCode: discount?.code ?? null,
-  });
-  if (hasZones && !zone) rows.splice(1, 0, ["Delivery", "Choose your area"]);
-  return { rows, total: formatMoney(pricing.totalAmount, currency) };
+  const rows = orderAmountLines(
+    {
+      ...pricing,
+      currency,
+      shippingZoneName: zone?.name ?? null,
+      taxRateBasisPoints: tax.rateBasisPoints,
+      taxLabel: tax.label,
+      discountCode: discount?.code ?? null,
+    },
+    t,
+  );
+  if (hasZones && !zone) rows.splice(1, 0, [t("Delivery"), t("Choose your area")]);
+  return { rows, total: t.money(pricing.totalAmount, currency) };
 }
 
 export interface SummaryPricing {
@@ -46,6 +50,8 @@ export function summaryPricing(
   currency: string,
   options: CheckoutOptions,
   discount: AppliedDiscount | null,
+  /** Labels and amounts in the shopper's language. */
+  t: Translator,
 ): SummaryPricing {
   const zones = options.zones.filter((zone) => zone.currency === currency);
   const hasZones = options.zones.length > 0;
@@ -53,9 +59,9 @@ export function summaryPricing(
     byZone: Object.fromEntries(
       zones.map((zone) => [
         zone.id,
-        pricedRows(subtotal, currency, zone, options.tax, true, discount),
+        pricedRows(subtotal, currency, zone, options.tax, true, discount, t),
       ]),
     ),
-    fallback: pricedRows(subtotal, currency, null, options.tax, hasZones, discount),
+    fallback: pricedRows(subtotal, currency, null, options.tax, hasZones, discount, t),
   };
 }

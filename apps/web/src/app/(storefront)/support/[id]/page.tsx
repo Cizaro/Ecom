@@ -1,14 +1,18 @@
 import { getConversationForShopper, NotFoundError } from "@ecom/core";
 import type { Metadata } from "next";
+import { shopT } from "@/server/i18n";
 import { notFound } from "next/navigation";
 import { storefrontDb } from "@/server/storefront";
 import { ConversationThread } from "../../_components/conversation-thread";
 
-export const metadata: Metadata = {
-  title: "Your message",
-  robots: { index: false, follow: false },
-  referrer: "no-referrer",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await shopT();
+  return {
+    title: t("Your message"),
+    robots: { index: false, follow: false },
+    referrer: "no-referrer",
+  };
+}
 
 // A guest's conversation, opened with the private link from their email.
 export default async function GuestConversationPage({

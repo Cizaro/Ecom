@@ -2,6 +2,7 @@
 
 import type { ImageView } from "@ecom/core";
 import { useRef, useState, type MouseEvent } from "react";
+import { useT } from "@/components/i18n";
 import { MediaImage } from "@/components/media-image";
 
 export interface GalleryPicture {
@@ -19,6 +20,7 @@ export interface GalleryPicture {
  * links to each picture.
  */
 export function ProductGallery({ pictures }: { pictures: readonly GalleryPicture[] }) {
+  const t = useT();
   const strip = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const count = pictures.length;
@@ -28,7 +30,12 @@ export function ProductGallery({ pictures }: { pictures: readonly GalleryPicture
     if (!element) return;
     event.preventDefault();
     const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    element.scrollTo({ left: index * element.clientWidth, behavior: smooth ? "smooth" : "auto" });
+    // Right to left (Arabic), the strip scrolls the other way: positions are negative.
+    const sign = getComputedStyle(element).direction === "rtl" ? -1 : 1;
+    element.scrollTo({
+      left: sign * index * element.clientWidth,
+      behavior: smooth ? "smooth" : "auto",
+    });
     setActive(index);
   }
 
@@ -40,11 +47,11 @@ export function ProductGallery({ pictures }: { pictures: readonly GalleryPicture
         tabIndex={count > 1 ? 0 : undefined}
         role="group"
         aria-roledescription="carousel"
-        aria-label="Product pictures"
+        aria-label={t("Product pictures")}
         onScroll={(event) => {
           const element = event.currentTarget;
           if (element.clientWidth > 0) {
-            setActive(Math.round(element.scrollLeft / element.clientWidth));
+            setActive(Math.round(Math.abs(element.scrollLeft) / element.clientWidth));
           }
         }}
         className="flex snap-x snap-mandatory overflow-x-auto rounded-card bg-surface-muted [scrollbar-width:none]"
@@ -55,7 +62,7 @@ export function ProductGallery({ pictures }: { pictures: readonly GalleryPicture
             id={`picture-${index + 1}`}
             role="group"
             aria-roledescription="slide"
-            aria-label={`${index + 1} of ${count}`}
+            aria-label={t("{number} of {count}", { number: index + 1, count })}
             className="aspect-[4/5] w-full shrink-0 snap-center"
             data-testid="gallery-slide"
           >
@@ -72,13 +79,13 @@ export function ProductGallery({ pictures }: { pictures: readonly GalleryPicture
 
       {count > 1 ? (
         <>
-          <ul className="flex flex-wrap gap-2" aria-label="Choose a picture">
+          <ul className="flex flex-wrap gap-2" aria-label={t("Choose a picture")}>
             {pictures.map((picture, index) => (
               <li key={picture.id}>
                 <a
                   href={`#picture-${index + 1}`}
                   onClick={(event) => show(event, index)}
-                  aria-label={`Show picture ${index + 1} of ${count}`}
+                  aria-label={t("Show picture {number} of {count}", { number: index + 1, count })}
                   aria-current={index === active ? "true" : undefined}
                   data-testid="gallery-thumbnail"
                   className="block size-16 overflow-hidden rounded-control border-2 border-transparent aria-[current=true]:border-brand"
@@ -89,7 +96,7 @@ export function ProductGallery({ pictures }: { pictures: readonly GalleryPicture
             ))}
           </ul>
           <p className="sr-only" role="status" data-testid="gallery-position">
-            Picture {active + 1} of {count}
+            {t("Picture {number} of {count}", { number: active + 1, count })}
           </p>
         </>
       ) : null}

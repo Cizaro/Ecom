@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { buttonClasses } from "@ecom/ui";
+import { useT } from "@/components/i18n";
 import { AccountField } from "../_components/account-form";
 import { previewDiscountAction } from "./actions";
 import { PRICING_EVENT } from "./checkout-amounts";
@@ -13,6 +14,7 @@ import { PRICING_EVENT } from "./checkout-amounts";
  * the order is placed.
  */
 export function DiscountField() {
+  const t = useT();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -32,7 +34,12 @@ export function DiscountField() {
     <div className="flex flex-col gap-2">
       <div className="flex items-end gap-3">
         <div className="flex-1">
-          <AccountField label="Code" name="discountCode" autoComplete="off" hint="Optional" />
+          <AccountField
+            label={t("Code")}
+            name="discountCode"
+            autoComplete="off"
+            hint={t("Optional")}
+          />
         </div>
         <button
           type="button"
@@ -41,7 +48,7 @@ export function DiscountField() {
           className={buttonClasses("secondary")}
           data-testid="apply-discount"
         >
-          {pending ? "Checking…" : "Apply"}
+          {pending ? t("Checking…") : t("Apply")}
         </button>
       </div>
       {message ? (

@@ -1,3 +1,4 @@
+import { createTranslator, DEFAULT_LOCALE, type Locale } from "@ecom/i18n";
 import { createHash, randomBytes } from "node:crypto";
 import type { AppTransaction } from "@ecom/db";
 import { assertPermission, type RequestContext } from "../access/context";
@@ -58,6 +59,8 @@ export interface CustomerDeps {
   /** The store's own address, for links in emails. Never taken from user input. */
   storeUrl: string;
   storeName: string;
+  /** The shop language the shopper is using; emails to them are written in it. */
+  locale?: Locale;
 }
 
 export interface CustomerRequest {
@@ -199,21 +202,27 @@ async function useToken(
   return { customerId: row.customerId };
 }
 
+const translatorFor = (deps: CustomerDeps) => createTranslator(deps.locale ?? DEFAULT_LOCALE);
+
 const emailBody = (deps: CustomerDeps, lines: string[]) =>
   [...lines, "", `${deps.storeName}`, deps.storeUrl].join("\n");
 
 async function sendVerification(deps: CustomerDeps, email: string, token: string) {
+  const t = translatorFor(deps);
+  const store = deps.storeName;
   await deps.email.send({
     to: email,
-    subject: `Confirm your email address for ${deps.storeName}`,
+    subject: t("Confirm your email address for {store}", { store }),
     text: emailBody(deps, [
-      `Someone, hopefully you, created an account at ${deps.storeName} with this email address.`,
+      t("Someone, hopefully you, created an account at {store} with this email address.", {
+        store,
+      }),
       "",
-      "Open this link to confirm the address and finish creating the account:",
+      t("Open this link to confirm the address and finish creating the account:"),
       `${deps.storeUrl}/account/verify?token=${token}`,
       "",
-      `The link works once and for ${VERIFY_HOURS} hours.`,
-      "If you did not create this account, ignore this email and nothing will happen.",
+      t("The link works once and for {hours} hours.", { hours: VERIFY_HOURS }),
+      t("If you did not create this account, ignore this email and nothing will happen."),
     ]),
   });
 }
@@ -303,16 +312,21 @@ export async function signUp(
   if (outcome.kind === "created") {
     await sendVerification(deps, email, outcome.token);
   } else if (outcome.kind === "exists") {
+    const t = translatorFor(deps);
+    const store = deps.storeName;
     await deps.email.send({
       to: email,
-      subject: `You already have an account at ${deps.storeName}`,
+      subject: t("You already have an account at {store}", { store }),
       text: emailBody(deps, [
-        `Someone, hopefully you, tried to create an account at ${deps.storeName} with this email address, but it already has one.`,
+        t(
+          "Someone, hopefully you, tried to create an account at {store} with this email address, but it already has one.",
+          { store },
+        ),
         "",
-        `Sign in here: ${deps.storeUrl}/account/sign-in`,
-        `Forgotten the password? ${deps.storeUrl}/account/forgot-password`,
+        t("Sign in here: {url}", { url: `${deps.storeUrl}/account/sign-in` }),
+        t("Forgotten the password? {url}", { url: `${deps.storeUrl}/account/forgot-password` }),
         "",
-        "If this was not you, you can ignore this email. Your account has not been changed.",
+        t("If this was not you, you can ignore this email. Your account has not been changed."),
       ]),
     });
   }
@@ -482,17 +496,21 @@ export async function requestPasswordReset(
     return issueToken(tx, db.tenantId, customer.id, "reset_password");
   });
   if (!token) return;
+  const t = translatorFor(deps);
+  const store = deps.storeName;
   await deps.email.send({
     to: email,
-    subject: `Choose a new password for ${deps.storeName}`,
+    subject: t("Choose a new password for {store}", { store }),
     text: emailBody(deps, [
-      `Someone, hopefully you, asked to choose a new password for your account at ${deps.storeName}.`,
+      t("Someone, hopefully you, asked to choose a new password for your account at {store}.", {
+        store,
+      }),
       "",
-      "Open this link to choose one:",
+      t("Open this link to choose one:"),
       `${deps.storeUrl}/account/reset-password?token=${token}`,
       "",
-      `The link works once and for ${RESET_MINUTES} minutes.`,
-      "If this was not you, ignore this email. Your password has not been changed.",
+      t("The link works once and for {minutes} minutes.", { minutes: RESET_MINUTES }),
+      t("If this was not you, ignore this email. Your password has not been changed."),
     ]),
   });
 }

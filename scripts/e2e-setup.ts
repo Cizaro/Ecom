@@ -64,6 +64,11 @@ try {
     where: { slug: E2E_TENANT_SLUG },
     include: { stores: { take: 1, orderBy: { createdAt: "asc" } } },
   });
+  // The main test store is offered in Arabic too (the language switch).
+  await prisma.store.update({
+    where: { id: mainTenant.stores[0]!.id },
+    data: { languages: ["en", "ar"] },
+  });
   await prisma.storeDomain.deleteMany({ where: { hostname: "localhost" } });
   await prisma.storeDomain.create({
     data: {

@@ -1,4 +1,4 @@
-import { getCategory, getCategoryImage, listCategories } from "@ecom/core";
+import { getCategory, getCategoryImage, getCategoryTranslation, listCategories } from "@ecom/core";
 import { Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import { SingleImage } from "../../_components/single-image";
 import {
   deleteCategoryAction,
   removeCategoryImageAction,
+  saveCategoryTranslationAction,
   setCategoryImageAction,
   updateCategoryAction,
 } from "../../actions";
@@ -26,9 +27,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const db = tenantDb(context);
   const category = await orNotFound(getCategory(db, context, id));
-  const [categories, image] = await Promise.all([
+  const [categories, image, arabic] = await Promise.all([
     listCategories(db, context),
     getCategoryImage(db, context, id),
+    getCategoryTranslation(db, context, id, "ar"),
   ]);
 
   return (
@@ -92,6 +94,32 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
             maxLength={500}
             defaultValue={category.seoDescription ?? ""}
           />
+        </ActionForm>
+      </Card>
+      <Card
+        title="Arabic"
+        description="Shown to shoppers who switch the shop to Arabic. Anything left empty shows the English."
+      >
+        <ActionForm
+          action={saveCategoryTranslationAction}
+          submitLabel="Save Arabic"
+          testId="category-arabic-form"
+        >
+          <input type="hidden" name="id" value={category.id} />
+          <div dir="rtl" lang="ar" className="flex flex-col gap-4">
+            <TextField
+              label="الاسم (Name)"
+              name="nameAr"
+              maxLength={100}
+              defaultValue={arabic.name}
+            />
+            <TextAreaField
+              label="الوصف (Description)"
+              name="descriptionAr"
+              rows={3}
+              defaultValue={arabic.description}
+            />
+          </div>
         </ActionForm>
       </Card>
       <SingleImage

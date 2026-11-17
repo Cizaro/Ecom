@@ -17,11 +17,13 @@ import {
   type ReactNode,
 } from "react";
 import { useFormStatus } from "react-dom";
+import { useT } from "@/components/i18n";
 import type { AccountFormState } from "../account/actions";
 
 // Forms for the shopper's account pages: pending state, messages from the
 // server action, and keeping what was typed after a refused submit
-// (passwords are never sent back).
+// (passwords are never sent back). Messages from the server are shown in the
+// shopper's language (t.message leaves text that is already translated as it is).
 
 type AccountAction = (previous: AccountFormState, formData: FormData) => Promise<AccountFormState>;
 
@@ -35,9 +37,10 @@ export function SubmitButton({
   tone?: "primary" | "secondary" | "danger";
 }) {
   const { pending } = useFormStatus();
+  const t = useT();
   return (
     <button type="submit" disabled={pending} aria-busy={pending} className={buttonClasses(tone)}>
-      {pending ? "Please wait…" : children}
+      {pending ? t("Please wait…") : children}
     </button>
   );
 }
@@ -56,17 +59,18 @@ export function AccountForm({
   testId?: string;
 }) {
   const [state, formAction] = useActionState(action, {});
+  const t = useT();
   return (
     <StateContext.Provider value={state}>
       <form action={formAction} className="flex flex-col gap-4" noValidate data-testid={testId}>
         {state.error ? (
           <Alert tone="error" testId="account-error">
-            {state.error}
+            {t.message(state.error)}
           </Alert>
         ) : null}
         {state.notice ? (
           <Alert tone="success" testId="account-notice">
-            {state.notice}
+            {t.message(state.notice)}
           </Alert>
         ) : null}
         {children}
@@ -149,6 +153,7 @@ export function ButtonForm({
   tone?: "primary" | "secondary" | "danger";
 }) {
   const [state, formAction] = useActionState(action, {});
+  const t = useT();
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
       {Object.entries(fields ?? {}).map(([name, value]) => (
@@ -157,7 +162,7 @@ export function ButtonForm({
       <SubmitButton tone={tone}>{label}</SubmitButton>
       {state.error ? (
         <Alert tone="error" testId="account-error">
-          {state.error}
+          {t.message(state.error)}
         </Alert>
       ) : null}
     </form>

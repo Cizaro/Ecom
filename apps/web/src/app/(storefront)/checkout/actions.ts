@@ -22,6 +22,7 @@ import { tooManyCartChanges } from "@/server/cart";
 import { cartOwner, getCurrentCustomer, safeReturnPath } from "@/server/customer";
 import { deliverPaymentNotification, getMockProvider, getPaymentProvider } from "@/server/payments";
 import { sendWaitingEmails } from "@/server/notifications";
+import { shopT } from "@/server/i18n";
 import { storefrontDb } from "@/server/storefront";
 import { summaryPricing, type SummaryPricing } from "@/server/checkout-pricing";
 import type { AccountFormState } from "../account/actions";
@@ -59,7 +60,7 @@ export async function placeOrderAction(
   _previous: AccountFormState,
   formData: FormData,
 ): Promise<AccountFormState> {
-  const { store, db } = await storefrontDb();
+  const [{ store, db }, t] = await Promise.all([storefrontDb(), shopT()]);
   const values = Object.fromEntries(
     [
       ...ADDRESS_FIELDS,
@@ -71,7 +72,7 @@ export async function placeOrderAction(
     ].map((name) => [name, text(formData, name)]),
   );
   if (await tooManyCartChanges(store.tenantId)) {
-    return { error: "Too many attempts in a short time. Please wait a minute.", values };
+    return { error: t("Too many attempts in a short time. Please wait a minute."), values };
   }
   const customer = await getCurrentCustomer();
   const address = {
@@ -89,7 +90,7 @@ export async function placeOrderAction(
   const paymentMethod =
     text(formData, "paymentMethod") === "online" ? "online" : "cash_on_delivery";
   if (paymentMethod === "online" && !provider) {
-    return { error: "Paying online is not available. Choose cash on delivery.", values };
+    return { error: t("Paying online is not available. Choose cash on delivery."), values };
   }
 
   let next: string;
@@ -105,6 +106,7 @@ export async function placeOrderAction(
       shippingZoneId: text(formData, "shippingZoneId"),
       pricingVersion: text(formData, "pricingVersion") || undefined,
       discountCode: text(formData, "discountCode"),
+      locale: t.locale,
     });
     if (customer && formData.get("saveAddress") === "on") {
       // Saving is a convenience: a full address book does not stop the order.
@@ -122,7 +124,7 @@ export async function placeOrderAction(
       ({ payUrl: next } = await startPayment(db, provider!, placed.orderId, returnPath));
     }
   } catch (error) {
-    if (error instanceof OrderError) return { error: error.message, values };
+    if (error instanceof OrderError) return { error: t.message(error.message), values };
     throw error;
   }
   revalidatePath("/", "layout");
@@ -134,7 +136,7 @@ export async function retryPaymentAction(
   _previous: AccountFormState,
   formData: FormData,
 ): Promise<AccountFormState> {
-  const { db } = await storefrontDb();
+  const [{ db }, t] = await Promise.all([storefrontDb(), shopT()]);
   const customer = await getCurrentCustomer();
   const orderId = text(formData, "orderId");
   const accessKey = text(formData, "key") || null;
@@ -146,7 +148,7 @@ export async function retryPaymentAction(
       accessKey,
     });
     const provider = getPaymentProvider();
-    if (!provider) return { error: "Paying online is not available." };
+    if (!provider) return { error: t("Paying online is not available.") };
     ({ payUrl } = await startPayment(
       db,
       provider,
@@ -154,7 +156,7 @@ export async function retryPaymentAction(
       returnPathFor(order.id, order.customerId ? null : accessKey),
     ));
   } catch (error) {
-    if (error instanceof OrderError) return { error: error.message };
+    if (error instanceof OrderError) return { error: t.message(error.message) };
     if (error instanceof NotFoundError) notFound();
     throw error;
   }
@@ -182,7 +184,7 @@ export async function mockPayAction(
   );
   if (!payment) notFound();
   if (payment.status !== "pending") {
-    return { error: "This payment has already been completed or replaced." };
+    return { error: (await shopT())("This payment has already been completed or replaced.") };
   }
   const { body, headers } = getMockProvider().notificationFor({
     outcome,
@@ -204,9 +206,9 @@ export async function mockPayAction(
 export async function previewDiscountAction(
   code: string,
 ): Promise<{ ok: boolean; message: string; pricing?: SummaryPricing }> {
-  const { store, db } = await storefrontDb();
+  const [{ store, db }, t] = await Promise.all([storefrontDb(), shopT()]);
   if (await tooManyCartChanges(store.tenantId)) {
-    return { ok: false, message: "Too many attempts in a short time. Please wait a minute." };
+    return { ok: false, message: t("Too many attempts in a short time. Please wait a minute.") };
   }
   const [cart, options] = await Promise.all([
     cartOwner().then((owner) => getCart(db, owner)),
@@ -214,7 +216,7 @@ export async function previewDiscountAction(
   ]);
   const currency = cart.currency ?? "USD";
   const typed = normalizeCode(typeof code === "string" ? code : "");
-  const without = summaryPricing(cart.subtotalAmount, currency, options, null);
+  const without = summaryPricing(cart.subtotalAmount, currency, options, null, t);
   if (!typed) return { ok: true, message: "", pricing: without };
   try {
     const applied = await checkDiscountCode(db, {
@@ -224,12 +226,15 @@ export async function previewDiscountAction(
     });
     return {
       ok: true,
-      message: `${applied.code}: ${describeDiscount({ ...applied, currency })} applied.`,
-      pricing: summaryPricing(cart.subtotalAmount, currency, options, applied),
+      message: t("{code}: {discount} applied.", {
+        code: applied.code,
+        discount: t.message(describeDiscount({ ...applied, currency })),
+      }),
+      pricing: summaryPricing(cart.subtotalAmount, currency, options, applied, t),
     };
   } catch (error) {
     if (error instanceof DiscountError)
-      return { ok: false, message: error.message, pricing: without };
+      return { ok: false, message: t.message(error.message), pricing: without };
     throw error;
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/components/i18n";
 
 /** Sent on the document when the summary's figures change (a discount code applied). */
 export const PRICING_EVENT = "checkout:pricing";
@@ -24,6 +25,7 @@ export function CheckoutAmounts({
   byZone: Record<string, PricedRows>;
   fallback: PricedRows;
 }) {
+  const t = useT();
   const [zoneId, setZoneId] = useState("");
   // Replaced when a discount code is applied (see discount-field.tsx).
   const [pricing, setPricing] = useState({ byZone, fallback });
@@ -63,7 +65,7 @@ export function CheckoutAmounts({
         </div>
       ))}
       <div className="flex justify-between text-base font-semibold">
-        <dt>Total</dt>
+        <dt>{t("Total")}</dt>
         <dd data-testid="checkout-total">{current.total}</dd>
       </div>
     </dl>

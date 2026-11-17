@@ -2,6 +2,7 @@
 
 import { buttonClasses } from "@ecom/ui";
 import { useEffect, useState } from "react";
+import { useT } from "@/components/i18n";
 import { RECENT_COOKIE, RECENT_COOKIE_DAYS, withRecent } from "@/server/recently-viewed";
 
 /**
@@ -28,6 +29,7 @@ export function RememberProduct({ slug }: { slug: string }) {
  * otherwise copies the address. Hidden until the browser can do either.
  */
 export function ShareButton({ title }: { title: string }) {
+  const t = useT();
   const [ready, setReady] = useState(false);
   const [message, setMessage] = useState("");
   useEffect(() => {
@@ -45,7 +47,7 @@ export function ShareButton({ title }: { title: string }) {
         return;
       }
       await navigator.clipboard.writeText(url);
-      setMessage("Link copied.");
+      setMessage(t("Link copied."));
     } catch {
       // Closing the share sheet is not an error worth reporting.
     }
@@ -54,7 +56,7 @@ export function ShareButton({ title }: { title: string }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button type="button" onClick={share} className={buttonClasses("secondary")}>
-        Share
+        {t("Share")}
       </button>
       <span role="status" className="text-sm text-ink-muted">
         {message}

@@ -1,6 +1,7 @@
 "use client";
 
 import { buttonClasses, inputClasses } from "@ecom/ui";
+import { useT } from "@/components/i18n";
 
 /**
  * The sort drop-down. Choosing an option submits the surrounding form at
@@ -13,10 +14,11 @@ export function SortSelect({
   value: string;
   options: readonly { value: string; label: string }[];
 }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-2">
       <label htmlFor="sort" className="text-sm font-medium whitespace-nowrap">
-        Sort by
+        {t("Sort by")}
       </label>
       <select
         id="sort"
@@ -33,7 +35,7 @@ export function SortSelect({
       </select>
       <noscript>
         <button type="submit" className={buttonClasses("secondary")}>
-          Sort
+          {t("Sort")}
         </button>
       </noscript>
     </div>

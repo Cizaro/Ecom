@@ -21,10 +21,13 @@ Sign in to the admin:
 
 Follow docs/DEPLOYMENT.md: a server, a domain, a managed database and Redis, file storage, an email sending service. Then run `pnpm launch:check --tenant <slug>` on the server and fix what it lists. In the admin: write and publish the policy pages, set the look and contact details, Store emails, and turn on two-factor sign-in.
 
-## Next development task: Arabic and right-to-left storefront, or Phase 5 (AI)
+## Owner: the Arabic shop
 
-1. **Arabic storefront**: translations for every shop text, right-to-left layout, a language switch, Arabic emails; product names and descriptions in both languages entered by staff.
-2. **Phase 5, AI foundation**: the AI gateway built to the reusability rules below.
+The demo store offers Arabic already. For each product and category, open it in the admin and fill in the **Arabic** box (name, descriptions); anything left empty shows the English. Write the Arabic policy pages under **Policy pages**. Please read the shop in Arabic once and tell us any wording you would like changed: the translations are in `packages/i18n/src/ar.ts`.
+
+## Next development task: Phase 5 (AI)
+
+**Phase 5, AI foundation**: the AI gateway built to the reusability rules below.
 
 **When Phase 5 (AI) starts:** follow the reusability rules in docs/REUSE.md and decision D88. The first deliverable is the interfaces (knowledge source, business profile, abilities) and a non-shop test business, before any prompt is written.
 
@@ -55,6 +58,7 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 - Reviews: an email asking customers to review a few days after their order is sent (with an unsubscribe); guest buyers reviewing through their order link; photos in reviews.
 - Customer photos: a poster frame for videos (needs a video tool on the server); longer videos through direct upload to storage; asking Instagram creators for permission through the official API (Phase 6).
 - Support: saved replies (inbox.configure), attachments, customers replying by answering the email, Instagram and Facebook messages in the same inbox (Phase 6).
+- Arabic: separate Arabic addresses (for example /ar/...) with hreflang so search engines index the Arabic shop; Arabic for colour and size names; Arabic in the bulk import spreadsheet; Arabic for staff-written store emails and the store's tagline.
 - Launch: an admin screen to add a store's web address; error reporting to a service such as Sentry; copying backups off the server automatically; a smaller production image (Next.js standalone output).
 - Dashboard: compare with the previous period; best-selling products.
 - Returns: shopper-started return requests once the return rules are known; card refunds with the gateway.

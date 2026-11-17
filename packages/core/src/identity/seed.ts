@@ -79,7 +79,8 @@ export async function seedDemoData(prisma: AdminPrismaClient): Promise<{ tenantI
     });
     const store = await tx.store.upsert({
       where: { tenantId_slug: { tenantId: tenant.id, slug: "main" } },
-      create: { tenantId: tenant.id, slug: "main", name: "Demo Store" },
+      // Offered in English (the default) and Arabic, like the shop it was made for.
+      create: { tenantId: tenant.id, slug: "main", name: "Demo Store", languages: ["en", "ar"] },
       update: {},
     });
     // The local storefront at http://localhost:3000 shows the demo store.

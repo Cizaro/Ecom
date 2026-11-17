@@ -108,10 +108,12 @@ export function parseBranding(value: unknown): StoreBranding {
 
 // System fonts only: nothing is downloaded from another site, so pages stay
 // fast and private.
+// Each stack ends with fonts that have Arabic letters, for the Arabic shop.
 const FONTS: Record<FontStyle, string> = {
-  sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  serif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-  rounded: 'ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, sans-serif',
+  sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Arabic", Tahoma, sans-serif',
+  serif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, "Noto Naskh Arabic", serif',
+  rounded:
+    'ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, "Noto Sans Arabic", Tahoma, sans-serif',
 };
 
 const CORNERS: Record<CornerStyle, { control: string; card: string }> = {

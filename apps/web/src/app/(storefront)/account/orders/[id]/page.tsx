@@ -5,10 +5,15 @@ import { notFound } from "next/navigation";
 import { requireCustomer } from "@/server/customer";
 import { storefrontDb } from "@/server/storefront";
 import { OrderDetails } from "../../../_components/order-details";
+import { shopT } from "@/server/i18n";
 
-export const metadata: Metadata = { title: "Your order" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await shopT();
+  return { title: t("Your order") };
+}
 
 export default async function AccountOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await shopT();
   const { id } = await params;
   const customer = await requireCustomer(`/account/orders/${encodeURIComponent(id)}`);
   const { db } = await storefrontDb();
@@ -22,7 +27,7 @@ export default async function AccountOrderPage({ params }: { params: Promise<{ i
   return (
     <>
       <Link href="/account/orders" className="text-sm underline underline-offset-4">
-        Back to your orders
+        {t("Back to your orders")}
       </Link>
       <OrderDetails order={order} />
     </>

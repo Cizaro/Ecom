@@ -3,7 +3,7 @@ import { Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { requirePermission, tenantDb } from "@/server/access";
-import { ActionForm, SelectField, TextField } from "../../../_components/form";
+import { ActionForm, CheckboxField, SelectField, TextField } from "../../../_components/form";
 import { SingleImage } from "../../catalog/_components/single-image";
 import {
   removeStoreLogoAction,
@@ -81,6 +81,12 @@ export default async function StoreSettingsPage() {
               defaultValue={branding.contactPhone}
             />
           </div>
+          <CheckboxField
+            label="Offer the shop in Arabic too"
+            name="arabic"
+            hint="Shoppers see an Arabic button in the shop's header; English stays the default. Add Arabic names and descriptions to products and categories, and Arabic policy pages, for a complete Arabic shop."
+            defaultChecked={store.languages.includes("ar")}
+          />
           <p className="text-sm text-ink-muted">Prices are in {store.currency}.</p>
         </ActionForm>
       </Card>

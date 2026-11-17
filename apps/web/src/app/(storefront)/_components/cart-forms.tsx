@@ -4,6 +4,7 @@ import { Alert, buttonClasses, inputClasses } from "@ecom/ui";
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useT } from "@/components/i18n";
 import type { CartFormState } from "../cart/actions";
 
 type CartAction = (previous: CartFormState, formData: FormData) => Promise<CartFormState>;
@@ -18,6 +19,7 @@ function Submit({
   className?: string;
 }) {
   const { pending } = useFormStatus();
+  const t = useT();
   return (
     <button
       type="submit"
@@ -25,7 +27,7 @@ function Submit({
       aria-busy={pending}
       className={buttonClasses(tone, className)}
     >
-      {pending ? "Please wait…" : children}
+      {pending ? t("Please wait…") : children}
     </button>
   );
 }
@@ -46,13 +48,14 @@ export function AddToCartForm({
   maxQuantity: number;
 }) {
   const [state, formAction] = useActionState(action, {});
+  const t = useT();
   return (
     <form action={formAction} className="flex flex-col gap-3" data-testid="add-to-cart">
       <input type="hidden" name="variantId" value={variantId} />
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="quantity" className="text-sm font-medium">
-            Quantity
+            {t("Quantity")}
           </label>
           <select id="quantity" name="quantity" defaultValue="1" className={`${inputClasses} w-24`}>
             {quantityOptions(maxQuantity).map((quantity) => (
@@ -62,7 +65,7 @@ export function AddToCartForm({
             ))}
           </select>
         </div>
-        <Submit className="flex-1 sm:flex-none sm:px-8">Add to cart</Submit>
+        <Submit className="flex-1 sm:flex-none sm:px-8">{t("Add to cart")}</Submit>
       </div>
       {state.error ? (
         <Alert tone="error" testId="cart-error">
@@ -75,7 +78,7 @@ export function AddToCartForm({
             {state.notice}
           </Alert>
           <Link href="/cart" className="text-sm font-medium underline underline-offset-4">
-            View cart
+            {t("View cart")}
           </Link>
         </div>
       ) : null}
@@ -104,6 +107,7 @@ export function CartLineControls({
   const [removeState, remove] = useActionState(removeAction, {});
   const error = updateState.error ?? removeState.error;
   const fieldId = `quantity-${itemId}`;
+  const t = useT();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-end gap-2">
@@ -111,7 +115,8 @@ export function CartLineControls({
           <input type="hidden" name="itemId" value={itemId} />
           <div className="flex flex-col gap-1">
             <label htmlFor={fieldId} className="text-sm text-ink-muted">
-              Quantity<span className="sr-only"> of {label}</span>
+              {t("Quantity")}
+              <span className="sr-only"> {t("of {item}", { item: label })}</span>
             </label>
             <select
               // The key resets the control when the saved quantity changes.
@@ -128,7 +133,7 @@ export function CartLineControls({
               ))}
             </select>
           </div>
-          <Submit tone="secondary">Update</Submit>
+          <Submit tone="secondary">{t("Update")}</Submit>
         </form>
         <form action={remove}>
           <input type="hidden" name="itemId" value={itemId} />
@@ -136,7 +141,8 @@ export function CartLineControls({
             type="submit"
             className="flex min-h-11 items-center px-2 text-sm underline underline-offset-4"
           >
-            Remove<span className="sr-only"> {label}</span>
+            {t("Remove")}
+            <span className="sr-only"> {label}</span>
           </button>
         </form>
       </div>

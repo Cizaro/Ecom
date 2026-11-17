@@ -1,13 +1,21 @@
-import { getPublicCategory } from "@ecom/core";
+import { getPublicCategory, localizeCategory, type PublicCategory } from "@ecom/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { parseListing, type RawParams } from "@/server/listing";
 import { listingState } from "@/server/listing-page";
 import { viewOf } from "@/server/media";
+import { shopT } from "@/server/i18n";
 import { listingSeo } from "@/server/seo";
 import { publicOrNotFound, storefrontDb } from "@/server/storefront";
 import { Breadcrumbs } from "../../_components/breadcrumbs";
 import { ProductListing } from "../../_components/listing";
+
+/** The category in the shopper's language, and its own (default-language) record. */
+async function loadCategory(slug: string): Promise<{ raw: PublicCategory; shown: PublicCategory }> {
+  const [{ db }, t] = await Promise.all([storefrontDb(), shopT()]);
+  const raw = await publicOrNotFound(getPublicCategory(db, slug));
+  return { raw, shown: await localizeCategory(db, t.locale, raw) };
+}
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -15,10 +23,15 @@ interface Props {
 }
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const { db } = await storefrontDb();
-  const category = await publicOrNotFound(getPublicCategory(db, (await params).slug));
-  const title = category.seoTitle ?? category.name;
-  const description = category.seoDescription ?? (category.description || undefined);
+  const { raw, shown: category } = await loadCategory((await params).slug);
+  // The search-engine wording is written in the default language: a
+  // translated name or description takes its place.
+  const translatedName = category.name !== raw.name;
+  const title = translatedName ? category.name : (raw.seoTitle ?? raw.name);
+  const description =
+    category.description !== raw.description
+      ? category.description
+      : (raw.seoDescription ?? (raw.description || undefined));
   const seo = listingSeo(`/c/${category.slug}`, parseListing(await searchParams));
   const image = category.image ? viewOf(category.image).url : undefined;
   return {
@@ -38,16 +51,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
-  const { store, db } = await storefrontDb();
+  const [{ store, db }, t] = await Promise.all([storefrontDb(), shopT()]);
   const { slug } = await params;
-  const category = await publicOrNotFound(getPublicCategory(db, slug));
+  const { shown: category } = await loadCategory(slug);
   const state = listingState(`/c/${category.slug}`, await searchParams, { search: false });
 
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs
         trail={[
-          { name: "Home", href: "/" },
+          { name: t("Home"), href: "/" },
           ...category.ancestors.map((ancestor) => ({
             name: ancestor.name,
             href: `/c/${ancestor.slug}`,
@@ -63,7 +76,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       </div>
 
       {category.children.length > 0 ? (
-        <nav aria-label={`Inside ${category.name}`}>
+        <nav aria-label={t("Inside {category}", { category: category.name })}>
           <ul className="flex flex-wrap gap-2">
             {category.children.map((child) => (
               <li key={child.id}>
@@ -85,7 +98,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         state={state}
         currency={store.defaultCurrency}
         scope={{ categoryId: category.id }}
-        emptyTitle="Nothing in this category yet"
+        emptyTitle={t("Nothing in this category yet")}
       />
     </div>
   );

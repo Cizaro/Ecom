@@ -1,4 +1,5 @@
-import { listStorePages, pageTemplate, unfilledBlanks } from "@ecom/core";
+import { getStoreSettings, listStorePages, pageTemplate, unfilledBlanks } from "@ecom/core";
+import { LOCALE_INFO } from "@ecom/i18n";
 import { Badge, Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -10,7 +11,10 @@ export const metadata: Metadata = { title: "Policy pages" };
 
 export default async function PolicyPagesPage() {
   const { context } = await requirePermission("settings.write");
-  const pages = await listStorePages(tenantDb(context), context);
+  const db = tenantDb(context);
+  // One set of pages per language the shop is offered in.
+  const { languages } = await getStoreSettings(db, context);
+  const pages = await listStorePages(db, context, languages);
 
   return (
     <div className="flex flex-col gap-6">
@@ -23,11 +27,27 @@ export default async function PolicyPagesPage() {
         empty line between paragraphs. These templates are a starting point, not legal advice: check
         them against the rules where you sell.
       </p>
+      {languages.length > 1 ? (
+        <p className="text-sm text-ink-muted">
+          Your shop is also offered in Arabic: write each page in Arabic too. Until an Arabic page
+          is published, shoppers using Arabic see the English one.
+        </p>
+      ) : null}
       {pages.map((page) => {
-        const body = page.body || pageTemplate(page.slug, context.tenantName);
+        // The templates are in English; an Arabic page starts empty.
+        const body =
+          page.body || (page.locale === "en" ? pageTemplate(page.slug, context.tenantName) : "");
         const blanks = unfilledBlanks(body);
+        const key = page.locale === "en" ? page.slug : `${page.slug}-${page.locale}`;
         return (
-          <Card key={page.slug} title={page.title}>
+          <Card
+            key={key}
+            title={
+              languages.length > 1
+                ? `${page.title} (${LOCALE_INFO[page.locale].label})`
+                : page.title
+            }
+          >
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <Badge tone={page.published ? "success" : "neutral"}>
                 {page.published ? "Published" : page.body ? "Draft" : "Not started"}
@@ -41,29 +61,27 @@ export default async function PolicyPagesPage() {
                 <span className="text-ink-muted">{blanks.length} blanks to fill in</span>
               ) : null}
             </div>
-            <ActionForm
-              action={saveStorePageAction}
-              submitLabel="Save"
-              testId={`page-form-${page.slug}`}
-            >
+            <ActionForm action={saveStorePageAction} submitLabel="Save" testId={`page-form-${key}`}>
               <input type="hidden" name="slug" value={page.slug} />
+              <input type="hidden" name="locale" value={page.locale} />
               <TextField
-                id={`title-${page.slug}`}
+                id={`title-${key}`}
                 label="Title"
                 name="title"
                 maxLength={100}
                 defaultValue={page.title}
               />
               <TextAreaField
-                id={`body-${page.slug}`}
+                id={`body-${key}`}
                 label="Text"
+                dir={LOCALE_INFO[page.locale].dir}
                 name="body"
                 rows={14}
                 maxLength={20000}
                 defaultValue={body}
               />
               <CheckboxField
-                id={`publish-${page.slug}`}
+                id={`publish-${key}`}
                 label="Published (shown in the shop)"
                 name="publish"
                 defaultChecked={page.published}

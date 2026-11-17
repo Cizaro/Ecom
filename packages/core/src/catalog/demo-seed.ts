@@ -1,15 +1,15 @@
 import type { TenantDb } from "../access/tenant-db";
 
 // Demonstration catalog for local development: the five launch categories and
-// two sample products, so the admin is not empty on a new computer. Written
+// two sample products (with Arabic names), so the admin is not empty on a new computer. Written
 // only if the tenant has no categories yet, so it never overwrites real work.
 
 const CATEGORIES = [
-  { name: "Women's Bags", slug: "womens-bags" },
-  { name: "Men's Wallets", slug: "mens-wallets" },
-  { name: "Watches", slug: "watches" },
-  { name: "Jewelry", slug: "jewelry" },
-  { name: "Accessories", slug: "accessories" },
+  { name: "Women's Bags", slug: "womens-bags", nameAr: "حقائب نسائية" },
+  { name: "Men's Wallets", slug: "mens-wallets", nameAr: "محافظ رجالية" },
+  { name: "Watches", slug: "watches", nameAr: "ساعات" },
+  { name: "Jewelry", slug: "jewelry", nameAr: "مجوهرات" },
+  { name: "Accessories", slug: "accessories", nameAr: "إكسسوارات" },
 ] as const;
 
 export async function seedDemoCatalog(
@@ -26,12 +26,15 @@ export async function seedDemoCatalog(
     const tenantId = db.tenantId;
 
     const ids: Record<string, string> = {};
-    for (const [position, category] of CATEGORIES.entries()) {
+    for (const [position, { nameAr, ...category }] of CATEGORIES.entries()) {
       const row = await tx.category.create({
         data: { tenantId, ...category, position },
         select: { id: true },
       });
       ids[category.slug] = row.id;
+      await tx.categoryTranslation.create({
+        data: { tenantId, categoryId: row.id, locale: "ar", name: nameAr },
+      });
     }
 
     const tote = await tx.product.create({
@@ -46,6 +49,15 @@ export async function seedDemoCatalog(
         status: "active",
       },
       select: { id: true },
+    });
+    await tx.productTranslation.create({
+      data: {
+        tenantId,
+        productId: tote.id,
+        locale: "ar",
+        name: "حقيبة جلدية نموذجية",
+        shortDescription: "منتج نموذجي لتجربة لوحة الإدارة.",
+      },
     });
     await tx.productVariant.createMany({
       data: [

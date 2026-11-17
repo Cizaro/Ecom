@@ -26,10 +26,17 @@ async function requestHost(): Promise<string | null> {
  * get the 404 page.
  */
 export const requireStorefront = cache(async (): Promise<Storefront> => {
-  const host = await requestHost();
-  const storefront = await loadStorefront(getAppPrisma(getEnv().DATABASE_URL), host);
+  const storefront = await findStorefront();
   if (!storefront) notFound();
   return storefront;
+});
+
+/** The store for this host name, or null (for code that must not show the 404 page). */
+export const findStorefront = cache(async (): Promise<Storefront | null> => {
+  // The request first: reading it is what makes the page render on request
+  // (and never at build time, when there is no configuration to read).
+  const host = await requestHost();
+  return loadStorefront(getAppPrisma(getEnv().DATABASE_URL), host);
 });
 
 /**

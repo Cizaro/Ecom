@@ -1,8 +1,9 @@
-import { loadHomeSections, type PublicProductCard } from "@ecom/core";
+import { loadHomeSections, localizeCategoryLinks, type PublicProductCard } from "@ecom/core";
 import { buttonClasses } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MediaImage } from "@/components/media-image";
+import { shopT } from "@/server/i18n";
 import { viewOf } from "@/server/media";
 import { storefrontDb } from "@/server/storefront";
 import { ProductGrid } from "./_components/product-card";
@@ -20,16 +21,19 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 function Section({
+  id: key,
   title,
   products,
   priorityCount,
 }: {
+  /** Stable, whatever the language. */
+  id: string;
   title: string;
   products: readonly PublicProductCard[];
   priorityCount?: number;
 }) {
   if (products.length === 0) return null;
-  const id = `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const id = `section-${key}`;
   return (
     <section aria-labelledby={id} className="flex flex-col gap-4" data-testid={id}>
       <h2 id={id} className="text-xl font-semibold tracking-tight">
@@ -44,11 +48,10 @@ function Section({
 // marked as new, or marked as best sellers. Every section is real catalog
 // data; a section with nothing in it is left out.
 export default async function StorefrontHomePage() {
-  const { store, db } = await storefrontDb();
-  const { categories, featured, newArrivals, bestSellers, latest } = await loadHomeSections(
-    db,
-    SECTION_SIZE,
-  );
+  const [{ store, db }, t] = await Promise.all([storefrontDb(), shopT()]);
+  const sections = await loadHomeSections(db, SECTION_SIZE);
+  const { featured, newArrivals, bestSellers, latest } = sections;
+  const categories = await localizeCategoryLinks(db, t.locale, sections.categories);
   const hasProducts = featured.length + newArrivals.length + bestSellers.length + latest.length > 0;
 
   return (
@@ -57,12 +60,12 @@ export default async function StorefrontHomePage() {
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{store.name}</h1>
         <p className="max-w-prose text-ink-muted">
           {hasProducts
-            ? "Bags, wallets, watches, jewelry and accessories."
-            : "Our shop is opening soon. Bags, wallets, watches, jewelry and accessories."}
+            ? t("Bags, wallets, watches, jewelry and accessories.")
+            : t("Our shop is opening soon. Bags, wallets, watches, jewelry and accessories.")}
         </p>
         {hasProducts ? (
           <Link href="/products" className={buttonClasses()}>
-            Shop all products
+            {t("Shop all products")}
           </Link>
         ) : null}
       </section>
@@ -70,7 +73,7 @@ export default async function StorefrontHomePage() {
       {categories.length > 0 ? (
         <section aria-labelledby="home-categories" className="flex flex-col gap-4">
           <h2 id="home-categories" className="text-xl font-semibold tracking-tight">
-            Shop by category
+            {t("Shop by category")}
           </h2>
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {categories.map((category) => (
@@ -100,11 +103,16 @@ export default async function StorefrontHomePage() {
         </section>
       ) : null}
 
-      <Section title="Featured" products={featured} priorityCount={4} />
-      <Section title="New arrivals" products={newArrivals} />
-      <Section title="Best sellers" products={bestSellers} />
+      <Section id="featured" title={t("Featured")} products={featured} priorityCount={4} />
+      <Section id="new-arrivals" title={t("New arrivals")} products={newArrivals} />
+      <Section id="best-sellers" title={t("Best sellers")} products={bestSellers} />
       {/* When nothing is flagged yet, the newest products keep the page from being empty. */}
-      <Section title="Latest additions" products={latest} priorityCount={4} />
+      <Section
+        id="latest-additions"
+        title={t("Latest additions")}
+        products={latest}
+        priorityCount={4}
+      />
     </div>
   );
 }

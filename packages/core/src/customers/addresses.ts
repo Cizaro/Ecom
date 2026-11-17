@@ -251,13 +251,14 @@ export async function setDefaultAddress(
 }
 
 /** An address as lines of text, in the order people in most countries expect. */
-export function formatAddress(address: ValidAddress): string[] {
+/** An address as lines; the country is named in the given language. */
+export function formatAddress(address: ValidAddress, locale = "en"): string[] {
   return [
     address.fullName,
     address.line1,
     address.line2,
     [address.city, address.region, address.postalCode].filter(Boolean).join(", "),
-    countryName(address.country),
+    countryName(address.country, locale),
     address.phone,
   ].filter((line): line is string => Boolean(line));
 }

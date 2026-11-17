@@ -1,3 +1,10 @@
+import {
+  createTranslator,
+  DEFAULT_LOCALE,
+  isLocale,
+  type Locale,
+  type Translator,
+} from "@ecom/i18n";
 import { createHash, createHmac, randomUUID } from "node:crypto";
 import type { AppTransaction, Prisma } from "@ecom/db";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
@@ -12,7 +19,6 @@ import {
   returnCommittedIn,
   settleReservationsIn,
 } from "../inventory/stock";
-import { formatMoney } from "../catalog/money";
 import { addDays, safeTimeZone, zonedDayStart } from "../platform/time";
 import { EMAIL_EVENTS, enqueueEmailIn, enqueueStaffEmailsIn } from "../notifications/enqueue";
 import type { PaymentNotification, PaymentProvider } from "../payments/provider";
@@ -98,6 +104,8 @@ function assertOrderId(id: unknown): asserts id is string {
 export interface OrderView {
   id: string;
   number: number;
+  /** The shop language the order was placed in; its emails use it. */
+  locale: Locale;
   status: OrderStatusValue;
   paymentMethod: PaymentMethodValue;
   email: string;
@@ -177,6 +185,7 @@ export interface StaffOrderView extends OrderView {
 const ORDER_SELECT = {
   id: true,
   number: true,
+  locale: true,
   status: true,
   paymentMethod: true,
   email: true,
@@ -242,6 +251,7 @@ type OrderRow = Prisma.OrderGetPayload<{ select: typeof ORDER_SELECT }>;
 
 const toView = (row: OrderRow): OrderView => ({
   ...row,
+  locale: isLocale(row.locale) ? row.locale : DEFAULT_LOCALE,
   shippingAddress: row.shippingAddress as unknown as ValidAddress,
 });
 
@@ -292,6 +302,8 @@ export interface PlaceOrderInput {
   pricingVersion?: unknown;
   /** A discount code the shopper typed; checked again here with the code locked. */
   discountCode?: unknown;
+  /** The shop language the shopper is using; the order's emails are written in it. */
+  locale?: Locale;
 }
 
 export interface PlacedOrder {
@@ -400,6 +412,7 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
           customerId: input.customer?.id ?? null,
           cartId: cart.id,
           email,
+          locale: input.locale ?? DEFAULT_LOCALE,
           accessKeyHash: hash(accessKey),
           currency: view.currency!,
           subtotalAmount: quote.subtotalAmount,
@@ -1116,27 +1129,30 @@ export function orderAmountLines(
     | "discountAmount"
     | "discountCode"
   >,
+  t: Translator = createTranslator(DEFAULT_LOCALE),
 ): [label: string, value: string][] {
-  const money = (amount: number) => formatMoney(amount, order.currency);
-  const rows: [string, string][] = [["Subtotal", money(order.subtotalAmount)]];
+  const money = (amount: number) => t.money(amount, order.currency);
+  const rows: [string, string][] = [[t("Subtotal"), money(order.subtotalAmount)]];
   if (order.shippingZoneName !== null || order.shippingAmount > 0) {
     rows.push([
-      order.shippingZoneName ? `Delivery (${order.shippingZoneName})` : "Delivery",
-      order.shippingAmount === 0 ? "Free" : money(order.shippingAmount),
+      order.shippingZoneName
+        ? t("Delivery ({area})", { area: order.shippingZoneName })
+        : t("Delivery"),
+      order.shippingAmount === 0 ? t("Free") : money(order.shippingAmount),
     ]);
   }
   if (order.discountAmount > 0) {
     rows.push([
-      order.discountCode ? `Discount (${order.discountCode})` : "Discount",
+      order.discountCode ? t("Discount ({code})", { code: order.discountCode }) : t("Discount"),
       `-${money(order.discountAmount)}`,
     ]);
   }
   if (order.taxRateBasisPoints > 0) {
-    const label = `${order.taxLabel ?? "Tax"} ${formatTaxRate(order.taxRateBasisPoints)}`;
+    const label = `${order.taxLabel ?? t("Tax")} ${formatTaxRate(order.taxRateBasisPoints)}`;
     rows.push(
       order.taxAmount > 0
         ? [label, money(order.taxAmount)]
-        : [`${label} included`, money(order.taxIncludedAmount)],
+        : [t("{tax} included", { tax: label }), money(order.taxIncludedAmount)],
     );
   }
   return rows;

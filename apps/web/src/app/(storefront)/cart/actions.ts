@@ -3,6 +3,7 @@
 import { addToCart, CartError, setCartItemQuantity } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { tooManyCartChanges, writeCartToken } from "@/server/cart";
+import { shopT } from "@/server/i18n";
 import { cartOwner } from "@/server/customer";
 import { storefrontDb } from "@/server/storefront";
 
@@ -31,24 +32,31 @@ const wholeNumber = (formData: FormData, name: string): number => {
   return /^\d{1,3}$/.test(value) ? Number(value) : Number.NaN;
 };
 
+/** Runs a cart change; messages come back in the shopper's language. */
 async function attempt(work: () => Promise<CartFormState>): Promise<CartFormState> {
+  const t = await shopT();
   try {
     const state = await work();
     // The header's cart count is part of every storefront page.
     revalidatePath("/", "layout");
-    return state;
+    return {
+      ...(state.error ? { error: t.message(state.error) } : {}),
+      ...(state.notice ? { notice: t.message(state.notice) } : {}),
+    };
   } catch (error) {
-    if (error instanceof CartError) return { error: error.message };
+    if (error instanceof CartError) return { error: t.message(error.message) };
     throw error;
   }
 }
+
+const tooMany = async (): Promise<CartFormState> => ({ error: (await shopT()).message(TOO_MANY) });
 
 export async function addToCartAction(
   _previous: CartFormState,
   formData: FormData,
 ): Promise<CartFormState> {
   const { store, db } = await storefrontDb();
-  if (await tooManyCartChanges(store.tenantId)) return { error: TOO_MANY };
+  if (await tooManyCartChanges(store.tenantId)) return tooMany();
   return attempt(async () => {
     const result = await addToCart(db, await cartOwner(), {
       variantId: text(formData, "variantId"),
@@ -68,7 +76,7 @@ export async function updateCartItemAction(
   formData: FormData,
 ): Promise<CartFormState> {
   const { store, db } = await storefrontDb();
-  if (await tooManyCartChanges(store.tenantId)) return { error: TOO_MANY };
+  if (await tooManyCartChanges(store.tenantId)) return tooMany();
   return attempt(async () => {
     await setCartItemQuantity(
       db,
@@ -85,7 +93,7 @@ export async function removeCartItemAction(
   formData: FormData,
 ): Promise<CartFormState> {
   const { store, db } = await storefrontDb();
-  if (await tooManyCartChanges(store.tenantId)) return { error: TOO_MANY };
+  if (await tooManyCartChanges(store.tenantId)) return tooMany();
   return attempt(async () => {
     await setCartItemQuantity(db, await cartOwner(), text(formData, "itemId"), 0);
     return {};
