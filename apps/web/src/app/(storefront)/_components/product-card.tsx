@@ -19,7 +19,8 @@ export function Price({
 }) {
   return (
     <p className="flex flex-wrap items-baseline gap-x-2" data-testid="price">
-      <span className="font-medium">
+      {/* A sale price is shown in the store's accent colour. */}
+      <span className={regularAmount !== null ? "font-medium text-accent" : "font-medium"}>
         {from ? <span className="font-normal text-ink-muted">from </span> : null}
         {regularAmount !== null ? <span className="sr-only">Sale price </span> : null}
         {formatMoney(amount, currency)}

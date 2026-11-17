@@ -169,6 +169,11 @@ Last updated: 2026-11-12
   - Admin **Reviews** page (`reviews.moderate`): waiting, reported, shown, hidden and rejected; approve, hide or reject; reply publicly. All audited.
   - Signed-in shoppers can report a review once. Search engines get the rating from approved reviews only.
 
+- **Store settings and per-store look (reuse for other shops):**
+  - Admin page **Store and look** (`settings.write`, audited): store name, time zone, tagline, contact email and phone; logo; main and accent colours, corner style, font, or one of four ready-made looks, with a preview.
+  - The storefront is one template that takes each store's values, so two stores on the same installation look different. Button text stays readable on any colour; unreadable accents are refused. The admin keeps its neutral look.
+  - `docs/REUSE.md`: what can be reused for other shops and businesses today, what needs work, and the rules that keep it reusable, including the rules the AI module must follow.
+
 ## In progress
 
 Nothing.
@@ -356,17 +361,17 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 4.1, on the first computer)
+## Checks run this session (store look and reuse guide, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 270 tests (new: the name shown with a review, ratings in search data only from approved reviews) |
-| `pnpm test:int` | Pass, 253 tests, on the separate test database (4 new: only customers who received the product review, once, and the database refuses others; only approved reviews shown, summary, replies, no deletes; reports once, not own; store separation and permissions) |
+| `pnpm test` | Pass, 280 tests (new: colours as people write them, readable button text on any colour, safe design tokens, ready-made looks) |
+| `pnpm test:int` | Pass, 255 tests, on the separate test database (2 new: two stores on one installation keep their own name, look, logo and contact details; bad values and staff without permission refused) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 109 tests (41 skipped by design), including a customer reviewing after delivery, staff replying and approving, and the review shown to everyone. Also fixed: reply boxes on the Reviews page each have their own ID |
+| `pnpm test:e2e` | Pass, 112 tests (42 skipped by design), including staff changing the look and contact details and the shop showing them |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
 | Looked at in a browser | Covered by the browser tests on desktop and phone |
 | CI on GitHub | See the Actions tab for this commit |
@@ -405,5 +410,6 @@ Milestone 4.2 (customer photos and videos) or launch readiness, as the owner pre
 | 2026-11-18 | Milestone 3.8: discount codes (percent, amount, free delivery; limits and dates), checkout Apply with live total, locked check when ordering, uses counted from orders |
 | 2026-11-18 | Bulk product import: store template with category and brand dropdowns, check then import, safe picture downloads by request and worker |
 | 2026-11-18 | Milestone 4.1: verified-buyer reviews with approval, replies, reports, ratings on product pages and in search data |
+| 2026-11-18 | Per-store look (colours, corners, font, logo, contact) and store settings page; reuse guide; AI reusability rules recorded (D88) |
 
 Commit hashes: `git log --oneline`.

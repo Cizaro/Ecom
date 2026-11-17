@@ -64,6 +64,8 @@ erDiagram
 | product_reviews | Own tenant | Own tenant, no delete |
 | review_reports | Own tenant | Own tenant, add only |
 
+**Store look (2026-11-18, decision D87):** `stores.branding` (JSON: brand and accent colours, corners, font, tagline, contact email and phone; read with safe defaults) and `stores.logo_asset_id` (a media asset of the same tenant).
+
 **Reviews (2026-11-18, decision D86):** `product_reviews` (product, customer, the qualifying order, rating 1 to 5, title, text, name shown, status pending, approved, rejected or hidden, store reply, who moderated) with a trigger that requires a sent order of the customer's containing the product, one per customer per product; `review_reports` (review, customer, reason; one per customer per review, add-only).
 
 **Product imports (2026-11-18, decisions D84 and D85):** `product_imports` (file name, checked rows as JSON, problems, counts, status checked, imported or discarded) and `product_import_images` (one picture link per row, its product, and download status, attempts and error).

@@ -19,7 +19,9 @@ Sign in to the admin:
 
 ## Next development task: Milestone 4.2, customer photos and videos (UGC), or launch readiness
 
-Milestone 4.1 (reviews) is done. Per PROJECT_PLAN.md the next is 4.2 (customer uploads with permission tracking, a reels gallery), then 4.3 (support conversations and customer timeline). The owner may prefer launch readiness first: store settings page, policy pages, Arabic, a real email sending service, backups and monitoring.
+Reviews (4.1) and per-store branding are done. Per PROJECT_PLAN.md the next is 4.2 (customer uploads with permission tracking, a reels gallery), then 4.3 (support conversations and customer timeline). The owner may prefer launch readiness first: policy pages, Arabic, a real email sending service, backups and monitoring.
+
+**When Phase 5 (AI) starts:** follow the reusability rules in docs/REUSE.md and decision D88. The first deliverable is the interfaces (knowledge source, business profile, abilities) and a non-shop test business, before any prompt is written.
 
 ## Return rules (owner)
 
@@ -42,7 +44,8 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 ## Small follow-ups carried forward
 
 - Cash on delivery: a maximum order amount for cash, and a store setting to switch cash on delivery off.
-- Store settings: a page for the store's name, currency and time zone (the demo store's time zone was set to Asia/Beirut directly).
+- Store look: a home page banner image and text per store; more ready-made looks; a preview before saving.
+- A script or admin screen for the platform owner to create a new store (tenant, store, web address, first owner) in one step.
 - Import: update existing products by SKU (today a known SKU is reported, not changed); variant pictures (a picture per colour).
 - Reviews: an email asking customers to review a few days after their order is sent (with an unsubscribe); guest buyers reviewing through their order link; photos in reviews (with 4.2).
 - Dashboard: compare with the previous period; best-selling products.

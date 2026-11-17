@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  CatalogError,
   createShippingZone,
   deleteShippingZone,
   ForbiddenError,
@@ -8,13 +9,19 @@ import {
   NotificationSettingsError,
   retryEmail,
   saveNotificationSettings,
+  removeStoreLogo,
   saveTaxSettings,
+  setStoreLogo,
   ShippingError,
+  StoreSettingsError,
   updateShippingZone,
+  updateStoreBranding,
+  updateStoreDetails,
 } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { forbidden, notFound } from "next/navigation";
 import { requirePermission, tenantDb } from "@/server/access";
+import { mediaDeps, uploadedImage } from "@/server/media";
 import { sendWaitingEmails } from "@/server/notifications";
 import type { FormState } from "../../actions";
 
@@ -36,7 +43,12 @@ async function attempt(
   try {
     return await work();
   } catch (error) {
-    if (error instanceof ShippingError || error instanceof NotificationSettingsError) {
+    if (
+      error instanceof ShippingError ||
+      error instanceof NotificationSettingsError ||
+      error instanceof StoreSettingsError ||
+      error instanceof CatalogError
+    ) {
       return { error: error.message, values };
     }
     if (error instanceof NotFoundError) notFound();
@@ -149,5 +161,75 @@ export async function retryEmailAction(
     await sendWaitingEmails(db);
     revalidatePath(EMAILS_PAGE);
     return { notice: "Tried again." };
+  });
+}
+
+const STORE_PAGE = "/admin/settings/store";
+
+/** The store's look is on every shop page. */
+const refreshStore = () => {
+  revalidatePath(STORE_PAGE);
+  revalidatePath("/", "layout");
+};
+
+export async function updateStoreDetailsAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("settings.write");
+  const values = {
+    name: field(formData, "name"),
+    timezone: field(formData, "timezone"),
+    tagline: field(formData, "tagline"),
+    contactEmail: field(formData, "contactEmail"),
+    contactPhone: field(formData, "contactPhone"),
+  };
+  return attempt(async () => {
+    await updateStoreDetails(tenantDb(context), context, values);
+    refreshStore();
+    return { notice: "Store details saved." };
+  }, values);
+}
+
+export async function updateStoreBrandingAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("settings.write");
+  const values = {
+    preset: field(formData, "preset"),
+    brandColor: field(formData, "brandColor"),
+    accentColor: field(formData, "accentColor"),
+    corners: field(formData, "corners"),
+    font: field(formData, "font"),
+  };
+  return attempt(async () => {
+    await updateStoreBranding(tenantDb(context), context, values);
+    refreshStore();
+    return { notice: "Look saved. Open your shop to see it." };
+  }, values);
+}
+
+export async function setStoreLogoAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("settings.write");
+  return attempt(async () => {
+    await setStoreLogo(tenantDb(context), context, mediaDeps(), await uploadedImage(formData));
+    refreshStore();
+    return { notice: "Logo saved." };
+  });
+}
+
+export async function removeStoreLogoAction(
+  _previous: FormState,
+  _formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("settings.write");
+  return attempt(async () => {
+    await removeStoreLogo(tenantDb(context), context, mediaDeps());
+    refreshStore();
+    return { notice: "Logo removed." };
   });
 }

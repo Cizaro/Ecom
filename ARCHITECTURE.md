@@ -192,6 +192,7 @@ Key rules:
 - **Prompt injection.** Customer messages, comments, reviews and scraped pages are always passed as delimited data, never as instructions. The model has no tools that change state; state changes happen only in application code after validation and approval.
 - **Three automation levels** per tenant and per channel: draft only, human approval required, automatic for low-risk categories. Refunds, payment problems, legal matters, threats, privacy requests, angry customers and account problems always go to a human.
 - **Evaluation.** A fixed test set per task runs against the mock provider in CI and against real providers on demand.
+- **Reusable for any business (owner requirement, decision D88).** The `ai` module must work for a business that is not a shop by being given that business's data. It lives in its own package and depends only on interfaces: it never imports catalog, orders or any other commerce module. Business facts reach it through a **knowledge source** interface (the commerce adapter is the first implementation; a clinic, restaurant or document-based business supplies its own). Each store has an editable **business profile** (what it does, tone, languages, what it may promise, when to hand over to a person). Prompt templates are filled from the profile and the knowledge source and name no product category. What the AI may do is a list of **registered abilities** provided by the business's adapter. Tests include a second, made-up, non-shop business from the first day. Full rules: docs/REUSE.md.
 
 ## 9. Order and payment flow
 

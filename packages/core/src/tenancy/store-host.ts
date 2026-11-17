@@ -1,4 +1,6 @@
 import { withTenant, type AppPrismaClient } from "@ecom/db";
+import { ASSET_SELECT, toStoredImage, type StoredImage } from "../media/assets";
+import { parseBranding, type StoreBranding } from "./branding";
 
 export interface StoreHost {
   tenantId: string;
@@ -64,6 +66,9 @@ export interface Storefront extends StoreHost {
   name: string;
   defaultLocale: string;
   defaultCurrency: string;
+  /** The store's own look and contact details (defaults when it has set none). */
+  branding: StoreBranding;
+  logo: StoredImage | null;
 }
 
 /**
@@ -79,8 +84,23 @@ export async function loadStorefront(
   const store = await withTenant(prisma, { tenantId: host.tenantId }, (tx) =>
     tx.store.findUnique({
       where: { id: host.storeId },
-      select: { name: true, defaultLocale: true, defaultCurrency: true },
+      select: {
+        name: true,
+        defaultLocale: true,
+        defaultCurrency: true,
+        branding: true,
+        logo: { select: ASSET_SELECT },
+      },
     }),
   );
-  return store ? { ...host, ...store } : null;
+  return store
+    ? {
+        ...host,
+        name: store.name,
+        defaultLocale: store.defaultLocale,
+        defaultCurrency: store.defaultCurrency,
+        branding: parseBranding(store.branding),
+        logo: store.logo ? toStoredImage(store.logo) : null,
+      }
+    : null;
 }

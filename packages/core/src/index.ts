@@ -492,3 +492,25 @@ export type {
   ReviewEligibility,
   ReviewStatus,
 } from "./reviews/reviews";
+
+export {
+  BRANDING_PRESETS,
+  contrastRatio,
+  CORNER_STYLES,
+  DEFAULT_BRANDING,
+  FONT_STYLES,
+  normalizeHex,
+  parseBranding,
+  readableOn,
+  themeVariables,
+} from "./tenancy/branding";
+export type { CornerStyle, FontStyle, StoreBranding } from "./tenancy/branding";
+export {
+  getStoreSettings,
+  removeStoreLogo,
+  setStoreLogo,
+  StoreSettingsError,
+  updateStoreBranding,
+  updateStoreDetails,
+} from "./tenancy/store-settings";
+export type { StoreSettingsView } from "./tenancy/store-settings";

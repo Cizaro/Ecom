@@ -1,11 +1,12 @@
-import { getCartCount, listTopCategories } from "@ecom/core";
+import { getCartCount, listTopCategories, themeVariables } from "@ecom/core";
 import { buttonClasses, inputClasses } from "@ecom/ui";
 import { getEnv } from "@ecom/config";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { readCartToken } from "@/server/cart";
 import { getCurrentCustomer } from "@/server/customer";
+import { viewOf } from "@/server/media";
 import { storefrontDb, storefrontOrigin } from "@/server/storefront";
 
 /**
@@ -26,7 +27,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Storefront shell: header with search and category navigation, main, footer.
-// The store comes from the host name.
+// The store comes from the host name, and so does its look: one template,
+// with each store's own colours, corners, font and logo (see branding.ts).
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   const { store, db } = await storefrontDb();
   const [cartToken, customer] = await Promise.all([readCartToken(), getCurrentCustomer()]);
@@ -40,8 +42,15 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         : 0,
   ]);
 
+  const theme = themeVariables(store.branding);
+  const logo = store.logo ? viewOf(store.logo) : null;
+
   return (
-    <div className="flex min-h-dvh flex-col bg-surface">
+    <div
+      className="flex min-h-dvh flex-col bg-surface font-sans"
+      style={theme as CSSProperties}
+      data-testid="storefront"
+    >
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-10 focus:rounded-control focus:bg-surface focus:px-3 focus:py-2"
@@ -50,7 +59,22 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
       </a>
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4">
-          <Link href="/" className="text-lg font-semibold tracking-tight" data-testid="store-name">
+          <Link
+            href="/"
+            className="flex items-center gap-3 text-lg font-semibold tracking-tight"
+            data-testid="store-name"
+          >
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- served from the store's own media storage
+              <img
+                src={logo.url}
+                alt=""
+                width={logo.width}
+                height={logo.height}
+                className="h-9 w-auto max-w-32 object-contain"
+                data-testid="store-logo"
+              />
+            ) : null}
             {store.name}
           </Link>
           <form
@@ -126,9 +150,34 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
       </main>
       <footer className="border-t border-line bg-canvas">
         <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-4 py-6 text-sm text-ink-muted">
-          <span>
-            © {new Date().getFullYear()} {store.name}
-          </span>
+          <div className="flex flex-col gap-1">
+            <span>
+              © {new Date().getFullYear()} {store.name}
+            </span>
+            {store.branding.tagline ? (
+              <span data-testid="store-tagline">{store.branding.tagline}</span>
+            ) : null}
+          </div>
+          {store.branding.contactEmail || store.branding.contactPhone ? (
+            <address className="flex flex-col gap-1 not-italic" data-testid="store-contact">
+              {store.branding.contactEmail ? (
+                <a
+                  href={`mailto:${store.branding.contactEmail}`}
+                  className="underline underline-offset-4"
+                >
+                  {store.branding.contactEmail}
+                </a>
+              ) : null}
+              {store.branding.contactPhone ? (
+                <a
+                  href={`tel:${store.branding.contactPhone.replace(/[^+d]/g, "")}`}
+                  className="underline underline-offset-4"
+                >
+                  {store.branding.contactPhone}
+                </a>
+              ) : null}
+            </address>
+          ) : null}
         </div>
       </footer>
     </div>

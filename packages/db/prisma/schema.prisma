@@ -103,12 +103,15 @@ model Store {
   defaultCurrency String   @default("USD") @map("default_currency") @db.Char(3)
   timezone        String   @default("UTC")
   branding        Json     @default("{}")
+  /// The store's logo, shown in the storefront header.
+  logoAssetId     String?  @unique @map("logo_asset_id") @db.Uuid
   settings        Json     @default("{}")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   domains StoreDomain[]
+  logo    MediaAsset?   @relation(fields: [logoAssetId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, slug])
   @@index([tenantId, createdAt])
@@ -737,6 +740,7 @@ model MediaAsset {
   productImage ProductImage?
   category     Category?
   brand        Brand?
+  store        Store?
 
   @@index([tenantId, createdAt])
   @@index([status, createdAt])
