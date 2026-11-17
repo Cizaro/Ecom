@@ -4,7 +4,7 @@ Last updated: 2026-11-12
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** Next: launch readiness or Phase 5 (AI), to agree with the owner. The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. Next: the owner's go-live steps (docs/DEPLOYMENT.md), then Arabic or Phase 5 (AI). The card gateway (3.4) still waits on a merchant account. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -184,6 +184,14 @@ Last updated: 2026-11-12
   - Admin **Inbox** (`inbox.read`, `inbox.reply`): to answer, waiting for customer, closed, mine only, search; reply (emailed), internal notes (staff only, never emailed), close, reopen, take or give up.
   - Admin customer page (`customers.read`): orders, spent, account status and a timeline of everything (orders, reviews, photos, messages, notes) linking to each; staff notes with `customers.write`.
   - Store emails: a new list for staff told about each customer message.
+
+- **Launch readiness:**
+  - Admin **Policy pages**: returns, delivery, privacy and terms, from templates with [BLANKS]; cannot be published until filled; linked in the shop footer and the sitemap.
+  - `pnpm launch:check --tenant <slug>`: settings, services and the store's setup, with what to fix and what to review.
+  - `pnpm db:backup`: a checked PostgreSQL dump, keeping the newest 14; restore tested.
+  - `pnpm store:create`: creates a store with its web address on a fresh server, or adds another address.
+  - `Dockerfile`: one image for the web app, the worker and database updates; no secrets inside; runs as a normal user; health check. Built and run on the development computer.
+  - `docs/DEPLOYMENT.md`: server, settings, HTTPS, first start, checks, backups, monitoring, updates.
 
 ## In progress
 
@@ -372,24 +380,27 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 4.3, on the first computer)
+## Checks run this session (launch readiness, on the first computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm healthcheck` | Pass |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 297 tests (route and permission registry cover the new pages and actions) |
-| `pnpm test:int` | Pass, 265 tests, on the separate test database (4 new: guest private link, staff reply and note, emails without the note, add-only messages; someone else's order cannot be linked; account conversations, inbox sorting, taking and closing, permissions and store separation; customer timeline and notes) |
+| `pnpm test` | Pass, 304 tests (new: policy templates leave every rule blank, blanks found, text shown without HTML; launch check of the settings) |
+| `pnpm test:int` | Pass, 268 tests, on the separate test database (3 new: a page with blanks cannot be published and drafts are not shown; pages belong to one store and need settings.write; the store launch check lists what is missing) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 122 tests (46 skipped by design), including a guest writing in, staff replying with a private note, the guest answering from the emailed link, and a customer timeline note |
+| `pnpm test:e2e` | Pass, 125 tests (47 skipped by design), including a returns page refused with a blank, then published, linked in the footer and listed in the sitemap |
 | `pnpm audit --audit-level high` | Pass (1 moderate advisory, unchanged) |
-| Looked at in a browser | Covered by the browser tests on desktop and phone |
+| Docker image | Built; web answered health and served the shop; worker started and processed jobs; migrate ran; runs as user "node" |
+| Backup and restore | Backup made and restored into a spare database: same products and migrations |
+| `pnpm store:create` | Created a store with an address, added a second address, refused an address of another store and a bad name; test store removed |
+| `pnpm launch:check --tenant demo` | Runs; on the development computer it correctly reports not ready (development mode, no HTTPS, example sender, test payments, no public address) |
 | CI on GitHub | See the Actions tab for this commit |
 
 ## Recommended next task
 
-Launch readiness (policy pages, Arabic, real email service, backups, monitoring) or Phase 5 (AI), as the owner prefers.
+The owner's go-live steps in docs/DEPLOYMENT.md; then Arabic and right-to-left, or Phase 5 (AI).
 
 ## Session log
 
@@ -424,5 +435,6 @@ Launch readiness (policy pages, Arabic, real email service, backups, monitoring)
 | 2026-11-18 | Per-store look (colours, corners, font, logo, contact) and store settings page; reuse guide; AI reusability rules recorded (D88) |
 | 2026-11-18 | Milestone 4.2: customer photos and short videos with recorded, withdrawable permission; staff moderation and creator content; product page photos and gallery |
 | 2026-11-19 | Milestone 4.3: contact page, support inbox with internal notes, guest private links, customer timeline and notes; Phase 4 complete |
+| 2026-11-19 | Launch readiness: policy pages, launch check, database backups, production Docker image, deployment guide |
 
 Commit hashes: `git log --oneline`.

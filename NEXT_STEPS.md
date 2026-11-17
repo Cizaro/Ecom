@@ -17,12 +17,14 @@ Sign in to the admin:
 2. **Store emails**: add the address(es) that should hear about new orders and low stock.
 3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 
-## Next development task: launch readiness, or Phase 5 (AI)
+## Owner: going live
 
-Phase 4 (reviews, customer photos, support and customer timeline) is complete, as is per-store branding. Two good next steps:
+Follow docs/DEPLOYMENT.md: a server, a domain, a managed database and Redis, file storage, an email sending service. Then run `pnpm launch:check --tenant <slug>` on the server and fix what it lists. In the admin: write and publish the policy pages, set the look and contact details, Store emails, and turn on two-factor sign-in.
 
-1. **Launch readiness** (recommended before real customers): policy pages (returns, delivery, privacy, terms), Arabic and right-to-left storefront, a real email sending service, backups and monitoring, production deployment guide.
-2. **Phase 5, AI foundation**: the AI gateway built to the reusability rules below, then product copy and reply drafts with approval.
+## Next development task: Arabic and right-to-left storefront, or Phase 5 (AI)
+
+1. **Arabic storefront**: translations for every shop text, right-to-left layout, a language switch, Arabic emails; product names and descriptions in both languages entered by staff.
+2. **Phase 5, AI foundation**: the AI gateway built to the reusability rules below.
 
 **When Phase 5 (AI) starts:** follow the reusability rules in docs/REUSE.md and decision D88. The first deliverable is the interfaces (knowledge source, business profile, abilities) and a non-shop test business, before any prompt is written.
 
@@ -53,6 +55,7 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 - Reviews: an email asking customers to review a few days after their order is sent (with an unsubscribe); guest buyers reviewing through their order link; photos in reviews.
 - Customer photos: a poster frame for videos (needs a video tool on the server); longer videos through direct upload to storage; asking Instagram creators for permission through the official API (Phase 6).
 - Support: saved replies (inbox.configure), attachments, customers replying by answering the email, Instagram and Facebook messages in the same inbox (Phase 6).
+- Launch: an admin screen to add a store's web address; error reporting to a service such as Sentry; copying backups off the server automatically; a smaller production image (Next.js standalone output).
 - Dashboard: compare with the previous period; best-selling products.
 - Returns: shopper-started return requests once the return rules are known; card refunds with the gateway.
 - Emails: an HTML version with the store's logo, and Arabic wording (with right-to-left layout).

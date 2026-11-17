@@ -562,3 +562,19 @@ export type {
 } from "./support/support";
 export { addCustomerNote, CustomerNoteError, getCustomerForStaff } from "./customers/profile";
 export type { StaffCustomerView, TimelineEntry, TimelineKind } from "./customers/profile";
+
+export {
+  DEFAULT_PAGE_TITLES,
+  getPublishedPage,
+  listPublishedPages,
+  listStorePages,
+  PAGE_SLUGS,
+  pageBlocks,
+  pageTemplate,
+  saveStorePage,
+  StorePageError,
+  unfilledBlanks,
+} from "./tenancy/store-pages";
+export type { PageBlock, PageSlug, StorePageView } from "./tenancy/store-pages";
+export { checkLaunchSettings, checkLaunchStore } from "./platform/launch-check";
+export type { LaunchFinding, LaunchStatus } from "./platform/launch-check";

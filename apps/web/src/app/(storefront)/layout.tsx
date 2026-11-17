@@ -1,4 +1,10 @@
-import { countApprovedUgc, getCartCount, listTopCategories, themeVariables } from "@ecom/core";
+import {
+  countApprovedUgc,
+  getCartCount,
+  listPublishedPages,
+  listTopCategories,
+  themeVariables,
+} from "@ecom/core";
 import { buttonClasses, inputClasses } from "@ecom/ui";
 import { getEnv } from "@ecom/config";
 import type { Metadata } from "next";
@@ -32,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
   const { store, db } = await storefrontDb();
   const [cartToken, customer] = await Promise.all([readCartToken(), getCurrentCustomer()]);
-  const [categories, cartCount, photoCount] = await Promise.all([
+  const [categories, cartCount, photoCount, policyPages] = await Promise.all([
     listTopCategories(db),
     customer
       ? getCartCount(db, { customerId: customer.id })
@@ -41,6 +47,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
         ? getCartCount(db, { token: cartToken })
         : 0,
     countApprovedUgc(db),
+    listPublishedPages(db),
   ]);
 
   const theme = themeVariables(store.branding);
@@ -165,13 +172,25 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
             <span>
               © {new Date().getFullYear()} {store.name}
             </span>
-            <Link
-              href="/contact"
-              className="underline underline-offset-4"
-              data-testid="contact-link"
-            >
-              Contact us
-            </Link>
+            <nav aria-label="Store information" className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link
+                href="/contact"
+                className="underline underline-offset-4"
+                data-testid="contact-link"
+              >
+                Contact us
+              </Link>
+              {policyPages.map((page) => (
+                <Link
+                  key={page.slug}
+                  href={`/policies/${page.slug}`}
+                  className="underline underline-offset-4"
+                  data-testid={`policy-link-${page.slug}`}
+                >
+                  {page.title}
+                </Link>
+              ))}
+            </nav>
             {store.branding.tagline ? (
               <span data-testid="store-tagline">{store.branding.tagline}</span>
             ) : null}

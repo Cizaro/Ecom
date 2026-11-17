@@ -1,4 +1,4 @@
-import { listSitemapSource } from "@ecom/core";
+import { listPublishedPages, listSitemapSource } from "@ecom/core";
 import { SITEMAP_LIMIT, sitemapXml, type SitemapEntry } from "@/server/seo";
 import { storefrontDb, storefrontOrigin } from "@/server/storefront";
 
@@ -7,13 +7,15 @@ import { storefrontDb, storefrontOrigin } from "@/server/storefront";
 // pages themselves, so a draft can never be listed.
 export async function GET(): Promise<Response> {
   const { db } = await storefrontDb();
-  const [origin, source] = await Promise.all([
+  const [origin, source, pages] = await Promise.all([
     storefrontOrigin(),
     listSitemapSource(db, SITEMAP_LIMIT),
+    listPublishedPages(db),
   ]);
   const entries: SitemapEntry[] = [
     { path: "/" },
     { path: "/products" },
+    ...pages.map((page) => ({ path: `/policies/${page.slug}` })),
     ...source.categories.map((category) => ({
       path: `/c/${category.slug}`,
       lastModified: category.updatedAt,

@@ -26,7 +26,10 @@
     "db:drift": "pnpm --filter @ecom/db migrate:drift",
     "admin:create": "tsx scripts/create-admin.ts",
     "db:test:prepare": "tsx scripts/prepare-test-db.ts",
-    "demo:catalog": "tsx scripts/demo-catalog.ts"
+    "demo:catalog": "tsx scripts/demo-catalog.ts",
+    "launch:check": "tsx scripts/launch-check.ts",
+    "db:backup": "tsx scripts/backup-db.ts",
+    "store:create": "tsx scripts/create-store.ts"
   },
   "devDependencies": {
     "@ecom/config": "workspace:*",

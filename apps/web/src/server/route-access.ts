@@ -84,6 +84,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/settings/shipping", access: SETTINGS_WRITE },
   { path: "/admin/settings/notifications", access: SETTINGS_WRITE },
   { path: "/admin/settings/store", access: SETTINGS_WRITE },
+  { path: "/admin/settings/pages", access: SETTINGS_WRITE },
   { path: "/admin/promotions", access: { level: "permission", permission: "promotions.write" } },
   { path: "/admin/reviews", access: { level: "permission", permission: "reviews.moderate" } },
   { path: "/admin/content", access: { level: "permission", permission: "reviews.moderate" } },
@@ -167,6 +168,7 @@ const SETTINGS_ACTION_ENTRIES: readonly ActionEntry[] = [
   "updateStoreBrandingAction",
   "setStoreLogoAction",
   "removeStoreLogoAction",
+  "saveStorePageAction",
 ].map((name) => ({ id: `${SETTINGS_ACTIONS}#${name}`, access: SETTINGS_WRITE }));
 
 const PROMOTION_ACTIONS = "(admin)/admin/(protected)/promotions/actions.ts";

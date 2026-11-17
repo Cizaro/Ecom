@@ -66,6 +66,9 @@ erDiagram
 | ugc_items | Own tenant | Own tenant, no delete |
 | support_conversations | Own tenant | Own tenant, no delete |
 | support_messages, customer_notes | Own tenant | Own tenant, add only |
+| store_pages | Own tenant | Own tenant, no delete |
+
+**Policy pages (2026-11-19, decision D92):** `store_pages` (one per store and page: returns, delivery, privacy or terms; title, plain text, published and when). A published page must have at least 50 characters.
 
 **Support and customer notes (2026-11-19, decisions D90 and D91):** `support_conversations` (customer or guest email and name, subject, status open, waiting or closed, linked order, assigned staff, hash of the guest link key, last message time), `support_messages` (author customer, staff or internal note, author name, text; add-only), `customer_notes` (staff notes on a customer; add-only). `notification_settings.support_emails` lists staff told about new messages.
 

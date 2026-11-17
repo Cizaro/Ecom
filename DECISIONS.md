@@ -287,6 +287,12 @@ Shoppers write from a Contact us page (linked in the footer). A signed-in custom
 ### D91. One customer page with everything that happened (2026-11-19)
 Staff with `customers.read` open a customer from the list: orders, money spent (orders taken less refunds), account status, and a timeline of the account, orders, reviews, shared photos, conversations and staff notes, newest first, each linking to its admin page. `customers.write` adds notes; notes are add-only (a correction is a new note) and visible to staff only.
 
+### D92. Policy pages are written by the store; templates leave every rule blank (2026-11-19)
+Returns, delivery, privacy and terms pages are the store's own text (Policy pages, `settings.write`). An empty page starts from a template that states only what the platform really does (for example, only essential cookies) and leaves every store decision as a [BLANK IN CAPITALS]; a page cannot be published while a blank is left or under 50 characters. Text is plain, shown as headings, paragraphs and lists, never as HTML. Published pages are linked in the shop footer and listed in the sitemap. The templates are a starting point, not legal advice.
+
+### D93. Launch readiness is checked by a command, and the app ships as one Docker image (2026-11-19)
+`pnpm launch:check --tenant <slug>` fails on what would hurt real customers (not production mode, no HTTPS, console email, an example sender, the test payment provider, test switches on) and warns about what to finish (search indexing, delivery areas, tax, unpublished policy pages, missing staff email addresses, owners without two-factor sign-in); it also checks the database, Redis and storage. One image runs the web app, the worker or the database update, by command; it holds no secrets (configuration at run time only), runs as a normal user and has a health check. `pnpm db:backup` writes a PostgreSQL dump, checks it is one, and keeps the newest 14; a restore was tested. `pnpm store:create` creates a store and its web address on a fresh server (production seeding adds no demo data). docs/DEPLOYMENT.md is the step-by-step guide.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.

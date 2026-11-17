@@ -10,6 +10,8 @@ import {
   retryEmail,
   saveNotificationSettings,
   removeStoreLogo,
+  saveStorePage,
+  StorePageError,
   saveTaxSettings,
   setStoreLogo,
   ShippingError,
@@ -47,6 +49,7 @@ async function attempt(
       error instanceof ShippingError ||
       error instanceof NotificationSettingsError ||
       error instanceof StoreSettingsError ||
+      error instanceof StorePageError ||
       error instanceof CatalogError
     ) {
       return { error: error.message, values };
@@ -233,4 +236,27 @@ export async function removeStoreLogoAction(
     refreshStore();
     return { notice: "Logo removed." };
   });
+}
+
+export async function saveStorePageAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("settings.write");
+  const slug = field(formData, "slug");
+  const publish = formData.get("publish") === "on";
+  const values = {
+    title: field(formData, "title"),
+    body: field(formData, "body"),
+    publish: publish ? "on" : "",
+  };
+  return attempt(async () => {
+    await saveStorePage(tenantDb(context), context, slug, { ...values, publish });
+    revalidatePath("/admin/settings/pages");
+    revalidatePath(`/policies/${slug}`);
+    revalidatePath("/", "layout");
+    return {
+      notice: publish ? "Saved and published." : "Saved as a draft (not shown in the shop).",
+    };
+  }, values);
 }

@@ -94,6 +94,7 @@ model Tenant {
   supportConversations    SupportConversation[]
   supportMessages         SupportMessage[]
   customerNotes           CustomerNote[]
+  storePages              StorePage[]
 
   @@map("tenants")
 }
@@ -1567,6 +1568,26 @@ model OrderReturnItem {
   @@index([returnId])
   @@index([orderItemId])
   @@map("order_return_items")
+}
+
+/// A store's own policy page (returns, delivery, privacy, terms), written by staff.
+model StorePage {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  /// returns, delivery, privacy or terms.
+  slug            String
+  title           String
+  body            String    @default("")
+  published       Boolean   @default(false)
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz(3)
+  updatedByUserId String?   @map("updated_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@map("store_pages")
 }
 
 /// One row per store: which staff addresses get store emails.

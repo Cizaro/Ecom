@@ -20,6 +20,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: "Customer photos", path: "/admin/content" },
   { label: "Discount codes", path: "/admin/promotions" },
   { label: "Store and look", path: "/admin/settings/store" },
+  { label: "Policy pages", path: "/admin/settings/pages" },
   { label: "Delivery and tax", path: "/admin/settings/shipping" },
   { label: "Store emails", path: "/admin/settings/notifications" },
   { label: "Access", path: "/admin/access" },
