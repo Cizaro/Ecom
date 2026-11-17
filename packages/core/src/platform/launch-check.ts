@@ -26,6 +26,8 @@ type LaunchEnv = Pick<
   | "ALLOW_MOCK_PAYMENTS_IN_PRODUCTION"
   | "IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS"
   | "S3_PUBLIC_URL"
+  | "AI_PROVIDER"
+  | "AI_PAUSED"
 >;
 
 const finding = (
@@ -85,6 +87,18 @@ export function checkLaunchSettings(env: LaunchEnv): LaunchFinding[] {
           "Payments",
           "the test payment provider is on: set PAYMENT_PROVIDER=none until a card gateway is connected",
         ),
+  );
+  // AI is optional: the stand-in costs nothing and invents nothing, but answers little.
+  results.push(
+    env.AI_PAUSED
+      ? finding("warn", "AI", "paused for every store (AI_PAUSED=true)")
+      : env.AI_PROVIDER === "mock"
+        ? finding(
+            "warn",
+            "AI",
+            "the built-in test stand-in is on; set AI_PROVIDER=anthropic and AI_API_KEY to use a real AI",
+          )
+        : finding("pass", "AI", `provider: ${env.AI_PROVIDER}`),
   );
   if (env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION) {
     results.push(

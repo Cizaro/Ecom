@@ -68,6 +68,10 @@ erDiagram
 | support_messages, customer_notes | Own tenant | Own tenant, add only |
 | store_pages | Own tenant | Own tenant, no delete |
 | product_translations, category_translations | Own tenant | Own tenant |
+| ai_settings, business_profiles | Own tenant | Own tenant, no delete |
+| ai_events | Own tenant | Own tenant, add only |
+
+**AI (2026-11-21, decisions D96 to D98):** `ai_settings` (one per store: paused, monthly budget in millionths of a dollar or none for the platform limit, how much the AI does alone). `business_profiles` (one per store: what the AI is told about the business, as checked JSON). `ai_events` (one per AI run: task, provider, model, outcome, who must look at it, tokens, cost, time, problem, input without personal details, output, the fact ids it was given, the staff member).
 
 **Languages (2026-11-20, decisions D94 and D95):** `stores.languages` (the languages the shop is offered in: English, and Arabic when the store turns it on; the default is always one of them). `product_translations` and `category_translations` (one per product or category and language, Arabic only: name and descriptions; empty parts show the English). `orders.locale`, `support_conversations.locale` (the language the shopper used; their emails use it). `store_pages.locale` (one page per slug and language).
 

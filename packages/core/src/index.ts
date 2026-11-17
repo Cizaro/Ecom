@@ -593,3 +593,14 @@ export {
 export type { PageBlock, PageSlug, StorePageView } from "./tenancy/store-pages";
 export { checkLaunchSettings, checkLaunchStore } from "./platform/launch-check";
 export type { LaunchFinding, LaunchStatus } from "./platform/launch-check";
+export { createCommerceKnowledge } from "./ai/commerce-knowledge";
+export {
+  AiSettingsError,
+  createAiLedger,
+  getAiOverview,
+  getBusinessProfile,
+  saveAiSettings,
+  saveBusinessProfile,
+  tryCustomerAnswer,
+} from "./ai/ai-admin";
+export type { AiOverview } from "./ai/ai-admin";

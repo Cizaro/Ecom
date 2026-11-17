@@ -25,11 +25,14 @@ Follow docs/DEPLOYMENT.md: a server, a domain, a managed database and Redis, fil
 
 The demo store offers Arabic already. For each product and category, open it in the admin and fill in the **Arabic** box (name, descriptions); anything left empty shows the English. Write the Arabic policy pages under **Policy pages**. Please read the shop in Arabic once and tell us any wording you would like changed: the translations are in `packages/i18n/src/ar.ts`.
 
-## Next development task: Phase 5 (AI)
+## Owner: the AI assistant
 
-**Phase 5, AI foundation**: the AI gateway built to the reusability rules below.
+1. Open **AI assistant** in the admin, fill in the **Business profile** (what you sell, your tone, what the AI must never promise) and try a few customer questions. Today it runs on the built-in test stand-in, which only quotes the first matching fact.
+2. To use the real AI: create an API key at console.anthropic.com, set a monthly spending limit there too, and put `AI_PROVIDER=anthropic` and `AI_API_KEY=...` in the server's settings (never in the repository). Choose a monthly budget per store on the AI page.
 
-**When Phase 5 (AI) starts:** follow the reusability rules in docs/REUSE.md and decision D88. The first deliverable is the interfaces (knowledge source, business profile, abilities) and a non-shop test business, before any prompt is written.
+## Next development task: Milestone 5.2 (product copy, SEO, tags, translation)
+
+Next AI tasks, each with the same checks: product descriptions and search-engine text from the product's own details, Arabic drafts of product names and descriptions for staff to approve, tags and categories. Then 5.3 (classifying support messages and drafting replies in the inbox, with approval) and 5.4 (a fixed evaluation set and prompt-injection tests, runnable against the real provider on demand).
 
 ## Return rules (owner)
 

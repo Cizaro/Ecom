@@ -87,6 +87,28 @@ const envSchema = z.object({
   ),
   SMTP_USER: optionalText,
   SMTP_PASSWORD: optionalText,
+
+  /**
+   * Who answers AI tasks: "mock" (a built-in stand-in that never calls an
+   * outside service, for development and tests) or "anthropic" (Claude,
+   * needs AI_API_KEY). Other providers are added behind the same interface.
+   */
+  AI_PROVIDER: z.enum(["mock", "anthropic"]).default("mock"),
+  AI_API_KEY: optionalText,
+  AI_DEFAULT_MODEL: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).default("claude-opus-5-5"),
+  ),
+  /** The most one store may spend on AI in a calendar month, in US dollars. */
+  AI_MONTHLY_BUDGET_USD: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : Number(value)),
+    z.number().min(0).max(100_000).default(50),
+  ),
+  /** Emergency switch: "true" stops every AI task for every store at once. */
+  AI_PAUSED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -116,6 +138,9 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   }
 
   const env = result.data;
+  if (env.AI_PROVIDER === "anthropic" && !env.AI_API_KEY) {
+    throw new EnvValidationError(["AI_API_KEY: required when AI_PROVIDER is anthropic"]);
+  }
   if (env.EMAIL_PROVIDER === "smtp" && (!env.SMTP_HOST || !env.SMTP_PORT)) {
     throw new EnvValidationError(["SMTP_HOST and SMTP_PORT: required when EMAIL_PROVIDER is smtp"]);
   }

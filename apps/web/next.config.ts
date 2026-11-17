@@ -20,7 +20,14 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Workspace packages are consumed as TypeScript source.
-  transpilePackages: ["@ecom/config", "@ecom/core", "@ecom/db", "@ecom/i18n", "@ecom/ui"],
+  transpilePackages: [
+    "@ecom/ai",
+    "@ecom/config",
+    "@ecom/core",
+    "@ecom/db",
+    "@ecom/i18n",
+    "@ecom/ui",
+  ],
   serverExternalPackages: [
     "pino",
     "ioredis",

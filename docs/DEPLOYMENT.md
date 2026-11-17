@@ -30,6 +30,8 @@ Copy `.env.example` to `.env.production` **on the server** (never into the repos
 | `EMAIL_PROVIDER` | `smtp`, with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` from the email service |
 | `EMAIL_FROM` | An address on your own domain, e.g. `orders@cedarbags.lb` |
 | `PAYMENT_PROVIDER` | `none` (cash on delivery) until a card gateway is connected |
+| `AI_PROVIDER`, `AI_API_KEY` | `mock` (no AI, costs nothing) or `anthropic` with your Anthropic API key from console.anthropic.com. The key stays on the server only. |
+| `AI_MONTHLY_BUDGET_USD`, `AI_PAUSED` | The most one store may spend on AI per month; `AI_PAUSED=true` stops all AI at once |
 | `ALLOW_SEARCH_INDEXING` | `true` once you are ready for Google |
 | `ALLOW_MOCK_PAYMENTS_IN_PRODUCTION`, `IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS` | `false` (test switches; never on a live site) |
 

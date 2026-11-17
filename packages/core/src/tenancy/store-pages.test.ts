@@ -42,6 +42,8 @@ describe("launch check of the server settings", () => {
     ALLOW_MOCK_PAYMENTS_IN_PRODUCTION: false,
     IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS: false,
     S3_PUBLIC_URL: "https://media.cedarbags.lb",
+    AI_PROVIDER: "anthropic" as const,
+    AI_PAUSED: false,
   };
 
   it("passes a live configuration", () => {
@@ -72,5 +74,13 @@ describe("launch check of the server settings", () => {
       ]),
     );
     expect(results.find((f) => f.label === "Search engines")?.status).toBe("warn");
+  });
+
+  it("warns when AI is the test stand-in or paused", () => {
+    const ai = (env: Partial<typeof live>) =>
+      checkLaunchSettings({ ...live, ...env }).find((f) => f.label === "AI");
+    expect(ai({})?.status).toBe("pass");
+    expect(ai({ AI_PROVIDER: "mock" as never })?.status).toBe("warn");
+    expect(ai({ AI_PAUSED: true })?.detail).toMatch(/paused/);
   });
 });

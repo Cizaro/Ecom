@@ -88,6 +88,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/promotions", access: { level: "permission", permission: "promotions.write" } },
   { path: "/admin/reviews", access: { level: "permission", permission: "reviews.moderate" } },
   { path: "/admin/content", access: { level: "permission", permission: "reviews.moderate" } },
+  { path: "/admin/ai", access: { level: "permission", permission: "ai.use" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -249,6 +250,15 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...CONTENT_ACTION_ENTRIES,
   ...INBOX_ACTION_ENTRIES,
   ...CUSTOMER_ACTION_ENTRIES,
+  // AI: settings and the profile need ai.configure; trying an answer needs ai.use.
+  ...["saveAiSettingsAction", "saveBusinessProfileAction"].map((name) => ({
+    id: `(admin)/admin/(protected)/ai/actions.ts#${name}`,
+    access: { level: "permission", permission: "ai.configure" } as const,
+  })),
+  {
+    id: "(admin)/admin/(protected)/ai/actions.ts#tryAnswerAction",
+    access: { level: "permission", permission: "ai.use" },
+  },
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [

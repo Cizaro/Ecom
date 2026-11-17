@@ -39,7 +39,18 @@ The owner wants the system built "like a puzzle": pieces that can be used again 
 4. **Pieces depend on the foundation, not on each other's insides.** A new module may use tenancy, permissions, customers, media and notifications; it reaches other modules only through their exported functions.
 5. **Everything tenant-scoped,** with a test that one store cannot see another's.
 
-## Rules for the AI module (Phase 5), decided before it is built
+## Using the AI module for another business
+
+The AI module (`packages/ai`) is built and follows the rules below. To point it at a different business:
+
+1. Write a **knowledge source**: an object with `abilities()` (what it can look up) and `search(question)` returning facts, each with an id and plain text. The shop's is `packages/core/src/ai/commerce-knowledge.ts`; the test clinic's is `packages/ai/src/fixtures/clinic.ts` (about 50 lines).
+2. Give it a **business profile** (staff fill it in on the AI page, or pass one in code).
+3. Give it a **ledger** for settings, spend and the audit trail (the platform's is `createAiLedger`), or your own.
+4. Call `createGateway({...}).run("customer.answer", { question, language }, { tenantId, profile, knowledge })`.
+
+Nothing in the module changes. New tasks are added in `packages/ai/src/tasks.ts` with the same checks.
+
+## Rules for the AI module (Phase 5), decided before it was built
 
 The owner wants the AI part to be redirected to a different business by giving it that business's data. So:
 
