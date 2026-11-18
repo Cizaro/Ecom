@@ -72,6 +72,11 @@ export default async function AiPage() {
             <dt className="text-ink-muted">Model</dt>
             <dd>
               {setup.provider} · {setup.model}
+              {setup.fallback ? (
+                <span className="block text-ink-muted" data-testid="ai-fallback">
+                  Backup: {setup.fallback.provider} · {setup.fallback.model}
+                </span>
+              ) : null}
             </dd>
           </div>
           <div>

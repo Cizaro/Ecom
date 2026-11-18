@@ -111,3 +111,60 @@ describe("parseEnv", () => {
     expect(env.PAYMENT_PROVIDER).toBe("none");
   });
 });
+
+describe("AI provider settings", () => {
+  it("defaults to the built-in stand-in", () => {
+    expect(parseEnv(valid).AI_PROVIDER).toBe("mock");
+  });
+
+  it("needs each chosen provider's key and model, the backup's too", () => {
+    expect(() => parseEnv({ ...valid, AI_PROVIDER: "groq" })).toThrow(
+      /GROQ_API_KEY.*\n.*GROQ_MODEL/,
+    );
+    expect(() =>
+      parseEnv({
+        ...valid,
+        AI_PROVIDER: "groq",
+        GROQ_API_KEY: "g",
+        GROQ_MODEL: "some-model",
+        AI_FALLBACK_PROVIDER: "moonshot",
+      }),
+    ).toThrow(/MOONSHOT_API_KEY/);
+    const env = parseEnv({
+      ...valid,
+      AI_PROVIDER: "groq",
+      GROQ_API_KEY: "g",
+      GROQ_MODEL: "some-model",
+      AI_FALLBACK_PROVIDER: "moonshot",
+      MOONSHOT_API_KEY: "m",
+      MOONSHOT_MODEL: "kimi-model",
+      AI_INPUT_PRICE_PER_MTOK: "0",
+      AI_OUTPUT_PRICE_PER_MTOK: "0",
+    });
+    expect(env).toMatchObject({ AI_FALLBACK_PROVIDER: "moonshot", AI_INPUT_PRICE_PER_MTOK: 0 });
+  });
+
+  it("checks the other settings", () => {
+    expect(() => parseEnv({ ...valid, AI_PROVIDER: "anthropic" })).toThrow(/AI_API_KEY/);
+    expect(() =>
+      parseEnv({
+        ...valid,
+        AI_PROVIDER: "openai-compatible",
+        AI_BASE_URL: "http://ai.example.test/v1",
+        AI_API_KEY: "k",
+        AI_DEFAULT_MODEL: "m",
+      }),
+    ).toThrow(/https/);
+    expect(
+      parseEnv({
+        ...valid,
+        AI_PROVIDER: "openai-compatible",
+        AI_BASE_URL: "http://localhost:11434/v1",
+        AI_API_KEY: "k",
+        AI_DEFAULT_MODEL: "m",
+      }).AI_BASE_URL,
+    ).toBe("http://localhost:11434/v1");
+    expect(() => parseEnv({ ...valid, AI_FALLBACK_PROVIDER: "mock" })).toThrow();
+    expect(() => parseEnv({ ...valid, AI_INPUT_PRICE_PER_MTOK: "1" })).toThrow(/both or neither/);
+  });
+});

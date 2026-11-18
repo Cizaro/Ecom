@@ -12,6 +12,10 @@ const optionalText = z.preprocess(
 
 const secret = z.string().min(32, "must be at least 32 characters");
 
+/** The AI services the platform can use (see AI_PROVIDER below). */
+export const AI_PROVIDERS = ["mock", "anthropic", "groq", "moonshot", "openai-compatible"] as const;
+export type AiProviderName = (typeof AI_PROVIDERS)[number];
+
 /**
  * Variables required from Phase 1. Later phases add their own (payments, email, AI,
  * social); see .env.example for the full list.
@@ -89,12 +93,40 @@ const envSchema = z.object({
   SMTP_PASSWORD: optionalText,
 
   /**
-   * Who answers AI tasks: "mock" (a built-in stand-in that never calls an
-   * outside service, for development and tests) or "anthropic" (Claude,
-   * needs AI_API_KEY). Other providers are added behind the same interface.
+   * Who answers AI tasks:
+   * - "mock": a built-in stand-in that never calls an outside service (development and tests);
+   * - "anthropic": Claude (AI_API_KEY, AI_DEFAULT_MODEL);
+   * - "groq": Groq (GROQ_API_KEY, GROQ_MODEL);
+   * - "moonshot": Moonshot / Kimi (MOONSHOT_API_KEY, MOONSHOT_MODEL);
+   * - "openai-compatible": any other service in that format (AI_BASE_URL, AI_API_KEY, AI_DEFAULT_MODEL).
    */
-  AI_PROVIDER: z.enum(["mock", "anthropic"]).default("mock"),
+  AI_PROVIDER: z.enum(AI_PROVIDERS).default("mock"),
+  /** Takes over when the main provider is busy, unreachable or out of credit. */
+  AI_FALLBACK_PROVIDER: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(AI_PROVIDERS).exclude(["mock"]).optional(),
+  ),
   AI_API_KEY: optionalText,
+  GROQ_API_KEY: optionalText,
+  GROQ_MODEL: optionalText,
+  MOONSHOT_API_KEY: optionalText,
+  MOONSHOT_MODEL: optionalText,
+  /** The service's address for "openai-compatible", e.g. https://api.groq.com/openai/v1. */
+  AI_BASE_URL: z.preprocess((value) => (value === "" ? undefined : value), z.url().optional()),
+  /**
+   * What the model costs in dollars per million tokens, for the monthly
+   * budget. Needed for models the built-in price list does not know; without
+   * them such a model is counted at the most expensive known price. A free
+   * test plan is 0 and 0.
+   */
+  AI_INPUT_PRICE_PER_MTOK: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : Number(value)),
+    z.number().min(0).max(1000).optional(),
+  ),
+  AI_OUTPUT_PRICE_PER_MTOK: z.preprocess(
+    (value) => (value === "" || value === undefined ? undefined : Number(value)),
+    z.number().min(0).max(1000).optional(),
+  ),
   AI_DEFAULT_MODEL: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).default("claude-opus-5-5"),
@@ -105,10 +137,13 @@ const envSchema = z.object({
     z.number().min(0).max(100_000).default(50),
   ),
   /** Emergency switch: "true" stops every AI task for every store at once. */
-  AI_PAUSED: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((value) => value === "true"),
+  AI_PAUSED: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -138,9 +173,19 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   }
 
   const env = result.data;
-  if (env.AI_PROVIDER === "anthropic" && !env.AI_API_KEY) {
-    throw new EnvValidationError(["AI_API_KEY: required when AI_PROVIDER is anthropic"]);
+  const aiIssues = [env.AI_PROVIDER, env.AI_FALLBACK_PROVIDER]
+    .filter((name): name is AiProviderName => name !== undefined)
+    .flatMap((name) => aiProviderIssues(name, env, source));
+  if (env.AI_FALLBACK_PROVIDER && env.AI_FALLBACK_PROVIDER === env.AI_PROVIDER) {
+    aiIssues.push("AI_FALLBACK_PROVIDER: choose a different provider from AI_PROVIDER");
   }
+  if (
+    (env.AI_INPUT_PRICE_PER_MTOK === undefined) !==
+    (env.AI_OUTPUT_PRICE_PER_MTOK === undefined)
+  ) {
+    aiIssues.push("AI_INPUT_PRICE_PER_MTOK and AI_OUTPUT_PRICE_PER_MTOK: set both or neither");
+  }
+  if (aiIssues.length > 0) throw new EnvValidationError([...new Set(aiIssues)]);
   if (env.EMAIL_PROVIDER === "smtp" && (!env.SMTP_HOST || !env.SMTP_PORT)) {
     throw new EnvValidationError(["SMTP_HOST and SMTP_PORT: required when EMAIL_PROVIDER is smtp"]);
   }
@@ -177,4 +222,46 @@ let cached: Env | undefined;
 export function getEnv(): Env {
   cached ??= parseEnv(process.env);
   return cached;
+}
+
+/** What a provider needs from the settings; empty when all is there. */
+function aiProviderIssues(
+  name: AiProviderName,
+  env: Env,
+  source: Record<string, string | undefined>,
+): string[] {
+  switch (name) {
+    case "mock":
+      return [];
+    case "anthropic":
+      return env.AI_API_KEY ? [] : ["AI_API_KEY: required for the anthropic provider"];
+    case "groq":
+      return [
+        ...(env.GROQ_API_KEY ? [] : ["GROQ_API_KEY: required for the groq provider"]),
+        ...(env.GROQ_MODEL ? [] : ["GROQ_MODEL: name the model (pnpm ai:models lists them)"]),
+      ];
+    case "moonshot":
+      return [
+        ...(env.MOONSHOT_API_KEY ? [] : ["MOONSHOT_API_KEY: required for the moonshot provider"]),
+        ...(env.MOONSHOT_MODEL
+          ? []
+          : ["MOONSHOT_MODEL: name the model (pnpm ai:models lists them)"]),
+      ];
+    case "openai-compatible": {
+      const issues: string[] = [];
+      if (!env.AI_BASE_URL) issues.push("AI_BASE_URL: required for the openai-compatible provider");
+      else if (
+        !env.AI_BASE_URL.startsWith("https://") &&
+        !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(env.AI_BASE_URL)
+      ) {
+        issues.push(
+          "AI_BASE_URL: must start with https:// (http:// only for a model on this computer)",
+        );
+      }
+      if (!env.AI_API_KEY) issues.push("AI_API_KEY: required for the openai-compatible provider");
+      if (!source.AI_DEFAULT_MODEL)
+        issues.push("AI_DEFAULT_MODEL: name the model (pnpm ai:models lists them)");
+      return issues;
+    }
+  }
 }

@@ -9,7 +9,7 @@ import { ProviderError, type AiProvider } from "../types";
  * ("server-side fallback"); a decline that stands is reported as "refused".
  * The key comes from the server's settings only.
  */
-export function createAnthropicProvider(options: { apiKey: string }): AiProvider {
+export function createAnthropicProvider(options: { apiKey: string; model?: string }): AiProvider {
   const client = new Anthropic({ apiKey: options.apiKey, maxRetries: 2 });
   return {
     name: "anthropic",
@@ -17,7 +17,7 @@ export function createAnthropicProvider(options: { apiKey: string }): AiProvider
       try {
         const response = await client.beta.messages.parse(
           {
-            model: request.model,
+            model: options.model ?? request.model,
             max_tokens: request.maxTokens,
             system: request.system,
             messages: [{ role: "user", content: request.user }],

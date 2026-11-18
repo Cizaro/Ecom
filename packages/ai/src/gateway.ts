@@ -1,4 +1,4 @@
-import { costMicros } from "./pricing";
+import { costMicros, type Prices } from "./pricing";
 import { TASKS, type TaskDefinition, type TaskName } from "./tasks";
 import {
   ProviderError,
@@ -29,6 +29,8 @@ export interface GatewayOptions {
   platformMonthlyBudgetMicros: number;
   timeoutMs?: number;
   now?: () => Date;
+  /** What the configured model costs, when the built-in price list does not know it. */
+  prices?: Prices;
 }
 
 export interface RunContext {
@@ -83,7 +85,7 @@ export function createGateway(options: GatewayOptions) {
         route: extra.route ?? null,
         inputTokens,
         outputTokens,
-        costMicros: costMicros(model, inputTokens, outputTokens),
+        costMicros: costMicros(model, inputTokens, outputTokens, options.prices),
         latencyMs: Date.now() - started,
         problem: extra.problem ?? null,
         input: recordedInput,

@@ -212,6 +212,7 @@ Last updated: 2026-11-22
   - Checked: drafts use the product's own details only; no number that is not in them; translations keep exactly the original's numbers and are in Arabic letters; only the store's own categories. Always for a person to approve.
   - Product page: an **AI drafts** panel to draft the wording and search text, or the Arabic wording, then tick the parts to apply or dismiss the draft. Tags are added to the current ones.
   - Table `product_suggestions` with Row-Level Security; drafting and deciding need `catalog.write` and `ai.use`.
+- **Free AI services for testing:** Groq and Moonshot (Kimi) through one OpenAI-compatible provider, with a backup provider when the main one is busy; `pnpm ai:models` lists a service's models and `pnpm ai:try` asks a question from the terminal.
 
 ## In progress
 
@@ -453,5 +454,6 @@ Milestone 5.3 (classifying support messages and drafting replies in the inbox, w
 | 2026-11-20 | Arabic shop: language switch, right to left, every shop text and customer email in Arabic, Arabic product and category names, policy pages per language |
 | 2026-11-21 | Milestone 5.1: AI gateway package, shop knowledge source, AI settings, business profile and audit trail, admin AI assistant page |
 | 2026-11-22 | Milestone 5.2: AI product drafts (wording, search text, tags, category, Arabic), applied part by part from the product page (second computer) |
+| 2026-11-22 | AI providers for testing: Groq and Moonshot (Kimi) through an OpenAI-compatible provider, backup provider, ai:models and ai:try commands |
 
 Commit hashes: `git log --oneline`.

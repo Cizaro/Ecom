@@ -9,3 +9,8 @@ export * from "./content-tasks";
 export * from "./gateway";
 export { createMockProvider } from "./providers/mock";
 export { createAnthropicProvider } from "./providers/anthropic";
+export { withFallback } from "./providers/fallback";
+export {
+  createOpenAiCompatibleProvider,
+  listOpenAiCompatibleModels,
+} from "./providers/openai-compatible";

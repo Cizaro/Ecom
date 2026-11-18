@@ -13,8 +13,25 @@ const PRICES: Record<string, { input: number; output: number }> = {
 
 const MOST_EXPENSIVE = { input: 8, output: 40 };
 
-export function costMicros(model: string, inputTokens: number, outputTokens: number): number {
-  const price = PRICES[model] ?? MOST_EXPENSIVE;
+export interface Prices {
+  /** Dollars per million input tokens. */
+  input: number;
+  /** Dollars per million output tokens. */
+  output: number;
+}
+
+/**
+ * The cost of a run. Models in the table above use its prices; for others,
+ * `prices` from the server's settings (a free test plan is 0 and 0), else
+ * the most expensive known price.
+ */
+export function costMicros(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  prices?: Prices,
+): number {
+  const price = PRICES[model] ?? prices ?? MOST_EXPENSIVE;
   return Math.ceil(inputTokens * price.input + outputTokens * price.output);
 }
 

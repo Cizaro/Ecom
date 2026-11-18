@@ -30,7 +30,10 @@ Copy `.env.example` to `.env.production` **on the server** (never into the repos
 | `EMAIL_PROVIDER` | `smtp`, with `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` from the email service |
 | `EMAIL_FROM` | An address on your own domain, e.g. `orders@cedarbags.lb` |
 | `PAYMENT_PROVIDER` | `none` (cash on delivery) until a card gateway is connected |
-| `AI_PROVIDER`, `AI_API_KEY` | `mock` (no AI, costs nothing) or `anthropic` with your Anthropic API key from console.anthropic.com. The key stays on the server only. |
+| `AI_PROVIDER`, `AI_FALLBACK_PROVIDER` | `mock` (no AI, costs nothing), `anthropic`, `groq`, `moonshot` or `openai-compatible`; the backup takes over when the main one is busy |
+| `AI_API_KEY`, `AI_DEFAULT_MODEL`, `AI_BASE_URL` | Claude, or another OpenAI-compatible service. Keys stay on the server only |
+| `GROQ_API_KEY`, `GROQ_MODEL`, `MOONSHOT_API_KEY`, `MOONSHOT_MODEL` | For Groq and Moonshot (Kimi); list model names with `pnpm ai:models groq` or `moonshot` |
+| `AI_INPUT_PRICE_PER_MTOK`, `AI_OUTPUT_PRICE_PER_MTOK` | Price of a model the built-in list does not know (0 and 0 for a free plan) |
 | `AI_MONTHLY_BUDGET_USD`, `AI_PAUSED` | The most one store may spend on AI per month; `AI_PAUSED=true` stops all AI at once |
 | `ALLOW_SEARCH_INDEXING` | `true` once you are ready for Google |
 | `ALLOW_MOCK_PAYMENTS_IN_PRODUCTION`, `IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS` | `false` (test switches; never on a live site) |

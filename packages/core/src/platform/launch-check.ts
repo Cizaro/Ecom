@@ -98,7 +98,13 @@ export function checkLaunchSettings(env: LaunchEnv): LaunchFinding[] {
             "AI",
             "the built-in test stand-in is on; set AI_PROVIDER=anthropic and AI_API_KEY to use a real AI",
           )
-        : finding("pass", "AI", `provider: ${env.AI_PROVIDER}`),
+        : env.AI_PROVIDER === "groq" || env.AI_PROVIDER === "moonshot"
+          ? finding(
+              "warn",
+              "AI",
+              `provider: ${env.AI_PROVIDER}; check its terms before sending real customer messages (free plans may keep them)`,
+            )
+          : finding("pass", "AI", `provider: ${env.AI_PROVIDER}`),
   );
   if (env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION) {
     results.push(

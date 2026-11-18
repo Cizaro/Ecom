@@ -621,3 +621,4 @@ export type {
   TranslationField,
   TranslationProposal,
 } from "./ai/product-content";
+export { aiModelFor, aiProviderFromSettings, openAiCompatibleConnection } from "./ai/providers";

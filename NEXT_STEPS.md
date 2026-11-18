@@ -29,7 +29,8 @@ The demo store offers Arabic already. For each product and category, open it in 
 
 1. Open **AI assistant** in the admin, fill in the **Business profile** (what you sell, your tone, what the AI must never promise) and try a few customer questions. Today it runs on the built-in test stand-in, which only quotes the first matching fact.
 2. On any product, open **AI drafts**, try **Draft wording and search text** and **Draft Arabic wording**, and apply only the parts you like. With the test stand-in the Arabic draft is the English marked "[test translation]": dismiss it.
-3. To use the real AI: create an API key at console.anthropic.com, set a monthly spending limit there too, and put `AI_PROVIDER=anthropic` and `AI_API_KEY=...` in the server's settings (never in the repository). Choose a monthly budget per store on the AI page.
+3. To test with free services: paste your Groq key into `GROQ_API_KEY` and your Moonshot key into `MOONSHOT_API_KEY` in `.env` (never in the repository). Run `pnpm ai:models groq` and `pnpm ai:models moonshot`, copy a model name into `GROQ_MODEL` and `MOONSHOT_MODEL`, then set `AI_PROVIDER=groq`, `AI_FALLBACK_PROVIDER=moonshot` and both prices to 0. Try it with `pnpm ai:try --tenant demo "How much is delivery?"` or on the AI page. Use made-up questions: free plans may keep what is sent.
+4. Later, for Claude: create an API key at console.anthropic.com, set a spending limit there, and set `AI_PROVIDER=anthropic` and `AI_API_KEY`.
 
 ## Housekeeping
 

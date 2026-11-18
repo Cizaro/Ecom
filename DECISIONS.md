@@ -314,6 +314,9 @@ Two content tasks in `packages/ai`, named for "items" so any business can use th
 ### D100. One dependency advisory ignored until a fix exists (2026-11-22)
 A high-severity advisory for `picomatch` (GHSA-fc5q-39xc-vjpf, slow pattern matching on crafted patterns) has no fixed version yet. It is reached only through developer tools (the linter, build and test tooling), never through what the app runs: `pnpm audit --prod` finds nothing. It is listed under `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` so CI's audit keeps checking everything else at high severity. Owner decision. Remove the entry once a fixed version is released.
 
+### D101. Free AI services for testing: Groq and Moonshot (Kimi), with a backup provider (2026-11-22)
+The owner tests the AI on free plans before paying for Claude. One provider speaks the "OpenAI chat completions" format used by Groq, Moonshot (Kimi), OpenRouter and local model servers; `groq` and `moonshot` are named presets of it with their own key and model settings, so both keys can sit in the settings at once. `AI_FALLBACK_PROVIDER` takes over when the main provider is busy, unreachable, slow or out of credit (useful with free plans' tight limits); a refused key or unknown model is reported, not hidden. Because these services differ in forcing a JSON shape, the provider asks for a JSON object and states the shape in the instructions; the gateway's checks are the same for every provider. Model names are read from the service (`pnpm ai:models`), never guessed. Unknown models count against the budget at the most expensive known price unless their price is set (`AI_INPUT_PRICE_PER_MTOK` and `AI_OUTPUT_PRICE_PER_MTOK`; 0 and 0 for a free plan). The launch check warns that free plans may keep what is sent: test with made-up questions.
+
 ## Open decisions for the owner
 
 Until answered, the assumption shown is used and kept configurable. Items marked **blocking** stop a specific milestone; nothing else waits.
