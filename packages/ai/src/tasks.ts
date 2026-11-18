@@ -96,6 +96,7 @@ export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAns
         GROUNDING_RULES,
         `- Reply in the language with code "${input.language}".`,
         "- Set answered to false when the facts do not answer the question; then citations may be empty.",
+        "- Mention only items that are what the customer asked about; leave out facts that merely share a word or a detail with the question.",
         "- Choose the topic that fits the message; set handover to true when a person should take over.",
       ].join("\n"),
       user: [

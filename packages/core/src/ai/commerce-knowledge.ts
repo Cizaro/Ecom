@@ -120,8 +120,18 @@ export function createCommerceKnowledge(
 
       // Products matching any of the question's words, best matches first.
       const seen = new Set<string>();
-      for (const word of words) {
-        const list = await listPublicProducts(db, { search: word, pageSize: MAX_PRODUCTS });
+      // Colours are not in product names: a word that is one of the store's
+      // colours ("black") is looked up as a colour, before the other words.
+      const storeColors = (await listPublicProducts(db, { pageSize: 1 })).facets.colors.map(
+        (facet) => facet.value.toLowerCase(),
+      );
+      const colorWords = words.filter((word) => storeColors.includes(word));
+      const queries = [
+        ...colorWords.map((color) => ({ colors: [color] })),
+        ...words.filter((word) => !colorWords.includes(word)).map((word) => ({ search: word })),
+      ];
+      for (const query of queries) {
+        const list = await listPublicProducts(db, { ...query, pageSize: MAX_PRODUCTS });
         const items = await localizeProducts(db, locale, list.items, (item) => item.id);
         for (const item of items) {
           if (seen.has(item.id) || seen.size >= MAX_PRODUCTS) continue;
