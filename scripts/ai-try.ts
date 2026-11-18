@@ -11,11 +11,9 @@ import { createGateway, dollarsToMicros } from "@ecom/ai";
 import { EnvValidationError, parseEnv } from "@ecom/config";
 import {
   aiProviderFromSettings,
+  answerCustomerQuestion,
   createAiLedger,
-  createCommerceKnowledge,
   createTenantDb,
-  getBusinessProfile,
-  parseBranding,
 } from "@ecom/core";
 import { disconnectDatabase, getAdminPrisma, getAppPrisma } from "@ecom/db";
 
@@ -69,18 +67,7 @@ try {
     platformMonthlyBudgetMicros: dollarsToMicros(env.AI_MONTHLY_BUDGET_USD),
   });
   console.log(`Asking ${provider.name} (${model}) about "${store.name}"...`);
-  const result = await gateway.run(
-    "customer.answer",
-    { question, language },
-    {
-      tenantId: tenant.id,
-      profile: await getBusinessProfile(db),
-      knowledge: createCommerceKnowledge(db, {
-        name: store.name,
-        branding: parseBranding(store.branding),
-      }),
-    },
-  );
+  const result = await answerCustomerQuestion(db, gateway, { question, language });
   const event = await admin.aiEvent.findUnique({
     where: { id: result.eventId },
     select: {

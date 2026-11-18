@@ -272,10 +272,36 @@ export async function tryCustomerAnswer(
   input: { question: unknown; language: unknown },
 ): Promise<RunResult<CustomerAnswerOutput> & { facts?: Fact[] }> {
   assertPermission(context, "ai.use");
+  return answerCustomerQuestion(db, gateway, input);
+}
+
+/**
+ * Drafts an answer to a customer's question in two AI steps: first search
+ * words in the language the store's records use (so a question in Lebanese
+ * Arabic or Arabizi finds its products), then the answer from the facts
+ * those words and the question find. If the first step does not work (busy,
+ * paused, a bad answer), the answer is drafted from the question alone.
+ * No permission check: callers check (staff screens) or are the system.
+ */
+export async function answerCustomerQuestion(
+  db: TenantDb,
+  gateway: AiGateway,
+  input: { question: unknown; language: unknown },
+): Promise<RunResult<CustomerAnswerOutput> & { facts?: Fact[] }> {
   const [store, profile] = await Promise.all([storeIn(db), getBusinessProfile(db)]);
+  const context = { tenantId: db.tenantId, profile, knowledge: createCommerceKnowledge(db, store) };
+  const words = await gateway.run(
+    "search.terms",
+    { question: input.question, recordsLanguage: store.languages[0] ?? "en" },
+    context,
+  );
   return gateway.run(
     "customer.answer",
-    { question: input.question, language: input.language },
-    { tenantId: db.tenantId, profile, knowledge: createCommerceKnowledge(db, store) },
+    {
+      question: input.question,
+      language: input.language,
+      ...(words.ok && words.output.terms.length > 0 ? { terms: words.output.terms } : {}),
+    },
+    context,
   );
 }

@@ -31,7 +31,15 @@ export interface KnowledgeSource {
   /** The lookups this source offers. */
   abilities(): Ability[];
   /** Facts relevant to a question, most relevant first. Never invents anything. */
-  search(question: string, options: { limit: number; language: string }): Promise<Fact[]>;
+  search(
+    question: string,
+    options: {
+      limit: number;
+      language: string;
+      /** More words to look up, in the business's own language (from the search.terms task). */
+      terms?: readonly string[];
+    },
+  ): Promise<Fact[]>;
 }
 
 /** What the business is and how it speaks: data staff edit, not code. */

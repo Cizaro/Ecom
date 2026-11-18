@@ -137,7 +137,13 @@ describe("AI for a store", () => {
       status: "ok",
       costMicros: 0,
     });
-    const event = await admin.aiEvent.findFirstOrThrow({ where: { tenantId: s.tenantId } });
+    const event = await admin.aiEvent.findFirstOrThrow({
+      where: { tenantId: s.tenantId, task: "customer.answer" },
+    });
+    // The search words step is recorded too.
+    expect(
+      await admin.aiEvent.count({ where: { tenantId: s.tenantId, task: "search.terms" } }),
+    ).toBe(1);
     expect(event.userId).toBe(s.userId);
     expect(event.factIds.length).toBeGreaterThan(0);
   });

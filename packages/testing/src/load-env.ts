@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { useTestAi } from "./test-ai";
 import { useTestDatabase } from "./test-database";
 
 // Vitest setup file for integration tests: loads the root .env if present
@@ -10,3 +11,4 @@ try {
   // No .env file.
 }
 useTestDatabase(process.env);
+useTestAi(process.env);

@@ -6,7 +6,7 @@ import { createGateway, type GatewayOptions } from "./gateway";
 import { dollarsToMicros } from "./pricing";
 import { redactPersonal } from "./prompt";
 import { createMockProvider } from "./providers/mock";
-import { customerAnswerTask } from "./tasks";
+import { customerAnswerTask, looksLikeArabizi, searchTermsTask } from "./tasks";
 import type { AiEvent, AiLedger, ProviderRequest, TenantAiSettings } from "./types";
 
 // The gateway against a made-up dental clinic (not a shop), with the mock
@@ -253,5 +253,52 @@ describe("number check of customer answers", () => {
     expect(check("el delivery 3al jnoub b $4.00, 7abibi", "addesh el delivery 3al jnoub?")).toEqual(
       [],
     );
+  });
+});
+
+describe("Lebanese Arabic in Latin letters", () => {
+  it("is recognised, and the answer is told to reply the same way", () => {
+    expect(looksLikeArabizi("kifak, 3endkon shanta sawda? addesh ha2a?")).toBe(true);
+    expect(looksLikeArabizi("How much is delivery to Beirut?")).toBe(false);
+    expect(looksLikeArabizi("قديش التوصيل؟")).toBe(false);
+    const { system } = customerAnswerTask.prompt({
+      input: { question: "kifak, addesh el delivery 3al jnoub?", language: "en" },
+      profile: clinicProfile,
+      facts: [],
+    });
+    expect(system).toMatch(/Latin letters and numbers. Reply the same way/);
+  });
+});
+
+describe("search words task", () => {
+  it("passes its words to the facts lookup and refuses long phrases", async () => {
+    const seen: string[][] = [];
+    const knowledge = {
+      ...clinicKnowledge,
+      search: async (
+        question: string,
+        options: { limit: number; language: string; terms?: readonly string[] },
+      ) => {
+        seen.push([...(options.terms ?? [])]);
+        return clinicKnowledge.search(question, options);
+      },
+    };
+    const { ledger } = memoryLedger();
+    const terms = await gateway(ledger, {}, () => ({
+      output: { terms: ["cleaning", "price"] },
+    })).run("search.terms", { question: "addesh el tandif?", recordsLanguage: "en" }, clinic);
+    expect(terms).toMatchObject({ ok: true, output: { terms: ["cleaning", "price"] } });
+    await gateway(ledger).run(
+      "customer.answer",
+      { question: "addesh el tandif?", language: "en", terms: ["cleaning"] },
+      { ...clinic, knowledge },
+    );
+    expect(seen).toEqual([["cleaning"]]);
+    expect(
+      searchTermsTask.check(
+        { terms: ["a very long search phrase here"] },
+        { input: { question: "x", recordsLanguage: "en" }, profile: clinicProfile, facts: [] },
+      ),
+    ).toHaveLength(1);
   });
 });

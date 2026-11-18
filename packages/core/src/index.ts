@@ -596,6 +596,7 @@ export type { LaunchFinding, LaunchStatus } from "./platform/launch-check";
 export { createCommerceKnowledge } from "./ai/commerce-knowledge";
 export {
   AiSettingsError,
+  answerCustomerQuestion,
   createAiLedger,
   getAiOverview,
   getBusinessProfile,
@@ -622,3 +623,4 @@ export type {
   TranslationProposal,
 } from "./ai/product-content";
 export { aiModelFor, aiProviderFromSettings, openAiCompatibleConnection } from "./ai/providers";
+export { normalizeArabic, shopWordsFor } from "./ai/shop-words";

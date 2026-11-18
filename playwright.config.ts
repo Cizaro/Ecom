@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { useTestAi } from "./packages/testing/src/test-ai";
 import { useTestDatabase } from "./packages/testing/src/test-database";
 
 // End-to-end tests use the separate test database (see prepare-test-db.ts).
@@ -11,6 +12,8 @@ try {
   // No .env file: variables come from the real environment (CI).
 }
 useTestDatabase(process.env);
+// Never a real AI service in automated tests (see test-ai.ts).
+useTestAi(process.env);
 // The browser tests check what a live store tells search engines.
 process.env.ALLOW_SEARCH_INDEXING = "true";
 // The browser tests run the production build and pay with the mock provider.

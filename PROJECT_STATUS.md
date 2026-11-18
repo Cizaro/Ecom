@@ -455,5 +455,6 @@ Milestone 5.3 (classifying support messages and drafting replies in the inbox, w
 | 2026-11-21 | Milestone 5.1: AI gateway package, shop knowledge source, AI settings, business profile and audit trail, admin AI assistant page |
 | 2026-11-22 | Milestone 5.2: AI product drafts (wording, search text, tags, category, Arabic), applied part by part from the product page (second computer) |
 | 2026-11-22 | AI providers for testing: Groq and Moonshot (Kimi) through an OpenAI-compatible provider, backup provider, ai:models and ai:try commands |
+| 2026-11-22 | AI in Lebanese Arabic and Arabizi: word list and AI search words for finding products, replies in the customer's dialect, number check by value; automated tests never call a real AI |
 
 Commit hashes: `git log --oneline`.

@@ -7,6 +7,7 @@ import { localizeProducts } from "../catalog/translations";
 import { getCheckoutOptions } from "../shipping/shipping";
 import { getPublishedPage, listPublishedPages, pageBlocks } from "../tenancy/store-pages";
 import type { StoreBranding } from "../tenancy/branding";
+import { shopWordsFor } from "./shop-words";
 
 // The shop's knowledge source for the AI (decision D88): the first adapter
 // behind the AI module's interface. It reads only what shoppers can already
@@ -113,9 +114,24 @@ export function createCommerceKnowledge(
       { id: "contact", description: "The store's contact email and phone" },
     ],
 
-    async search(question, { limit, language }) {
+    async search(question, { limit, language, terms = [] }) {
       const locale = isLocale(language) ? language : "en";
-      const words = keywords(question);
+      // The question's own words, the catalog's English for shoppers' Arabic,
+      // Lebanese and Arabizi words, and the AI's search words.
+      const own = keywords(question);
+      const allWords =
+        question
+          .slice(0, 1000)
+          .toLowerCase()
+          .match(/[\p{L}\p{N}]+/gu) ?? [];
+      const extra = terms.flatMap((term) => term.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
+      const words = [
+        ...new Set([
+          ...shopWordsFor(allWords),
+          ...extra.filter((w) => w.length >= 3 && !FILLER.has(w)),
+          ...own,
+        ]),
+      ].slice(0, 20);
       const facts: Fact[] = [];
 
       // Products matching any of the question's words, best matches first.
@@ -133,6 +149,17 @@ export function createCommerceKnowledge(
       for (const query of queries) {
         const list = await listPublicProducts(db, { ...query, pageSize: MAX_PRODUCTS });
         const items = await localizeProducts(db, locale, list.items, (item) => item.id);
+        // What kind of item each is, so a wallet is not offered as a bag.
+        const kinds = new Map(
+          (
+            await db.run((tx) =>
+              tx.product.findMany({
+                where: { id: { in: items.map((item) => item.id) } },
+                select: { id: true, category: { select: { name: true } } },
+              }),
+            )
+          ).map((row) => [row.id, row.category?.name ?? null]),
+        );
         for (const item of items) {
           if (seen.has(item.id) || seen.size >= MAX_PRODUCTS) continue;
           seen.add(item.id);
@@ -141,7 +168,7 @@ export function createCommerceKnowledge(
             id: `product:${item.slug}`,
             kind: "product",
             text: [
-              `${item.name}${item.brandName ? ` by ${item.brandName}` : ""}`,
+              `${item.name}${item.brandName ? ` by ${item.brandName}` : ""}${kinds.get(item.id) ? ` (category: ${kinds.get(item.id)})` : ""}`,
               `costs ${item.priceVaries ? "from " : ""}${price}`,
               item.regularPriceAmount !== null
                 ? `(on sale; regular price ${formatMoney(item.regularPriceAmount, item.currency)})`
