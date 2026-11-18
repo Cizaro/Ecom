@@ -151,7 +151,11 @@ export function createGateway(options: GatewayOptions) {
       outputTokens += result.outputTokens;
       if (result.stop === "refused") return fail("refused");
 
-      const output = task.output.safeParse(result.output);
+      const parsed = task.output.safeParse(result.output);
+      const output =
+        parsed.success && task.normalize
+          ? { success: true as const, data: task.normalize(parsed.data) }
+          : parsed;
       problems = output.success
         ? task.check(output.data, taskContext)
         : [

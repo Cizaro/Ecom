@@ -344,3 +344,26 @@ describe("message triage and conversation history", () => {
     expect(user).not.toContain("maya@example.test");
   });
 });
+
+describe("tidying answers before the checks", () => {
+  it("accepts a citation copied with its brackets, but still only real facts", async () => {
+    const reply = (citation: string) =>
+      gateway(memoryLedger().ledger, {}, () => ({
+        output: {
+          answered: true,
+          reply: "A cleaning takes 45 minutes.",
+          citations: [citation],
+          topic: "question",
+          handover: false,
+        },
+      })).run("customer.answer", ask("How long does a cleaning take?"), clinic);
+    expect(await reply("[service:cleaning]")).toMatchObject({
+      ok: true,
+      output: { citations: ["service:cleaning"] },
+    });
+    expect(await reply("[service:whitening]")).toMatchObject({
+      ok: false,
+      status: "invalid_output",
+    });
+  });
+});

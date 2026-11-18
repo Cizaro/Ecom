@@ -41,3 +41,6 @@ next-env.d.ts
 
 # Local AI-tooling state (claude-flow / ruflo)
 .claude-flow/
+
+# AI evaluation reports (pnpm ai:eval)
+eval-results/

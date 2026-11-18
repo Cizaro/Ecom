@@ -14,3 +14,5 @@ export {
   createOpenAiCompatibleProvider,
   listOpenAiCompatibleModels,
 } from "./providers/openai-compatible";
+export * from "./eval/cases";
+export * from "./eval/runner";

@@ -457,5 +457,6 @@ Milestone 5.3 (classifying support messages and drafting replies in the inbox, w
 | 2026-11-22 | AI providers for testing: Groq and Moonshot (Kimi) through an OpenAI-compatible provider, backup provider, ai:models and ai:try commands |
 | 2026-11-22 | AI in Lebanese Arabic and Arabizi: word list and AI search words for finding products, replies in the customer's dialect, number check by value; automated tests never call a real AI |
 | 2026-11-22 | Milestone 5.3: support inbox AI (labels, urgency, summary, reply drafts staff edit and send), worker pass, ai:inbox command |
+| 2026-11-22 | Milestone 5.4: AI evaluation set (35 cases, 7 groups), misbehaving-AI tests, stricter number and leak checks, ai:eval command; Groq scored 35 of 35. Phase 5 complete |
 
 Commit hashes: `git log --oneline`.

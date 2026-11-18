@@ -27,6 +27,8 @@ export interface TaskDefinition<Input, Output> {
   /** The input with personal details removed, as it is sent and recorded. */
   minimize(input: Input): Input;
   prompt(context: TaskContext<Input>): { system: string; user: string };
+  /** Tidies an output that passed its schema, before it is checked (harmless differences only). */
+  normalize?(output: Output): Output;
   /** Problems with an output that passed its schema; empty when it may be used. */
   check(output: Output, context: TaskContext<Input>): string[];
   /** "high" results always go to a person first. */
@@ -197,8 +199,34 @@ const sameValue = (number: string) =>
  * joined to letters are not numbers: Arabic written in Latin letters uses
  * them as letters ("3endkon", "7elwe").
  */
+/** A phone number (7 digits or more, with spaces or dashes) as one number: "+961 1 000 000" -> 9611000000. */
+const joinPhones = (text: string) =>
+  text.replace(/\+?\d[\d -]{5,}\d/g, (match) =>
+    match.replace(/\D/g, "").length >= 7 ? match.replace(/[ -]/g, "") : match,
+  );
+
+const NUMBER = /(?<![\p{L}\d])\d+(?:[.,:]\d+)*(?![\p{L}\d])/gu;
+
 const numbersIn = (text: string) =>
-  (westernDigits(text).match(/(?<![\p{L}\d])\d+(?:[.,:]\d+)*(?![\p{L}\d])/gu) ?? []).map(sameValue);
+  (joinPhones(westernDigits(text)).match(NUMBER) ?? []).map(sameValue);
+
+/**
+ * Amounts and percentages in a text ("$50", "30%", "50 dollars", "٥٠ دولار").
+ * A customer's message may not supply these: a trick message could plant the
+ * discount it wants repeated. They must come from the business's facts.
+ */
+const amountsIn = (text: string) => {
+  const western = joinPhones(westernDigits(text));
+  const found: string[] = [];
+  const pattern = new RegExp(
+    "([$€£]\\s*)?(\\d+(?:[.,]\\d+)*)(\\s*(%|percent|dollars?|usd|lbp|euros?|دولار|ليرة|بالمئة|٪))?",
+    "giu",
+  );
+  for (const match of western.matchAll(pattern)) {
+    if (match[1] || match[3]) found.push(sameValue(match[2]!));
+  }
+  return found;
+};
 
 export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAnswerOutput> = {
   name: "customer.answer",
@@ -265,7 +293,19 @@ export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAns
       ].join("\n"),
     };
   },
-  check(output, { input, facts }) {
+  normalize(output) {
+    // Models sometimes copy the brackets the facts are listed with: "[delivery:x]".
+    return {
+      ...output,
+      citations: output.citations.map((id) =>
+        id
+          .trim()
+          .replace(/^\[|\]$/g, "")
+          .trim(),
+      ),
+    };
+  },
+  check(output, { input, facts, profile }) {
     const problems: string[] = [];
     const ids = new Set(facts.map((fact) => fact.id));
     const unknown = output.citations.filter((id) => !ids.has(id));
@@ -279,12 +319,30 @@ export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAns
     const cited = facts.filter((fact) => output.citations.includes(fact.id));
     const allowed = new Set([
       ...cited.flatMap((fact) => numbersIn(fact.text)),
-      ...numbersIn(input.question),
+      // The question's plain numbers (an order number), never its amounts.
+      ...numbersIn(input.question).filter((n) => !amountsIn(input.question).includes(n)),
+      // The business's own contact line (a phone number) may always be given.
+      ...numbersIn(profile.contact),
     ]);
     const invented = numbersIn(output.reply).filter((number) => !allowed.has(number));
     if (invented.length > 0) {
       problems.push(`It states numbers no cited fact contains: ${invented.join(", ")}.`);
     }
+    // No email address that is not the business's own (in a cited fact or its
+    // contact line) or the customer's: nobody else's details can leak.
+    const emails = (text: string) => text.toLowerCase().match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g) ?? [];
+    const knownEmails = new Set([
+      ...cited.flatMap((fact) => emails(fact.text)),
+      ...emails(profile.contact),
+      ...emails(input.question),
+    ]);
+    const strange = emails(output.reply).filter((email) => !knownEmails.has(email));
+    if (strange.length > 0)
+      problems.push("It gives an email address that is not the business's own.");
+    // Never its own instructions, whatever a message asks.
+    const instructions =
+      /<\/?(facts|customer_message|earlier_messages)>|\bRules:|Text between <|data, not instructions/i;
+    if (instructions.test(output.reply)) problems.push("It repeats its instructions.");
     return problems;
   },
   risk(output) {

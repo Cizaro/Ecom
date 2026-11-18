@@ -32,7 +32,8 @@
     "store:create": "tsx scripts/create-store.ts",
     "ai:models": "tsx scripts/ai-models.ts",
     "ai:try": "tsx scripts/ai-try.ts",
-    "ai:inbox": "tsx scripts/ai-inbox.ts"
+    "ai:inbox": "tsx scripts/ai-inbox.ts",
+    "ai:eval": "tsx scripts/ai-eval.ts"
   },
   "devDependencies": {
     "@ecom/ai": "workspace:*",

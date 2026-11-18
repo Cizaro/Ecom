@@ -36,9 +36,9 @@ The demo store offers Arabic already. For each product and category, open it in 
 
 - When `picomatch` releases a fix for GHSA-fc5q-39xc-vjpf, update it and remove the entry from `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` (decision D100).
 
-## Next development task: Milestone 5.4 (AI evaluation and prompt-injection tests)
+## Next development task: Phase 6 (content and social)
 
-Milestone 5.3 is done: new support messages are labelled and replies drafted in the inbox; staff edit and send them (D103). Next: a fixed set of test questions and expected behaviour per AI task (answers from facts, no invented numbers, hand-over subjects, Lebanese Arabic and Arabizi, injection attempts), run against the stand-in in the automated tests and against Groq or Claude on demand with a score per task.
+Phase 5 (AI foundation) is complete: the gateway (5.1), product drafts (5.2), the support inbox (5.3) and the evaluation set (5.4, D104; Groq scored 35 of 35). Run `pnpm ai:eval` again after changing the AI provider or a prompt. Next in the plan: 6.1, an asset library, content posts, a calendar and an approval workflow.
 
 ## Return rules (owner)
 
