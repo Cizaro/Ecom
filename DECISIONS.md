@@ -350,7 +350,7 @@ Until answered, the assumption shown is used and kept configurable. Items marked
 | Q10 | Instagram account? | None connected | **6.3** |
 | Q11 | Facebook Page? | None connected | **6.3** |
 | Q12 | TikTok account? | None connected | **6.5** |
-| Q13 | Meta Business account? | None | **6.3, 7.3** |
+| Q13 | Meta Business account? | None. Owner, 2026-11-24: set it up later from home; 6.3 to 6.5 and 7.3 skipped until then, steps in docs/META_SETUP.md | **6.3, 7.3** |
 | Q14 | One store or several at first? | One store on multi-tenant model | |
 | Q15 | AI provider? | Mock; Anthropic and OpenAI-compatible adapters planned | **5.x with real output** |
 | Q16 | Monthly AI budget? | 50 USD cap | |

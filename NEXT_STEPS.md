@@ -2,6 +2,10 @@
 
 Prioritized continuation plan. The top item is always the next thing to do. Update at the end of every session.
 
+## Owner: connect Instagram and Facebook (skipped for now, 2026-11-24)
+
+**Paused until you are back home.** Milestones 6.3, 6.4, 6.5 and 7.3 need your Meta (and optionally TikTok) accounts, so development skipped ahead to Phase 7. Follow the checklist in **docs/META_SETUP.md** (accounts, business verification, the developer app, keys in `.env`), then say "the Meta app is ready" with the App ID to continue with 6.3.
+
 ## Owner actions (do not block development)
 
 1. Done 2026-11-13: the owner has a sign-in for the demo store. More staff: `pnpm admin:create --email someone@example.com --name "Name" --tenant demo --role store_manager`. Password-reset emails arrive at http://localhost:8025 in development.
@@ -38,7 +42,7 @@ The demo store offers Arabic already. For each product and category, open it in 
 
 ## Next development task: Phase 6 (content and social)
 
-Phase 5 (AI foundation) is complete: the gateway (5.1), product drafts (5.2), the support inbox (5.3) and the evaluation set (5.4, D104; Groq scored 35 of 35). Run `pnpm ai:eval` again after changing the AI provider or a prompt. Milestones 6.1 (D105: content library, posts with approval, calendar, AI captions) and 6.2 (D106: photo versions for each platform, light correction, plain-background removal) are built. Next in the plan: 6.3 (see PROJECT_PLAN.md section 4). Instagram, Facebook and TikTok publishing (6.3, 6.5) need the owner's accounts (Q10 to Q13).
+Phase 5 (AI foundation) is complete: the gateway (5.1), product drafts (5.2), the support inbox (5.3) and the evaluation set (5.4, D104; Groq scored 35 of 35). Run `pnpm ai:eval` again after changing the AI provider or a prompt. Milestones 6.1 (D105: content library, posts with approval, calendar, AI captions) and 6.2 (D106: photo versions for each platform, light correction, plain-background removal) are built. 6.3 to 6.5 are skipped until the owner's Meta accounts are ready (docs/META_SETUP.md). Next: Phase 7, starting with 7.1 (marketing plans, campaign briefs, segments, UTM links). Instagram, Facebook and TikTok publishing (6.3, 6.5) need the owner's accounts (Q10 to Q13).
 
 ## Owner: content planning
 

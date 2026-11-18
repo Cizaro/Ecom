@@ -4,7 +4,7 @@ Last updated: 2026-11-24
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** Next: Milestone 6.3. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** 6.3 to 6.5 skipped until the owner's Meta accounts are ready (docs/META_SETUP.md). Next: Milestone 7.1. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -430,7 +430,7 @@ Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, st
 
 ## Recommended next task
 
-Milestone 6.3 (connecting Instagram and Facebook for publishing; needs the owner's accounts). Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
+Milestone 7.1 (marketing plans, campaign briefs, segments, UTM links). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
 
 ## Session log
 
