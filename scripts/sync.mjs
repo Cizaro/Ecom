@@ -31,7 +31,9 @@ function run(command, args, { quiet = false, allowFail = false } = {}) {
   const result = spawnSync(command, args, {
     cwd: root,
     encoding: "utf8",
-    shell: process.platform === "win32",
+    // pnpm and docker are .cmd shims on Windows and need the shell; git does
+    // not, and through the shell its "--format=%h %s" would be split in two.
+    shell: process.platform === "win32" && command !== "git",
     stdio: quiet ? ["ignore", "pipe", "pipe"] : "inherit",
   });
   if (result.status !== 0 && !allowFail) {
