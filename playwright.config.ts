@@ -20,6 +20,8 @@ process.env.ALLOW_SEARCH_INDEXING = "true";
 process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION = "true";
 // The import test serves its picture from a local server, which is a private address.
 process.env.IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS = "true";
+// The tests act from one address all day; real limits would stop them.
+process.env.RATE_LIMIT_SCALE = "100";
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;

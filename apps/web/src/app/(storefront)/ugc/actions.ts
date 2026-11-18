@@ -2,7 +2,7 @@
 
 import { MAX_VIDEO_BYTES, NotFoundError, shareUgc, UgcError, withdrawUgc } from "@ecom/core";
 import { revalidatePath } from "next/cache";
-import { tooManyCartChanges } from "@/server/cart";
+import { tooManyAttempts } from "@/server/limits";
 import { getCurrentCustomer } from "@/server/customer";
 import { mediaDeps } from "@/server/media";
 import { storefrontDb } from "@/server/storefront";
@@ -29,7 +29,7 @@ export async function shareUgcAction(
   };
   const customer = await getCurrentCustomer();
   if (!customer) return { error: "Sign in to share a photo or video.", values };
-  if (await tooManyCartChanges(store.tenantId)) {
+  if (await tooManyAttempts(store.tenantId, "photo")) {
     return { error: "Too many attempts in a short time. Please wait a minute.", values };
   }
   const file = formData.get("file");

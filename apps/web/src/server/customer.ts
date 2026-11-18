@@ -14,10 +14,11 @@ import {
   type EmailProvider,
   type RateLimiter,
 } from "@ecom/core";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { CART_COOKIE, readCartToken } from "./cart";
+import { visitorAddress } from "./limits";
 import { shopLocale } from "./i18n";
 import { storefrontDb, storefrontOrigin } from "./storefront";
 
@@ -74,21 +75,11 @@ export async function cartOwner(): Promise<CartOwner> {
   return { token: await readCartToken() };
 }
 
-/**
- * Where to go after signing in. Only a path on this site is accepted, so a
- * crafted link cannot send a shopper to another site after they sign in.
- */
-export function safeReturnPath(value: unknown, fallback = "/account"): string {
-  if (typeof value !== "string" || value.length > 300) return fallback;
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return fallback;
-  if (/^\/(admin|api)(\/|$)/.test(value)) return fallback;
-  return value;
-}
+export { safeReturnPath } from "./return-path";
 
-/** Client address for rate limits. Trustworthy only behind a proxy that overwrites the header. */
+/** Client address for rate limits, as far as the configured proxies vouch for it (limits.ts). */
 export async function customerRequest(): Promise<CustomerRequest> {
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  return { ip };
+  return { ip: await visitorAddress() };
 }
 
 const globalForCustomers = globalThis as typeof globalThis & {

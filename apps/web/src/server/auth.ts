@@ -16,6 +16,7 @@ import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { clientAddressFrom } from "./client-address";
 
 export const SIGN_IN_PATH = "/admin/sign-in";
 
@@ -48,12 +49,12 @@ export function getAuthService(): AuthService {
 }
 
 /**
- * Client address for rate limiting and the audit log. Trustworthy only when
- * the app sits behind a proxy that overwrites this header; deployment
- * documentation must say so.
+ * Client address for rate limiting and the audit log: the X-Forwarded-For
+ * entry added by our own proxies (TRUST_PROXY_HOPS), which a visitor cannot
+ * forge. See client-address.ts.
  */
 function clientIp(requestHeaders: Headers): string {
-  return requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return clientAddressFrom(requestHeaders.get("x-forwarded-for"), getEnv().TRUST_PROXY_HOPS);
 }
 
 export async function getRequestInfo(): Promise<RequestInfo> {

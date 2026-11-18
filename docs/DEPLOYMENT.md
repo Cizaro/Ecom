@@ -36,7 +36,9 @@ Copy `.env.example` to `.env.production` **on the server** (never into the repos
 | `AI_INPUT_PRICE_PER_MTOK`, `AI_OUTPUT_PRICE_PER_MTOK` | Price of a model the built-in list does not know (0 and 0 for a free plan) |
 | `AI_MONTHLY_BUDGET_USD`, `AI_PAUSED` | The most one store may spend on AI per month; `AI_PAUSED=true` stops all AI at once |
 | `ALLOW_SEARCH_INDEXING` | `true` once you are ready for Google |
+| `TRUST_PROXY_HOPS` | `1` with Caddy as below (the number of proxies in front of the app that add to `X-Forwarded-For`). Visitor limits use the address the proxy saw, which a visitor cannot forge. |
 | `ALLOW_MOCK_PAYMENTS_IN_PRODUCTION`, `IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS` | `false` (test switches; never on a live site) |
+| `RATE_LIMIT_SCALE` | `1` or left out (the automated tests raise it; the launch check fails otherwise) |
 
 The app refuses to start in production with the example secrets or the test payment provider.
 

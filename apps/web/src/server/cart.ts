@@ -1,13 +1,9 @@
 import "server-only";
 
 import { getEnv } from "@ecom/config";
-import {
-  CART_LIFETIME_DAYS,
-  createRedisRateLimiter,
-  isCartToken,
-  type RateLimiter,
-} from "@ecom/core";
-import { cookies, headers } from "next/headers";
+import { CART_LIFETIME_DAYS, isCartToken } from "@ecom/core";
+import { cookies } from "next/headers";
+import { tooManyAttempts } from "./limits";
 
 // The visitor's cart token. It lives in a cookie the page's scripts cannot
 // read (HttpOnly), is sent only to this site, and is strictly necessary for
@@ -32,27 +28,7 @@ export async function writeCartToken(token: string): Promise<void> {
   });
 }
 
-const globalForCart = globalThis as typeof globalThis & { __cartLimiter?: RateLimiter };
-
-/** Cart changes allowed per visitor address per minute, per store. */
-const CART_CHANGE_RULE = { limit: 60, windowSeconds: 60 };
-
-/**
- * Counts one cart change and says whether this address has made too many.
- * If the counter itself is unreachable the change is allowed: a shopper
- * should not lose their cart because Redis is down.
- */
+/** Counts one cart change; true when this visitor has made too many (see limits.ts). */
 export async function tooManyCartChanges(tenantId: string): Promise<boolean> {
-  globalForCart.__cartLimiter ??= createRedisRateLimiter(getEnv().REDIS_URL);
-  // Trustworthy only behind a proxy that overwrites this header (see server/auth.ts).
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  try {
-    const status = await globalForCart.__cartLimiter.hit(
-      `cart:${tenantId}:${ip}`,
-      CART_CHANGE_RULE,
-    );
-    return status.count > CART_CHANGE_RULE.limit;
-  } catch {
-    return false;
-  }
+  return tooManyAttempts(tenantId, "cart");
 }

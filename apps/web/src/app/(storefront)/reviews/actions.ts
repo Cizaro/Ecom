@@ -2,7 +2,7 @@
 
 import { NotFoundError, reportReview, ReviewError, submitReview } from "@ecom/core";
 import { revalidatePath } from "next/cache";
-import { tooManyCartChanges } from "@/server/cart";
+import { tooManyAttempts } from "@/server/limits";
 import { getCurrentCustomer } from "@/server/customer";
 import { storefrontDb } from "@/server/storefront";
 import type { AccountFormState } from "../account/actions";
@@ -33,7 +33,7 @@ export async function submitReviewAction(
   };
   const customer = await getCurrentCustomer();
   if (!customer) return { error: "Sign in to write a review.", values };
-  if (await tooManyCartChanges(store.tenantId)) {
+  if (await tooManyAttempts(store.tenantId, "review")) {
     return { error: "Too many attempts in a short time. Please wait a minute.", values };
   }
   try {
@@ -54,7 +54,7 @@ export async function reportReviewAction(
   const { store, db } = await storefrontDb();
   const customer = await getCurrentCustomer();
   if (!customer) return { error: "Sign in to report a review." };
-  if (await tooManyCartChanges(store.tenantId)) {
+  if (await tooManyAttempts(store.tenantId, "report")) {
     return { error: "Too many attempts in a short time. Please wait a minute." };
   }
   try {

@@ -18,7 +18,7 @@ import {
 } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { tooManyCartChanges } from "@/server/cart";
+import { tooManyAttempts } from "@/server/limits";
 import { cartOwner, getCurrentCustomer, safeReturnPath } from "@/server/customer";
 import { deliverPaymentNotification, getMockProvider, getPaymentProvider } from "@/server/payments";
 import { sendWaitingEmails } from "@/server/notifications";
@@ -71,7 +71,7 @@ export async function placeOrderAction(
       "discountCode",
     ].map((name) => [name, text(formData, name)]),
   );
-  if (await tooManyCartChanges(store.tenantId)) {
+  if (await tooManyAttempts(store.tenantId, "order")) {
     return { error: t("Too many attempts in a short time. Please wait a minute."), values };
   }
   const customer = await getCurrentCustomer();
@@ -136,7 +136,10 @@ export async function retryPaymentAction(
   _previous: AccountFormState,
   formData: FormData,
 ): Promise<AccountFormState> {
-  const [{ db }, t] = await Promise.all([storefrontDb(), shopT()]);
+  const [{ store, db }, t] = await Promise.all([storefrontDb(), shopT()]);
+  if (await tooManyAttempts(store.tenantId, "payment")) {
+    return { error: t("Too many attempts in a short time. Please wait a minute.") };
+  }
   const customer = await getCurrentCustomer();
   const orderId = text(formData, "orderId");
   const accessKey = text(formData, "key") || null;
@@ -207,7 +210,7 @@ export async function previewDiscountAction(
   code: string,
 ): Promise<{ ok: boolean; message: string; pricing?: SummaryPricing }> {
   const [{ store, db }, t] = await Promise.all([storefrontDb(), shopT()]);
-  if (await tooManyCartChanges(store.tenantId)) {
+  if (await tooManyAttempts(store.tenantId, "discount")) {
     return { ok: false, message: t("Too many attempts in a short time. Please wait a minute.") };
   }
   const [cart, options] = await Promise.all([

@@ -35,6 +35,15 @@ const envSchema = z.object({
   ENCRYPTION_KEY: secret,
 
   /**
+   * How many proxies in front of the app add to X-Forwarded-For. The visitor
+   * address used for rate limits is the entry that many places from the
+   * right, which a visitor cannot forge. 1 for one proxy (Caddy, nginx, a
+   * load balancer); 0 when the app is reached directly (the header is then
+   * ignored and every visitor shares one limit).
+   */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
+
+  /**
    * Whether search engines may index the storefront. Off unless set to
    * "true", so development, test and staging copies stay out of search
    * results. Switch it on for the live site only.
@@ -73,6 +82,13 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
+
+  /**
+   * Multiplies every visitor limit (orders, contact form, discount checks...).
+   * Only the automated tests set it, because they act from one address all
+   * day. Leave it at 1 on a live site; the launch check fails otherwise.
+   */
+  RATE_LIMIT_SCALE: z.coerce.number().int().min(1).max(1000).default(1),
 
   S3_ENDPOINT: z.url(),
   S3_REGION: z.string().min(1),

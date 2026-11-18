@@ -44,6 +44,8 @@ describe("launch check of the server settings", () => {
     S3_PUBLIC_URL: "https://media.cedarbags.lb",
     AI_PROVIDER: "anthropic" as const,
     AI_PAUSED: false,
+    RATE_LIMIT_SCALE: 1,
+    TRUST_PROXY_HOPS: 1,
   };
 
   it("passes a live configuration", () => {
@@ -74,6 +76,14 @@ describe("launch check of the server settings", () => {
       ]),
     );
     expect(results.find((f) => f.label === "Search engines")?.status).toBe("warn");
+  });
+
+  it("fails relaxed visitor limits and warns when visitor addresses cannot be told apart", () => {
+    const find = (env: Partial<typeof live>, label: string) =>
+      checkLaunchSettings({ ...live, ...env }).filter((f) => f.label === label);
+    expect(find({ RATE_LIMIT_SCALE: 100 }, "Test switch")[0]?.detail).toMatch(/RATE_LIMIT_SCALE/);
+    expect(find({ TRUST_PROXY_HOPS: 0 }, "Visitor addresses")[0]?.status).toBe("warn");
+    expect(find({}, "Visitor addresses")[0]?.status).toBe("pass");
   });
 
   it("warns when AI is the test stand-in or paused", () => {

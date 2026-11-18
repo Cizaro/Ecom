@@ -246,7 +246,9 @@ Last updated: 2026-11-26
 
 ## In progress
 
-Nothing.
+**Launch hardening** (from Phase 10), in four parts: security, monitoring and restore, accessibility, performance.
+
+- **Security, part 1 (D111):** each visitor action has its own limit (orders 5 in 10 minutes, discount-code checks 20 in 10 minutes, new contact conversations 5 an hour, and so on); the visitor address is the one our proxy added (`TRUST_PROXY_HOPS`), so it cannot be forged; the launch check fails if the tests' `RATE_LIMIT_SCALE` is left on and warns when addresses cannot be told apart; the after-sign-in redirect refuses tabs, line breaks and spaces. `pnpm sync` added for working from two computers.
 
 ## Not started
 
@@ -431,21 +433,20 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 7.4, on the second computer)
+## Checks run this session (launch hardening, security part 1, on the second computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 482 tests (new: the forecast by weekday with its range, too little history, days after today ignored; running-out order and negative stock; percentages; the report question task answers from the figures and cites them, accepts the same amount written differently and numbers from the question, refuses worked-out numbers and unknown figures after a second try, keeps the question as data, uses no shop words) |
-| `pnpm test:int` | Pass, 301 tests (5 new: searches normalised and bots recognised; invalid events refused and the database refuses a search without its words; the report counts sales, units, guests, top products with views and adds, categories, the funnel, searches that found nothing, campaign link clicks and what will run out, its facts and CSV; questions answered from the figures and recorded, ai.use and reports.read both needed; another store sees none of it and cannot record an event about its product) |
-| `pnpm db:drift` | Pass, no difference |
+| `pnpm test` | Pass, 490 tests (new: the visitor address is the proxy's entry, never the visitor's, and odd values are refused; the redirect after sign-in refuses other sites disguised with backslashes, tabs, line breaks or spaces; the launch check fails relaxed limits and warns about TRUST_PROXY_HOPS=0; `pnpm sync` adds only missing settings) |
+| `pnpm test:int` | Pass, 301 tests |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 168 passed, 66 skipped by design (new: a shopper's product view and search raise the figures, the owner asks a question and sees the figures used, the period switch and CSV download work; an inventory manager sees reports without the question box; customer service gets 403 for the page and the CSV) |
-| Real AI provider | Not called: no API key on this computer; the built-in test stand-in was used |
+| `pnpm test:e2e` | 166 passed, 2 failed, 66 skipped on the full run; the 2 (a mobile checkout waiting 5 seconds for "Sent", a mobile sign-up notice) are timing failures under load and passed on rerun |
+| CI on GitHub | The last runs stopped at "Install browser system packages" (Ubuntu download timing out) after all unit and integration tests and the build passed; fixing it needs a GitHub login with the workflow permission |
 
 ## Recommended next task
 
-Phase 8 (giveaways) once the owner confirms the prize and entry structure (COMPLIANCE.md), otherwise Phase 10 readiness work (security, accessibility and performance passes; monitoring). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: open Reports and try a question. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
+Launch hardening, security part 2: review file uploads, checkout and the admin API for gaps; then monitoring and a tested database restore, accessibility and performance. Phase 8 (giveaways) once the owner confirms the prize and entry structure (COMPLIANCE.md). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: open Reports and try a question. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
 
 ## Session log
 

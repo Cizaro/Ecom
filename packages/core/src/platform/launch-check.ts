@@ -25,6 +25,8 @@ type LaunchEnv = Pick<
   | "ALLOW_SEARCH_INDEXING"
   | "ALLOW_MOCK_PAYMENTS_IN_PRODUCTION"
   | "IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS"
+  | "RATE_LIMIT_SCALE"
+  | "TRUST_PROXY_HOPS"
   | "S3_PUBLIC_URL"
   | "AI_PROVIDER"
   | "AI_PAUSED"
@@ -124,6 +126,24 @@ export function checkLaunchSettings(env: LaunchEnv): LaunchFinding[] {
       ),
     );
   }
+  if (env.RATE_LIMIT_SCALE !== 1) {
+    results.push(
+      finding("fail", "Test switch", "RATE_LIMIT_SCALE is for automated tests only; set it to 1"),
+    );
+  }
+  results.push(
+    env.TRUST_PROXY_HOPS === 0
+      ? finding(
+          "warn",
+          "Visitor addresses",
+          "TRUST_PROXY_HOPS is 0: every visitor shares one set of limits. Set it to the number of proxies in front of the app (usually 1).",
+        )
+      : finding(
+          "pass",
+          "Visitor addresses",
+          `taken from the proxy ${env.TRUST_PROXY_HOPS === 1 ? "in front of the app" : `${env.TRUST_PROXY_HOPS} hops in`}`,
+        ),
+  );
   results.push(
     env.ALLOW_SEARCH_INDEXING
       ? finding("pass", "Search engines", "allowed to list the shop")

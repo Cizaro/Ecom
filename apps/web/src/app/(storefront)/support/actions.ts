@@ -4,7 +4,7 @@ import { getEnv } from "@ecom/config";
 import { NotFoundError, replyAsShopper, startConversation, SupportError } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { tooManyCartChanges } from "@/server/cart";
+import { tooManyAttempts } from "@/server/limits";
 import { getCurrentCustomer } from "@/server/customer";
 import { shopLocale } from "@/server/i18n";
 import { sendWaitingEmails } from "@/server/notifications";
@@ -34,7 +34,7 @@ export async function startConversationAction(
     orderNumber: text(formData, "orderNumber"),
   };
   if (text(formData, "website")) return { notice: "Thank you. Your message was sent." };
-  if (await tooManyCartChanges(store.tenantId)) {
+  if (await tooManyAttempts(store.tenantId, "contact")) {
     return { error: "Too many attempts in a short time. Please wait a minute.", values };
   }
   const customer = await getCurrentCustomer();
@@ -63,7 +63,7 @@ export async function replyToConversationAction(
 ): Promise<AccountFormState> {
   const { store, db } = await storefrontDb();
   const values = { message: text(formData, "message") };
-  if (await tooManyCartChanges(store.tenantId)) {
+  if (await tooManyAttempts(store.tenantId, "reply")) {
     return { error: "Too many attempts in a short time. Please wait a minute.", values };
   }
   const customer = await getCurrentCustomer();
