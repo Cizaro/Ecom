@@ -94,6 +94,19 @@ export function createOpenAiCompatibleProvider(options: {
         throw new ProviderError("The AI provider needs credit on the account.", false);
       }
       if (response.status === 429) {
+        // Some services (Moonshot) also answer 429 for an empty balance; only
+        // the error's type is read, never its message (it can name the account).
+        const type = await response
+          .clone()
+          .json()
+          .then((value: unknown) => {
+            const error = (value as { error?: { type?: unknown; code?: unknown } } | null)?.error;
+            return String(error?.type ?? error?.code ?? "");
+          })
+          .catch(() => "");
+        if (/quota|balance|credit|billing/i.test(type)) {
+          throw new ProviderError("The AI provider needs credit on the account.", false);
+        }
         throw new ProviderError(
           "The AI provider is busy (rate limit). Try again in a minute.",
           true,

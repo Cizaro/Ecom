@@ -19,6 +19,29 @@ const MAX_POLICY_PARTS = 4;
 
 /** Words worth looking up: letters or digits, 3 or more, without common filler. */
 const FILLER = new Set([
+  "all",
+  "also",
+  "about",
+  "tell",
+  "off",
+  "today",
+  "just",
+  "want",
+  "need",
+  "like",
+  "know",
+  "from",
+  "they",
+  "them",
+  "our",
+  "its",
+  "thanks",
+  "thank",
+  "would",
+  "could",
+  "should",
+  "will",
+  "get",
   "the",
   "and",
   "for",
@@ -65,10 +88,9 @@ function keywords(question: string): string[] {
       .slice(0, 1000)
       .toLowerCase()
       .match(/[\p{L}\p{N}]+/gu) ?? [];
-  return [...new Set(words)]
-    .filter((word) => word.length >= 3 && !FILLER.has(word))
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 4);
+  // Up to 16, in the order written: a long message (or one stuffed with
+  // other words to push the real question out) still has its subject looked up.
+  return [...new Set(words)].filter((word) => word.length >= 3 && !FILLER.has(word)).slice(0, 16);
 }
 
 const overlap = (text: string, words: readonly string[]) => {

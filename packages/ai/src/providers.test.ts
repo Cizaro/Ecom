@@ -138,6 +138,29 @@ describe("OpenAI-compatible provider", () => {
   });
 });
 
+describe("OpenAI-compatible provider: an empty balance", () => {
+  it("reports a 429 that means no credit as needing credit, not as busy", async () => {
+    const service = fakeService([
+      {
+        status: 429,
+        body: {
+          error: { type: "exceeded_current_quota_error", message: "account org-123 suspended" },
+        },
+      },
+    ]);
+    const provider = createOpenAiCompatibleProvider({
+      baseUrl: "https://api.example.test/v1",
+      apiKey: "k",
+      fetch: service.fetchFn,
+      retryDelayMs: 0,
+    });
+    const error = await provider.complete(request()).catch((e: unknown) => e);
+    expect((error as Error).message).toBe("The AI provider needs credit on the account.");
+    expect((error as Error).message).not.toContain("org-123");
+    expect(service.calls).toHaveLength(2);
+  });
+});
+
 describe("backup provider", () => {
   const failing = (error: ProviderError) => ({
     name: "main",
