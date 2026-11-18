@@ -645,9 +645,24 @@ export {
   ContentError,
   getLibraryFile,
   listLibrary,
+  listVersions,
+  makeLibraryVersion,
   updateLibraryFile,
 } from "./content/library";
 export type { LibraryItem } from "./content/library";
+export {
+  describeEdit,
+  EDIT_BACKGROUNDS,
+  EDIT_FITS,
+  EDIT_POSITIONS,
+  EDIT_SIZES,
+  EDIT_STEPS,
+  type EditBackground,
+  type EditFit,
+  type EditOptions,
+  type EditPosition,
+  type EditSize,
+} from "./media/edit";
 export {
   createPost,
   deletePost,

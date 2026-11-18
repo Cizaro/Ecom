@@ -112,3 +112,54 @@ test("an editor prepares a post, a marketer approves and publishes it, the calen
   await expect(page.getByTestId(`calendar-day-${month}-15`)).toContainText(title);
   await expect(page.getByTestId(`calendar-day-${month}-15`)).toContainText("6:30");
 });
+
+// Milestone 6.2: a version of a library photo for a platform, made on the server.
+test("an editor makes a story-sized version of a library photo", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const tag = `${testInfo.project.name}${randomUUID().slice(0, 6)}`;
+  const fileTitle = `Studio shot ${tag}`;
+
+  await signIn(page, roleEmail("content_editor"));
+  await page.goto("/admin/marketing/library");
+  const upload = page.getByTestId("library-upload");
+  await upload.getByLabel("Photo or video").setInputFiles({
+    name: "tote.png",
+    mimeType: "image/png",
+    buffer: readFileSync(resolve(import.meta.dirname, "fixtures/tote.png")),
+  });
+  await upload.getByLabel("Title", exact).fill(fileTitle);
+  await upload.getByLabel("Who owns it, and your permission to use it").fill("Our own photo");
+  await upload.getByRole("button", { name: "Add to library" }).click();
+  await expect(upload.getByTestId("form-notice")).toHaveText("Added to the library.");
+
+  await page
+    .getByTestId("library-items")
+    .getByRole("listitem")
+    .filter({ hasText: fileTitle })
+    .getByRole("link", { name: "Sizes and versions" })
+    .click();
+  await expect(page.getByRole("heading", { name: fileTitle })).toBeVisible();
+
+  const form = page.getByTestId("version-form");
+  await form.getByLabel("For").selectOption("story");
+  await form.getByLabel("Fit").selectOption("whole");
+  await form.getByLabel("Background", exact).selectOption("light");
+  await form.getByLabel("Correct the light automatically").check();
+  await form.getByRole("button", { name: "Make version" }).click();
+  // The test photo is small, so the notice says it was enlarged.
+  await expect(form.getByTestId("form-notice")).toContainText("enlarged");
+  const versions = page.getByTestId("versions");
+  await expect(versions).toContainText(`${fileTitle} · Story`);
+  await expect(versions).toContainText("1080 × 1920; whole photo on light grey; light corrected");
+
+  // Too strong a change cannot be sent: only small steps are offered.
+  await expect(form.getByLabel("Brightness").locator("option")).toHaveCount(5);
+
+  await page.goto("/admin/marketing/library");
+  await expect(
+    page
+      .getByTestId("library-items")
+      .getByRole("listitem")
+      .filter({ hasText: `${fileTitle} · Story` }),
+  ).toContainText(`Version of ${fileTitle}`);
+});

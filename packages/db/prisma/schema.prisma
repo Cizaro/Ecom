@@ -1922,16 +1922,23 @@ model ContentAsset {
   tags            String[]  @default([])
   /// Who owns it and the permission to use it.
   usageNote       String    @default("") @map("usage_note")
+  /// The library file this one was made from (a platform size, a cleaned-up copy).
+  derivedFromId   String?   @map("derived_from_id") @db.Uuid
+  /// What was done to make it, for staff ("Instagram story 1080 x 1920, ...").
+  editNote        String    @default("") @map("edit_note")
   createdByUserId String?   @map("created_by_user_id") @db.Uuid
   archivedAt      DateTime? @map("archived_at") @db.Timestamptz(3)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  media  MediaAsset         @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
-  posts  ContentPostAsset[]
+  media       MediaAsset         @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  posts       ContentPostAsset[]
+  derivedFrom ContentAsset?      @relation("ContentAssetVersions", fields: [derivedFromId], references: [id], onDelete: SetNull)
+  versions    ContentAsset[]     @relation("ContentAssetVersions")
 
   @@index([tenantId, createdAt])
+  @@index([derivedFromId])
   @@map("content_assets")
 }
 

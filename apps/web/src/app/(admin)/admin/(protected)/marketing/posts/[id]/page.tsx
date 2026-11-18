@@ -52,6 +52,9 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
         archived: true,
         createdAt: new Date(0),
         postCount: 1,
+        derivedFrom: null,
+        editNote: "",
+        versionCount: 0,
       })),
   ];
   const canApprove = hasPermission(context, "content.approve");

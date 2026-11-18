@@ -92,6 +92,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/ai", access: { level: "permission", permission: "ai.use" } },
   // Content planning: approving and publishing need more, checked per step.
   { path: "/admin/marketing/library", access: CONTENT_WRITE },
+  { path: "/admin/marketing/library/[id]", access: CONTENT_WRITE },
   { path: "/admin/marketing/posts", access: CONTENT_WRITE },
   { path: "/admin/marketing/posts/new", access: CONTENT_WRITE },
   { path: "/admin/marketing/posts/[id]", access: CONTENT_WRITE },
@@ -220,6 +221,7 @@ const CONTENT_ACTION_ENTRIES: readonly ActionEntry[] = [
 const MARKETING_ACTION_ENTRIES: readonly ActionEntry[] = [
   "addLibraryFileAction",
   "updateLibraryFileAction",
+  "makeVersionAction",
   "createPostAction",
   "updatePostAction",
   "movePostAction",

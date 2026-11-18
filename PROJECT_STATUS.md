@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-11-23
+Last updated: 2026-11-24
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestone 6.1 (content library, posts with approval, calendar, AI captions) built.** Next: Milestone 6.2 (image processing per platform). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** Next: Milestone 6.3. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -222,6 +222,12 @@ Last updated: 2026-11-23
   - **Content calendar** (`/admin/marketing/calendar`): the month by day in the store's time zone, with the count of unplanned posts.
   - **AI caption** from the featured products' real details: no invented numbers, no pressure or fake scarcity, English or Arabic; a draft copied into the caption and still approved.
   - Tables `content_assets`, `content_posts`, `content_post_assets`, `content_post_products` with Row-Level Security.
+- **Milestone 6.2, photo versions (D106):**
+  - **Sizes and versions** on each library photo (`/admin/marketing/library/[id]`): Instagram square and portrait, story / reel / TikTok / WhatsApp status, Facebook landscape, or the photo's own size.
+  - Crop to fill (automatic, centre, top or bottom) or the whole photo on white, light grey, black, a blurred copy or transparent.
+  - Light correction, brightness and colour within 10%, slight sharpening.
+  - Plain-background removal on our own server; busy backgrounds are refused with a message. No outside image service is connected.
+  - Each version is a new library file linked to its original, with the same tags and rights note and a note of what was done.
 
 ## In progress
 
@@ -410,21 +416,21 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 6.1)
+## Checks run this session (Milestone 6.2)
 
 | Check | Result |
 | --- | --- |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 411 tests (new: the caption task: numbers only from the products' details, pressure words refused in English, Arabic and Arabizi, Arabic letters for an Arabic caption, hashtags tidied; three caption cases in the evaluation set) |
-| `pnpm test:int` | Pass, 288 tests, on the separate test database (new: library upload and archive; the whole post workflow with the Beirut time conversion, AI caption, calendar and each role's permissions; one store never sees another's library or posts) |
+| `pnpm test` | Pass, 425 tests (new: each platform size exact, original size not enlarged, whole photo on a background, plain background removed and product kept, busy or all-background photos refused, brightness only within the small step, unknown options refused, the edit note in words) |
+| `pnpm test:int` | Pass, 290 tests (new: a story version linked to its original with the same notes, audit entry, refused removal adds nothing, videos refused; content.write needed, another store's file not found, and the database refuses linking to another store's file) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 145 passed, 53 skipped (new: an editor uploads a photo and prepares a post with an AI caption and cannot approve it; a marketer asks for a change, approves and records it as published; the calendar shows it on its day) |
-| Real AI provider | Not called by the tests (test stand-in only) |
+| `pnpm test:e2e` | Pass, 148 passed, 54 skipped (new: an editor makes a story version of a library photo, is told a small photo was enlarged, and sees it in the library as a version of the original) |
+| Outside image service | None connected or called |
 
 ## Recommended next task
 
-Milestone 6.2 (image processing per platform). Owner: try the content library, a post with an AI caption and the approval steps; tell us your Instagram and Facebook accounts when you want posting connected (6.3).
+Milestone 6.3 (connecting Instagram and Facebook for publishing; needs the owner's accounts). Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
 
 ## Session log
 
@@ -468,5 +474,6 @@ Milestone 6.2 (image processing per platform). Owner: try the content library, a
 | 2026-11-22 | Milestone 5.3: support inbox AI (labels, urgency, summary, reply drafts staff edit and send), worker pass, ai:inbox command |
 | 2026-11-22 | Milestone 5.4: AI evaluation set (35 cases, 7 groups), misbehaving-AI tests, stricter number and leak checks, ai:eval command; Groq scored 35 of 35. Phase 5 complete |
 | 2026-11-23 | Milestone 6.1: content library, posts with an approval workflow, calendar in the store's time zone, AI captions without invented numbers or pressure |
+| 2026-11-24 | Milestone 6.2: photo versions for each platform (sizes, crop or whole photo on a background, light correction within limits, plain-background removal), made on our server and kept in the library |
 
 Commit hashes: `git log --oneline`.

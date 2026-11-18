@@ -10,6 +10,7 @@ import {
   type MediaDeps,
   type StoredImage,
 } from "../media/assets";
+import { describeEdit, EDIT_SIZES, editImage, EditError, parseEditOptions } from "../media/edit";
 import { ImageError, sniffImageType } from "../media/image";
 import { storeVideo, VideoError } from "../media/video";
 
@@ -47,6 +48,12 @@ export interface LibraryItem {
   createdAt: Date;
   /** How many posts use it. */
   postCount: number;
+  /** The file this one was made from, if it is a version (D106). */
+  derivedFrom: { id: string; title: string } | null;
+  /** What was done to make it. */
+  editNote: string;
+  /** How many versions were made from it. */
+  versionCount: number;
 }
 
 const SELECT = {
@@ -58,7 +65,9 @@ const SELECT = {
   archivedAt: true,
   createdAt: true,
   media: { select: { ...ASSET_SELECT, kind: true, mimeType: true } },
-  _count: { select: { posts: true } },
+  editNote: true,
+  derivedFrom: { select: { id: true, title: true } },
+  _count: { select: { posts: true, versions: true } },
 } as const;
 
 type Row = {
@@ -70,7 +79,9 @@ type Row = {
   archivedAt: Date | null;
   createdAt: Date;
   media: Parameters<typeof toStoredImage>[0] & { kind: "image" | "video"; mimeType: string };
-  _count: { posts: number };
+  editNote: string;
+  derivedFrom: { id: string; title: string } | null;
+  _count: { posts: number; versions: number };
 };
 
 const toItem = (row: Row): LibraryItem => ({
@@ -85,6 +96,9 @@ const toItem = (row: Row): LibraryItem => ({
   archived: row.archivedAt !== null,
   createdAt: row.createdAt,
   postCount: row._count.posts,
+  derivedFrom: row.derivedFrom,
+  editNote: row.editNote,
+  versionCount: row._count.versions,
 });
 
 function cleanText(input: {
@@ -302,4 +316,118 @@ export async function getLibraryFile(
   const row = await db.run((tx) => tx.contentAsset.findUnique({ where: { id }, select: SELECT }));
   if (!row) throw new NotFoundError("library file");
   return toItem(row as unknown as Row);
+}
+
+/** The versions made from a library file, newest first. */
+export async function listVersions(
+  db: TenantDb,
+  context: RequestContext,
+  id: string,
+): Promise<LibraryItem[]> {
+  assertPermission(context, "content.write");
+  assertUuid(id, "library file");
+  const rows = await db.run((tx) =>
+    tx.contentAsset.findMany({
+      where: { derivedFromId: id },
+      select: SELECT,
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+  );
+  return rows.map((row) => toItem(row as unknown as Row));
+}
+
+/**
+ * Makes a version of a library photo (a platform size, light correction, a
+ * plain background removed) and adds it to the library as a new file linked
+ * to the original, with the same tags, description and rights note. The
+ * original is never changed. Photos only.
+ */
+export async function makeLibraryVersion(
+  db: TenantDb,
+  context: RequestContext,
+  deps: MediaDeps,
+  id: string,
+  input: Record<string, unknown>,
+): Promise<{ id: string; enlarged: boolean }> {
+  assertPermission(context, "content.write");
+  assertUuid(id, "library file");
+  let options;
+  try {
+    options = parseEditOptions(input);
+  } catch (error) {
+    if (error instanceof EditError) throw new ContentError(error.message, error.field);
+    throw error;
+  }
+  const source = await db.run((tx) =>
+    tx.contentAsset.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        altText: true,
+        tags: true,
+        usageNote: true,
+        media: { select: { kind: true, storageKey: true } },
+      },
+    }),
+  );
+  if (!source) throw new NotFoundError("library file");
+  if (source.media.kind !== "image") {
+    throw new ContentError("Versions can be made from photos only, not videos.", "size");
+  }
+
+  const master = await deps.storage.get(source.media.storageKey);
+  let edited;
+  try {
+    edited = await editImage(master, options);
+  } catch (error) {
+    if (error instanceof EditError) throw new ContentError(error.message, error.field);
+    throw error;
+  }
+  let upload;
+  try {
+    upload = await storeUpload(db.tenantId, deps.storage, edited.body);
+  } catch (error) {
+    if (error instanceof ImageError) {
+      throw new ContentError("This version came out too large to store. Choose a smaller size.");
+    }
+    throw error;
+  }
+
+  const suffix = ` · ${EDIT_SIZES[options.size].short}`;
+  const title = source.title.slice(0, 120 - suffix.length) + suffix;
+  try {
+    const row = await db.run(async (tx) => {
+      const asset = await insertAsset(tx, db.tenantId, context.userId, upload);
+      const created = await tx.contentAsset.create({
+        data: {
+          tenantId: db.tenantId,
+          mediaAssetId: asset.id,
+          title,
+          altText: source.altText,
+          tags: source.tags,
+          usageNote: source.usageNote,
+          derivedFromId: source.id,
+          editNote: describeEdit(options, edited.width, edited.height),
+          createdByUserId: context.userId,
+        },
+        select: { id: true, mediaAssetId: true },
+      });
+      await audit(
+        tx,
+        context,
+        "content.asset_version_made",
+        { type: "content_asset", id: created.id },
+        undefined,
+        { from: source.id, size: options.size, removeBackground: options.removeBackground },
+      );
+      return created;
+    });
+    await requestProcessing(deps, { tenantId: db.tenantId, assetId: row.mediaAssetId });
+    return { id: row.id, enlarged: edited.enlarged };
+  } catch (error) {
+    await deleteStoredFiles(deps, [upload.storageKey]);
+    throw error;
+  }
 }

@@ -8,6 +8,7 @@ import {
   draftPostCaption,
   ForbiddenError,
   hasPermission,
+  makeLibraryVersion,
   movePost,
   NotFoundError,
   updateLibraryFile,
@@ -95,6 +96,38 @@ export async function updateLibraryFileAction(
     revalidatePath(LIBRARY);
     return { notice: archived ? "Archived." : "Saved." };
   });
+}
+
+const VERSION_FIELDS = [
+  "size",
+  "fit",
+  "position",
+  "background",
+  "brightness",
+  "saturation",
+  "removeBackground",
+  "autoLight",
+  "sharpen",
+] as const;
+
+/** Makes a platform size or cleaned-up copy of a library photo (D106). */
+export async function makeVersionAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("content.write");
+  const id = field(formData, "id");
+  const values = Object.fromEntries(VERSION_FIELDS.map((name) => [name, field(formData, name)]));
+  return attempt(async () => {
+    const made = await makeLibraryVersion(tenantDb(context), context, mediaDeps(), id, values);
+    revalidatePath(LIBRARY);
+    revalidatePath(`${LIBRARY}/${id}`);
+    return {
+      notice: made.enlarged
+        ? "Version added to the library. The photo was smaller than this size and was enlarged, so it may look soft: a larger photo gives a sharper result."
+        : "Version added to the library.",
+    };
+  }, values);
 }
 
 const postValues = (formData: FormData) => ({

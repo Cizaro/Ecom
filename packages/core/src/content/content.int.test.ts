@@ -9,7 +9,15 @@ import { createTenantDb } from "../access/tenant-db";
 import { createAiLedger } from "../ai/ai-admin";
 import { SYSTEM_ROLES, type PermissionKey, type SystemRoleKey } from "../identity/permissions";
 import { createMemoryStorage } from "../storage/storage";
-import { addLibraryFile, listLibrary, updateLibraryFile } from "./library";
+import {
+  addLibraryFile,
+  ContentError,
+  getLibraryFile,
+  listLibrary,
+  listVersions,
+  makeLibraryVersion,
+  updateLibraryFile,
+} from "./library";
 import {
   createPost,
   deletePost,
@@ -122,6 +130,90 @@ describe("content library", () => {
     await expect(
       addLibraryFile(db, context, { storage }, new Uint8Array([1, 2, 3]), { title: "Broken" }),
     ).rejects.toThrow(/photo \(JPEG, PNG or WebP\) or a video/);
+  });
+});
+
+describe("library versions", () => {
+  it("makes a platform size as a new file linked to the original, keeping its notes", async () => {
+    const s = await store("versions");
+    const { db, context } = s.owner;
+    const original = await addLibraryFile(db, context, { storage }, photo, {
+      title: "Tote on the beach",
+      tags: "summer",
+      altText: "A black tote on sand",
+      usageNote: "Our own photo",
+    });
+    const made = await makeLibraryVersion(db, context, { storage }, original.id, {
+      size: "story",
+      fit: "whole",
+      background: "blur",
+      autoLight: "on",
+    });
+    expect(made.enlarged).toBe(true);
+
+    const version = await getLibraryFile(db, context, made.id);
+    expect(version).toMatchObject({
+      title: "Tote on the beach · Story",
+      tags: ["summer"],
+      altText: "A black tote on sand",
+      usageNote: "Our own photo",
+      derivedFrom: { id: original.id, title: "Tote on the beach" },
+      kind: "image",
+    });
+    expect(version.editNote).toBe(
+      "Story, reel, TikTok or WhatsApp status, 1080 × 1920; whole photo on a blurred copy of the photo; light corrected",
+    );
+    expect([version.media.width, version.media.height]).toEqual([1080, 1920]);
+    expect((await getLibraryFile(db, context, original.id)).versionCount).toBe(1);
+    expect((await listVersions(db, context, original.id)).map((v) => v.id)).toEqual([made.id]);
+
+    const entries = await admin.auditLog.findMany({
+      where: { tenantId: s.tenantId, action: "content.asset_version_made" },
+    });
+    expect(entries).toHaveLength(1);
+
+    // A photo that is all one colour has no background to remove: refused, nothing added.
+    await expect(
+      makeLibraryVersion(db, context, { storage }, original.id, { removeBackground: "on" }),
+    ).rejects.toThrow(ContentError);
+    await expect(
+      makeLibraryVersion(db, context, { storage }, original.id, { brightness: "40" }),
+    ).rejects.toThrow(/10%/);
+    expect(await listVersions(db, context, original.id)).toHaveLength(1);
+
+    // Videos have no versions.
+    const clip = await addLibraryFile(
+      db,
+      context,
+      { storage },
+      makeTestVideo({ width: 720, height: 1280 }),
+      { title: "Clip" },
+    );
+    await expect(makeLibraryVersion(db, context, { storage }, clip.id, {})).rejects.toThrow(
+      /photos only/,
+    );
+  });
+
+  it("needs content.write and stays inside its store", async () => {
+    const a = await store("versions-a");
+    const b = await store("versions-b");
+    const file = await addLibraryFile(a.owner.db, a.owner.context, { storage }, photo, {
+      title: "Store A photo",
+    });
+    const service = a.as("customer_service");
+    await expect(
+      makeLibraryVersion(service.db, service.context, { storage }, file.id, {}),
+    ).rejects.toThrow(ForbiddenError);
+    await expect(
+      makeLibraryVersion(b.owner.db, b.owner.context, { storage }, file.id, {}),
+    ).rejects.toThrow(/not found/i);
+    // The database refuses linking to another store's file.
+    const other = await addLibraryFile(b.owner.db, b.owner.context, { storage }, photo, {
+      title: "Store B photo",
+    });
+    await expect(
+      admin.contentAsset.update({ where: { id: other.id }, data: { derivedFromId: file.id } }),
+    ).rejects.toThrow(/Foreign key constraint/);
   });
 });
 

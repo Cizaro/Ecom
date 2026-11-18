@@ -127,6 +127,25 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
                   )}
                 </div>
                 <p className="truncate font-medium">{item.title}</p>
+                {item.derivedFrom ? (
+                  <p className="text-xs text-ink-muted">
+                    Version of{" "}
+                    <Link
+                      href={`/admin/marketing/library/${item.derivedFrom.id}`}
+                      className="underline underline-offset-4"
+                    >
+                      {item.derivedFrom.title}
+                    </Link>
+                  </p>
+                ) : null}
+                {item.kind === "image" ? (
+                  <Link
+                    href={`/admin/marketing/library/${item.id}`}
+                    className="text-sm underline underline-offset-4"
+                  >
+                    Sizes and versions{item.versionCount ? ` (${item.versionCount})` : ""}
+                  </Link>
+                ) : null}
                 <div className="flex flex-wrap gap-1 text-xs">
                   <Badge tone="neutral">{item.kind === "video" ? "Video" : "Photo"}</Badge>
                   {item.tags.map((t) => (
