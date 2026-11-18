@@ -136,6 +136,7 @@ const postValues = (formData: FormData) => ({
   format: field(formData, "format"),
   caption: field(formData, "caption"),
   plannedFor: field(formData, "plannedFor"),
+  campaignId: field(formData, "campaignId"),
 });
 const postInput = (formData: FormData) => ({
   ...postValues(formData),

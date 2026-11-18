@@ -42,6 +42,7 @@ const INVENTORY_READ: RouteAccess = { level: "permission", permission: "inventor
 const INVENTORY_ADJUST: RouteAccess = { level: "permission", permission: "inventory.adjust" };
 const SETTINGS_WRITE: RouteAccess = { level: "permission", permission: "settings.write" };
 const CONTENT_WRITE: RouteAccess = { level: "permission", permission: "content.write" };
+const MARKETING_WRITE: RouteAccess = { level: "permission", permission: "marketing.write" };
 
 /**
  * A path segment in square brackets (`[id]`) stands for a record identifier.
@@ -97,6 +98,14 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/marketing/posts/new", access: CONTENT_WRITE },
   { path: "/admin/marketing/posts/[id]", access: CONTENT_WRITE },
   { path: "/admin/marketing/calendar", access: CONTENT_WRITE },
+  // Marketing plan (D107). A segment's member list also needs customers.read
+  // and its export customers.export, checked by the services.
+  { path: "/admin/marketing/campaigns", access: MARKETING_WRITE },
+  { path: "/admin/marketing/campaigns/new", access: MARKETING_WRITE },
+  { path: "/admin/marketing/campaigns/[id]", access: MARKETING_WRITE },
+  { path: "/admin/marketing/segments", access: MARKETING_WRITE },
+  { path: "/admin/marketing/segments/[id]", access: MARKETING_WRITE },
+  { path: "/admin/marketing/links", access: MARKETING_WRITE },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -232,6 +241,19 @@ const MARKETING_ACTION_ENTRIES: readonly ActionEntry[] = [
   access: CONTENT_WRITE,
 }));
 
+const CAMPAIGN_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "createCampaignAction",
+  "updateCampaignAction",
+  "deleteCampaignAction",
+  "saveSegmentAction",
+  "deleteSegmentAction",
+  "createLinkAction",
+  "deleteLinkAction",
+].map((name) => ({
+  id: `(admin)/admin/(protected)/marketing/campaigns/actions.ts#${name}`,
+  access: MARKETING_WRITE,
+}));
+
 const INBOX_ACTION_ENTRIES: readonly ActionEntry[] = [
   "replyToConversationStaffAction",
   "updateConversationAction",
@@ -277,6 +299,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...REVIEW_ACTION_ENTRIES,
   ...CONTENT_ACTION_ENTRIES,
   ...MARKETING_ACTION_ENTRIES,
+  ...CAMPAIGN_ACTION_ENTRIES,
   ...INBOX_ACTION_ENTRIES,
   ...CUSTOMER_ACTION_ENTRIES,
   // AI: settings and the profile need ai.configure; trying an answer needs ai.use.
@@ -307,6 +330,12 @@ export const ADMIN_API: readonly ApiEntry[] = [
   // service also checks orders.read).
   {
     path: "/api/v1/admin/orders/export",
+    method: "GET",
+    access: { level: "permission", permission: "customers.export" },
+  },
+  // Emails of a segment's customers who agreed to marketing (D107).
+  {
+    path: "/api/v1/admin/marketing/segment-export",
     method: "GET",
     access: { level: "permission", permission: "customers.export" },
   },

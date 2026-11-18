@@ -59,6 +59,8 @@ export interface PostView extends PostSummary {
   publishedUrl: string | null;
   files: { id: string; title: string; kind: "image" | "video"; media: StoredImage }[];
   products: { id: string; name: string; slug: string }[];
+  /** The marketing campaign it belongs to (D107). */
+  campaign: { id: string; name: string } | null;
 }
 
 const COVER = {
@@ -93,6 +95,8 @@ interface PostInput {
   plannedFor?: unknown;
   fileIds?: unknown;
   productIds?: unknown;
+  /** A marketing campaign of this store, or empty. */
+  campaignId?: unknown;
 }
 
 async function cleanPost(db: TenantDb, input: PostInput) {
@@ -127,7 +131,20 @@ async function cleanPost(db: TenantDb, input: PostInput) {
     throw new ContentError(`Feature ${MAX_PRODUCTS} products at most.`, "productIds");
   }
   for (const id of [...fileIds, ...productIds]) assertUuid(id, "file or product");
-  return { title, channel, format, caption, plannedFor, fileIds, productIds };
+  const campaignId =
+    typeof input.campaignId === "string" && input.campaignId ? input.campaignId : null;
+  if (campaignId) assertUuid(campaignId, "campaign");
+  return { title, channel, format, caption, plannedFor, fileIds, productIds, campaignId };
+}
+
+/** A campaign of this store (checked before writing, for a clear message). */
+async function checkCampaign(tx: AppTransaction, campaignId: string | null) {
+  if (!campaignId) return;
+  const campaign = await tx.marketingCampaign.findUnique({
+    where: { id: campaignId },
+    select: { id: true },
+  });
+  if (!campaign) throw new ContentError("That campaign no longer exists.", "campaignId");
 }
 
 /** Replaces a post's files and products; only ones of this store, and live files only. */
@@ -172,6 +189,7 @@ export async function createPost(
   assertPermission(context, "content.write");
   const post = await cleanPost(db, input);
   return db.run(async (tx) => {
+    await checkCampaign(tx, post.campaignId);
     const created = await tx.contentPost.create({
       data: {
         tenantId: db.tenantId,
@@ -180,6 +198,7 @@ export async function createPost(
         format: post.format,
         caption: post.caption,
         plannedFor: post.plannedFor,
+        campaignId: post.campaignId,
         createdByUserId: context.userId,
       },
       select: { id: true },
@@ -206,6 +225,7 @@ export async function updatePost(
   return db.run(async (tx) => {
     const before = await tx.contentPost.findUnique({ where: { id }, select: { status: true } });
     if (!before) throw new NotFoundError("post");
+    await checkCampaign(tx, post.campaignId);
     if (before.status === "published")
       throw new ContentError("A published post cannot be changed.");
     const backToDraft = before.status === "in_review" || before.status === "approved";
@@ -217,6 +237,7 @@ export async function updatePost(
         format: post.format,
         caption: post.caption,
         plannedFor: post.plannedFor,
+        campaignId: post.campaignId,
         ...(backToDraft
           ? { status: "draft", approvedByUserId: null, approvedAt: null, submittedAt: null }
           : {}),
@@ -419,6 +440,7 @@ export async function getPost(
           },
         },
         products: { select: { product: { select: { id: true, name: true, slug: true } } } },
+        campaign: { select: { id: true, name: true } },
       },
     }),
   );
@@ -453,6 +475,7 @@ export async function getPost(
     publishedUrl: row.publishedUrl,
     files,
     products: row.products.map(({ product }) => product),
+    campaign: row.campaign,
     cover: files[0] ? { ...files[0].media, kind: files[0].kind } : null,
   };
 }
@@ -617,20 +640,19 @@ export async function productsForPosts(
 ): Promise<{ id: string; name: string; published: boolean }[]> {
   assertPermission(context, "content.write");
   const select = { id: true, name: true, status: true } as const;
-  const [recent, linked] = await db.run((tx) =>
-    Promise.all([
-      // Newest first: what a post features is usually recent.
-      tx.product.findMany({
-        where: { status: { in: ["active", "draft"] } },
-        select,
-        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-        take: 300,
-      }),
-      include.length
-        ? tx.product.findMany({ where: { id: { in: include } }, select })
-        : Promise.resolve([]),
-    ]),
-  );
+  const [recent, linked] = await db.run(async (tx) => {
+    // Newest first: what a post features is usually recent. One query at a time.
+    const newest = await tx.product.findMany({
+      where: { status: { in: ["active", "draft"] } },
+      select,
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      take: 300,
+    });
+    const onPost = include.length
+      ? await tx.product.findMany({ where: { id: { in: include } }, select })
+      : [];
+    return [newest, onPost] as const;
+  });
   const rows = [...linked, ...recent.filter((row) => !linked.some((l) => l.id === row.id))];
   return rows.map((row) => ({ id: row.id, name: row.name, published: row.status === "active" }));
 }

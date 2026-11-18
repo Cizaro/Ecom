@@ -678,3 +678,45 @@ export {
   updatePost,
 } from "./content/posts";
 export type { PostChannel, PostFormat, PostStatus, PostSummary, PostView } from "./content/posts";
+
+export {
+  assertMarketingId,
+  CAMPAIGN_CHANNELS,
+  CAMPAIGN_OBJECTIVES,
+  CAMPAIGN_STATUSES,
+  campaignChoices,
+  campaignsForPosts,
+  shopHost,
+  createCampaign,
+  deleteCampaign,
+  getCampaign,
+  listCampaigns,
+  MarketingError,
+  updateCampaign,
+} from "./marketing/campaigns";
+export type {
+  CampaignChannel,
+  CampaignObjective,
+  CampaignStatus,
+  CampaignSummary,
+  CampaignView,
+} from "./marketing/campaigns";
+export {
+  deleteSegment,
+  exportSegmentCsv,
+  getSegment,
+  listSegments,
+  saveSegment,
+  segmentMembers,
+} from "./marketing/segments";
+export type { SegmentMember, SegmentRules, SegmentView } from "./marketing/segments";
+export {
+  createLink,
+  deleteLink,
+  followLink,
+  listLinks,
+  storePath,
+  trackedUrl,
+  utmTag,
+} from "./marketing/links";
+export type { TrackingLink } from "./marketing/links";

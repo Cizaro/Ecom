@@ -26,6 +26,8 @@ Do these steps when you are back home, in order. Use your own phone and computer
    - `META_WEBHOOK_VERIFY_TOKEN=` any long random phrase you make up
 10. Tell me in chat only "the Meta app is ready" and the App ID (the App ID is not secret; the App Secret is).
 
+When adding permissions later, include **insights** (`instagram_manage_insights`, `read_insights`): they give the views, reach, likes and saves per post and video for the performance dashboard you asked for.
+
 That is all that is needed to start Milestone 6.3: connecting the Page and Instagram from the admin, receiving comments and messages, and publishing approved posts to your own accounts.
 
 ## Part 4: later, when the shop is live on its own domain

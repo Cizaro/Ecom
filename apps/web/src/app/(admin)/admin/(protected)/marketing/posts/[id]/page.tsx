@@ -1,8 +1,10 @@
 import {
+  campaignsForPosts,
   getBusinessProfile,
   getPost,
   hasPermission,
   listLibrary,
+  listLinks,
   productsForPosts,
   safeTimeZone,
   zonedLocalInput,
@@ -12,6 +14,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
 import { orNotFound } from "@/server/catalog-forms";
+import { shopOrigin } from "@/server/shop-url";
+import { TrackingLinks } from "../../_components/tracking-links";
 import { ActionForm, TextField } from "../../../../_components/form";
 import { deletePostAction, movePostAction, updatePostAction } from "../../actions";
 import { CHANNEL_LABEL, FORMAT_LABEL, STATUS_LABEL, STATUS_TONE } from "../../labels";
@@ -25,7 +29,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const db = tenantDb(context);
   const post = await orNotFound(getPost(db, context, id));
-  const [files, products, profile, store] = await Promise.all([
+  const [files, products, profile, store, campaigns, links, origin] = await Promise.all([
     listLibrary(db, context),
     productsForPosts(
       db,
@@ -36,6 +40,9 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
     db.run((tx) =>
       tx.store.findFirst({ select: { timezone: true }, orderBy: { createdAt: "asc" } }),
     ),
+    campaignsForPosts(db, context, post.campaign?.id ?? null),
+    listLinks(db, context, { postId: post.id }),
+    shopOrigin(db),
   ]);
   const timeZone = safeTimeZone(store?.timezone);
   // Files already on the post stay pickable even when archived since.
@@ -82,6 +89,17 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
           <>
             {CHANNEL_LABEL[post.channel]} · {FORMAT_LABEL[post.format]}
             {post.plannedFor ? ` · planned for ${when.format(post.plannedFor)}` : ""}
+            {post.campaign ? (
+              <>
+                {" · campaign "}
+                <Link
+                  href={`/admin/marketing/campaigns/${post.campaign.id}`}
+                  className="underline underline-offset-4"
+                >
+                  {post.campaign.name}
+                </Link>
+              </>
+            ) : null}
             {" · "}
             <Link href="/admin/marketing/posts" className="underline underline-offset-4">
               Posts
@@ -175,6 +193,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
             <PostFields
               files={pickable}
               products={products}
+              campaigns={campaigns}
               value={{
                 title: post.title,
                 channel: post.channel,
@@ -183,6 +202,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
                 plannedFor: post.plannedFor ? zonedLocalInput(post.plannedFor, timeZone) : "",
                 fileIds: post.files.map((f) => f.id),
                 productIds: post.products.map((p) => p.id),
+                campaignId: post.campaign?.id ?? "",
               }}
             />
           </ActionForm>
@@ -203,6 +223,20 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
           <CaptionDraft postId={post.id} languages={profile.languages} />
         </Card>
       ) : null}
+
+      <Card
+        title="Tracking links"
+        description="Put the short link in this post's caption, bio or story: each click is counted, so you can see which post brings people to the shop. Views and reach come when Instagram, Facebook and TikTok are connected."
+      >
+        <TrackingLinks
+          links={links}
+          origin={origin}
+          canEdit={hasPermission(context, "marketing.write")}
+          postId={post.id}
+          campaignId={post.campaign?.id ?? ""}
+          defaultSource={post.channel === "other" ? "social" : post.channel}
+        />
+      </Card>
 
       {post.status !== "approved" && post.status !== "published" ? (
         <ActionForm

@@ -103,6 +103,9 @@ model Tenant {
   supportReplyDrafts      SupportReplyDraft[]
   contentAssets           ContentAsset[]
   contentPosts            ContentPost[]
+  marketingCampaigns      MarketingCampaign[]
+  customerSegments        CustomerSegment[]
+  utmLinks                UtmLink[]
   productSuggestions      ProductSuggestion[]
 
   @@map("tenants")
@@ -618,14 +621,15 @@ model Product {
   createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  brand        Brand?               @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  category     Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tenant       Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  brand        Brand?                     @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  category     Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   variants     ProductVariant[]
   attributes   ProductAttribute[]
   images       ProductImage[]
   translations ProductTranslation[]
   contentPosts ContentPostProduct[]
+  campaigns    MarketingCampaignProduct[]
 
   importImages ProductImportImage[]
 
@@ -1576,6 +1580,7 @@ model DiscountCode {
 
   tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   redemptions DiscountRedemption[]
+  campaigns   MarketingCampaign[]
 
   @@unique([tenantId, code])
   @@map("discount_codes")
@@ -1931,7 +1936,7 @@ model ContentAsset {
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   media       MediaAsset         @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
   posts       ContentPostAsset[]
   derivedFrom ContentAsset?      @relation("ContentAssetVersions", fields: [derivedFromId], references: [id], onDelete: SetNull)
@@ -1964,16 +1969,21 @@ model ContentPost {
   publishedAt      DateTime? @map("published_at") @db.Timestamptz(3)
   /// The live post's address, recorded when it is published.
   publishedUrl     String?   @map("published_url")
+  /// The marketing campaign it belongs to (D107).
+  campaignId       String?   @map("campaign_id") @db.Uuid
   createdByUserId  String?   @map("created_by_user_id") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  campaign MarketingCampaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  links    UtmLink[]
   tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assets   ContentPostAsset[]
   products ContentPostProduct[]
 
   @@index([tenantId, status, plannedFor])
   @@index([tenantId, plannedFor])
+  @@index([campaignId])
   @@map("content_posts")
 }
 
@@ -2006,4 +2016,103 @@ model ContentPostProduct {
   @@index([tenantId])
   @@index([productId])
   @@map("content_post_products")
+}
+
+/// A marketing campaign and its brief (Milestone 7.1, decision D107). Planning
+/// only: nothing here spends money or posts anywhere.
+model MarketingCampaign {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  name            String
+  /// awareness, traffic, sales, launch, loyalty
+  objective       String
+  /// planned, active, finished, cancelled
+  status          String    @default("planned")
+  startsOn        DateTime  @map("starts_on") @db.Date
+  endsOn          DateTime? @map("ends_on") @db.Date
+  channels        String[]  @default([])
+  audience        String    @default("")
+  keyMessage      String    @default("") @map("key_message")
+  offer           String    @default("")
+  /// What the store plans to spend, for its own planning (minor units). Never spent from here.
+  budgetAmount    Int?      @map("budget_amount")
+  currency        String    @default("USD")
+  discountCodeId  String?   @map("discount_code_id") @db.Uuid
+  segmentId       String?   @map("segment_id") @db.Uuid
+  notes           String    @default("")
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  discountCode DiscountCode?              @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+  segment      CustomerSegment?           @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  products     MarketingCampaignProduct[]
+  posts        ContentPost[]
+  links        UtmLink[]
+
+  @@index([tenantId, startsOn])
+  @@map("marketing_campaigns")
+}
+
+model MarketingCampaignProduct {
+  tenantId   String @map("tenant_id") @db.Uuid
+  campaignId String @map("campaign_id") @db.Uuid
+  productId  String @map("product_id") @db.Uuid
+
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  product  Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, productId])
+  @@index([tenantId])
+  @@index([productId])
+  @@map("marketing_campaign_products")
+}
+
+/// A group of customers described by rules over the store's own data (D107).
+model CustomerSegment {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  name            String
+  /// Checked in code: minOrders, minSpent, orderedWithinDays, noOrderForDays, categoryId.
+  rules           Json     @default("{}")
+  createdByUserId String?  @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaigns MarketingCampaign[]
+
+  @@unique([tenantId, name])
+  @@map("customer_segments")
+}
+
+/// A tracking link to a page of the store, with UTM tags and a short address
+/// that counts clicks (D107). No visitor data is stored, only a count.
+model UtmLink {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  campaignId      String?   @map("campaign_id") @db.Uuid
+  postId          String?   @map("post_id") @db.Uuid
+  label           String
+  /// A path on the store itself ("/p/leather-tote"): never another site.
+  destinationPath String    @map("destination_path")
+  source          String
+  medium          String
+  utmCampaign     String    @map("utm_campaign")
+  content         String    @default("")
+  shortCode       String    @map("short_code")
+  clickCount      Int       @default(0) @map("click_count")
+  lastClickedAt   DateTime? @map("last_clicked_at") @db.Timestamptz(3)
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign MarketingCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  post     ContentPost?       @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, shortCode])
+  @@index([campaignId])
+  @@index([postId])
+  @@map("utm_links")
 }

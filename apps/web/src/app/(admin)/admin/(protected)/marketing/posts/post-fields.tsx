@@ -8,10 +8,12 @@ import { CHANNEL_LABEL, FORMAT_LABEL } from "../labels";
 export function PostFields({
   files,
   products,
+  campaigns,
   value,
 }: {
   files: LibraryItem[];
   products: { id: string; name: string; published: boolean }[];
+  campaigns: { id: string; name: string }[];
   value?: {
     title: string;
     channel: string;
@@ -20,6 +22,7 @@ export function PostFields({
     plannedFor: string;
     fileIds: string[];
     productIds: string[];
+    campaignId: string;
   };
 }) {
   return (
@@ -54,6 +57,17 @@ export function PostFields({
           defaultValue={value?.plannedFor}
         />
       </div>
+      {campaigns.length > 0 ? (
+        <SelectField
+          label="Campaign"
+          name="campaignId"
+          defaultValue={value?.campaignId ?? ""}
+          options={[
+            { value: "", label: "None" },
+            ...campaigns.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
+      ) : null}
       <TextAreaField
         id="caption"
         label="Caption"

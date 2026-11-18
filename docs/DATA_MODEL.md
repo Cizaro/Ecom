@@ -297,6 +297,8 @@ erDiagram
 | AnalyticsEvent | store_id, name, session_id, customer_id, properties (JSON), utm fields, occurred_at; partitioned by month |
 | UTMLink | campaign_id, destination_url, source, medium, campaign, content, short_code |
 
+**Built in Milestone 7.1 (D107):** `marketing_campaigns` (name, objective, status, starts_on, ends_on, channels[], audience, key_message, offer, budget_amount planned only, currency, discount_code_id, segment_id, notes), `marketing_campaign_products`, `customer_segments` (name unique per store, rules JSON: minOrders, minSpentAmount, orderedWithinDays, noOrderForDays, categoryId) and `utm_links` (campaign_id, post_id, label, destination_path on the store only, source, medium, utm_campaign, content, short_code unique per store, click_count, last_clicked_at). `content_posts.campaign_id` links a post to a campaign. A marketing plan is the campaigns timeline; plans as their own table, AI-made plans and campaign assets come later.
+
 Observed facts and AI output are in different tables with an explicit `origin`, so the UI can never present a recommendation as an observation.
 
 ## 6. Giveaways

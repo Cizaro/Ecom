@@ -1,4 +1,4 @@
-import { listLibrary, productsForPosts } from "@ecom/core";
+import { campaignsForPosts, listLibrary, productsForPosts } from "@ecom/core";
 import { Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -12,9 +12,10 @@ export const metadata: Metadata = { title: "New post" };
 export default async function NewPostPage() {
   const { context } = await requirePermission("content.write");
   const db = tenantDb(context);
-  const [files, products] = await Promise.all([
+  const [files, products, campaigns] = await Promise.all([
     listLibrary(db, context),
     productsForPosts(db, context),
+    campaignsForPosts(db, context),
   ]);
   return (
     <div className="flex flex-col gap-6">
@@ -28,7 +29,7 @@ export default async function NewPostPage() {
       />
       <Card>
         <ActionForm action={createPostAction} submitLabel="Save draft" testId="post-form">
-          <PostFields files={files} products={products} />
+          <PostFields files={files} products={products} campaigns={campaigns} />
         </ActionForm>
       </Card>
     </div>
