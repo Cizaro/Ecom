@@ -1,5 +1,10 @@
+import { createGateway, dollarsToMicros } from "@ecom/ai";
 import { getEnv } from "@ecom/config";
 import {
+  aiProviderFromSettings,
+  checkNewSupportMessages,
+  createAiLedger,
+  listTenantsWithSupportToCheck,
   createEmailProvider,
   createLogger,
   createS3Storage,
@@ -37,6 +42,17 @@ const email = createEmailProvider(env, logger);
 const appPrisma = getAppPrisma(env.DATABASE_URL);
 /** Tenant-bound database handle: Row-Level Security applies to the worker too. */
 const tenantDb = (tenantId: string) => createTenantDb(appPrisma, { tenantId });
+
+/** The AI gateway for background work; runs are recorded without a staff member. */
+const ai = aiProviderFromSettings(env);
+const aiGateway = createGateway({
+  provider: ai.provider,
+  ledger: createAiLedger(appPrisma, null),
+  model: ai.model,
+  prices: ai.prices,
+  globalPaused: env.AI_PAUSED,
+  platformMonthlyBudgetMicros: dollarsToMicros(env.AI_MONTHLY_BUDGET_USD),
+});
 
 /** An upload is given this long to be queued normally before the sweep queues it. */
 const SWEEP_AFTER_MS = 2 * 60_000;
@@ -103,6 +119,18 @@ const maintenanceWorker = new Worker(
         }
         if (done > 0 || failed > 0) logger.info({ done, failed }, "import pictures sweep");
         return { done, failed };
+      }
+      case MAINTENANCE_JOBS.supportAiSweep: {
+        const tenants = await listTenantsWithSupportToCheck(env.DATABASE_ADMIN_URL);
+        const total = { labelled: 0, drafted: 0, failed: 0 };
+        for (const tenantId of tenants) {
+          const result = await checkNewSupportMessages(tenantDb(tenantId), aiGateway);
+          total.labelled += result.labelled;
+          total.drafted += result.drafted;
+          total.failed += result.failed;
+        }
+        if (total.labelled > 0 || total.failed > 0) logger.info(total, "support AI sweep");
+        return total;
       }
       default:
         throw new Error(`Unknown maintenance job: ${job.name}`);
@@ -181,7 +209,13 @@ await maintenanceQueue.upsertJobScheduler(
   { name: MAINTENANCE_JOBS.emailSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
-logger.info({ queues: Object.values(QUEUES) }, "worker started");
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.supportAiSweep,
+  { every: 60_000 },
+  { name: MAINTENANCE_JOBS.supportAiSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+logger.info({ queues: Object.values(QUEUES), aiProvider: ai.provider.name }, "worker started");
 
 let shuttingDown = false;
 async function shutdown(signal: string) {

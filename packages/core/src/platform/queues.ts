@@ -23,6 +23,8 @@ export const MAINTENANCE_JOBS = {
   emailSweep: "email-sweep",
   /** Downloads picture links from product imports that are still waiting. */
   importImagesSweep: "import-images-sweep",
+  /** Labels new support messages and drafts replies with AI (staff send them). */
+  supportAiSweep: "support-ai-sweep",
 } as const;
 
 export const MEDIA_JOBS = {

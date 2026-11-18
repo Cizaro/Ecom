@@ -36,9 +36,9 @@ The demo store offers Arabic already. For each product and category, open it in 
 
 - When `picomatch` releases a fix for GHSA-fc5q-39xc-vjpf, update it and remove the entry from `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` (decision D100).
 
-## Next development task: Milestone 5.3 (support classification and reply drafts)
+## Next development task: Milestone 5.4 (AI evaluation and prompt-injection tests)
 
-Milestone 5.2 is done: AI drafts of a product's wording, search text, tags, category and Arabic wording, applied part by part from the product page (D99). Next: classify each support message (question, complaint, spam, abuse, and the always-a-person subjects) and draft a reply in the inbox from the shop's facts, which staff edit and send; nothing is sent by the AI. Then 5.4 (a fixed evaluation set and prompt-injection tests, runnable against the real provider on demand).
+Milestone 5.3 is done: new support messages are labelled and replies drafted in the inbox; staff edit and send them (D103). Next: a fixed set of test questions and expected behaviour per AI task (answers from facts, no invented numbers, hand-over subjects, Lebanese Arabic and Arabizi, injection attempts), run against the stand-in in the automated tests and against Groq or Claude on demand with a score per task.
 
 ## Return rules (owner)
 

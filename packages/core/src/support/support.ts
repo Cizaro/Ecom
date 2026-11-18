@@ -267,6 +267,10 @@ export interface ConversationSummary {
   lastMessageAt: Date;
   assignedUserId: string | null;
   customerId: string | null;
+  /** AI labels, for staff lists only. */
+  aiCategory?: string | null;
+  aiUrgency?: string | null;
+  aiSummary?: string | null;
 }
 
 const SUMMARY = {
@@ -331,7 +335,7 @@ export async function listConversations(
             }
           : {}),
       },
-      select: SUMMARY,
+      select: { ...SUMMARY, aiCategory: true, aiUrgency: true, aiSummary: true },
       // Waiting longest first, so nobody is forgotten.
       orderBy: { lastMessageAt: status === "open" ? "asc" : "desc" },
       take: 100,
@@ -360,7 +364,12 @@ export async function replyAsStaff(
   db: TenantDb,
   context: RequestContext,
   conversationId: string,
-  input: { message: unknown; internal?: boolean },
+  input: {
+    message: unknown;
+    internal?: boolean;
+    /** The AI draft this reply started from, if any (it is then marked sent). */
+    draftId?: string;
+  },
 ): Promise<void> {
   assertPermission(context, "inbox.reply");
   if (!UUID.test(conversationId)) throw new NotFoundError("conversation");
@@ -383,6 +392,23 @@ export async function replyAsStaff(
       },
       select: { id: true },
     });
+    if (!input.internal && input.draftId && UUID.test(input.draftId)) {
+      const draft = await tx.supportReplyDraft.findFirst({
+        where: { id: input.draftId, conversationId, status: "pending" },
+        select: { id: true, body: true },
+      });
+      if (draft) {
+        await tx.supportReplyDraft.update({
+          where: { id: draft.id },
+          data: {
+            status: "sent",
+            edited: draft.body.trim() !== body,
+            decidedByUserId: context.userId,
+            decidedAt: new Date(),
+          },
+        });
+      }
+    }
     if (!input.internal) {
       await tx.supportConversation.update({
         where: { id: conversationId },

@@ -624,3 +624,11 @@ export type {
 } from "./ai/product-content";
 export { aiModelFor, aiProviderFromSettings, openAiCompatibleConnection } from "./ai/providers";
 export { normalizeArabic, shopWordsFor } from "./ai/shop-words";
+export {
+  checkNewSupportMessages,
+  dismissSupportDraft,
+  draftSupportReply,
+  getSupportAi,
+} from "./support/support-ai";
+export { listTenantsWithSupportToCheck } from "./platform/support-lookup";
+export type { SupportAiView } from "./support/support-ai";

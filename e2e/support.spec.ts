@@ -92,3 +92,47 @@ test("staff see a customer's timeline and add a note", async ({ page }) => {
   await expect(form.getByTestId("form-notice")).toHaveText("Note added.");
   await expect(page.getByTestId("customer-timeline").getByText(note)).toBeVisible();
 });
+
+// Milestone 5.3: an AI draft in the inbox, which staff edit and send themselves.
+test("staff draft a reply with AI, change it and send it", async ({ page, browser }, testInfo) => {
+  test.setTimeout(120_000);
+  const tag = `${testInfo.project.name}${randomUUID().slice(0, 6)}`;
+  const subject = `Opening hours ${tag}`;
+
+  const guestContext = await browser.newContext();
+  const guest = await guestContext.newPage();
+  await guest.goto("/contact");
+  const form = guest.getByTestId("contact-form");
+  await form.getByLabel("Your name").fill("Rami Khoury");
+  await form.getByLabel("Email", exact).fill(`ai-draft-${tag}@example.test`);
+  await form.getByLabel("Subject").fill(subject);
+  await form.getByLabel("Message").fill(`Do you sell gift cards? ${tag}`);
+  await form.getByRole("button", { name: "Send message" }).click();
+  await expect(guest).toHaveURL(/\/support\/[0-9a-f-]{36}\?key=/);
+  const link = guest.url();
+
+  await signIn(page, roleEmail("store_owner"));
+  await page.goto("/admin/inbox");
+  await page.getByRole("link", { name: subject }).click();
+  // Nothing is drafted until asked (the background labelling runs in the worker).
+  await page
+    .getByTestId("support-draft-form")
+    .getByRole("button", { name: "Draft a reply with AI" })
+    .click();
+  const reply = page.getByTestId("staff-reply-form");
+  const box = reply.getByLabel("Message");
+  // The draft is in the reply box, with the shop facts it used (the stand-in
+  // AI quotes the first fact it is given).
+  await expect(box).not.toHaveValue("");
+  await expect(page.getByTestId("support-draft-facts")).toBeVisible();
+  await box.fill("Not yet, but we will tell you as soon as we do.");
+  await reply.getByRole("button", { name: "Send" }).click();
+  await expect(reply.getByTestId("form-notice")).toHaveText("Reply sent.");
+  await expect(page.getByTestId("support-dismiss-form")).toHaveCount(0);
+
+  await guest.goto(link);
+  await expect(guest.getByTestId("conversation-message").nth(1)).toContainText(
+    "Not yet, but we will tell you",
+  );
+  await guestContext.close();
+});

@@ -210,6 +210,9 @@ const CONTENT_ACTION_ENTRIES: readonly ActionEntry[] = [
 const INBOX_ACTION_ENTRIES: readonly ActionEntry[] = [
   "replyToConversationStaffAction",
   "updateConversationAction",
+  // Drafting also needs ai.use, which the service checks.
+  "draftSupportReplyAction",
+  "dismissSupportDraftAction",
 ].map((name) => ({
   id: `(admin)/admin/(protected)/inbox/actions.ts#${name}`,
   access: { level: "permission", permission: "inbox.reply" } as const,

@@ -1,11 +1,17 @@
-import { getConversationForStaff, hasPermission } from "@ecom/core";
+import { getConversationForStaff, getSupportAi, hasPermission } from "@ecom/core";
 import { Badge, Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePermission, tenantDb } from "@/server/access";
 import { orNotFound } from "@/server/catalog-forms";
 import { ActionForm, CheckboxField, TextAreaField } from "../../../_components/form";
-import { replyToConversationStaffAction, updateConversationAction } from "../actions";
+import {
+  dismissSupportDraftAction,
+  draftSupportReplyAction,
+  replyToConversationStaffAction,
+  updateConversationAction,
+} from "../actions";
+import { CATEGORY_LABEL } from "../labels";
 
 export const metadata: Metadata = { title: "Conversation" };
 
@@ -14,8 +20,13 @@ const LABEL = { open: "To answer", waiting: "Waiting for customer", closed: "Clo
 export default async function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { context } = await requirePermission("inbox.read");
   const { id } = await params;
-  const conversation = await orNotFound(getConversationForStaff(tenantDb(context), context, id));
+  const db = tenantDb(context);
+  const [conversation, ai] = await Promise.all([
+    orNotFound(getConversationForStaff(db, context, id)),
+    orNotFound(getSupportAi(db, context, id)),
+  ]);
   const canReply = hasPermission(context, "inbox.reply");
+  const canDraft = canReply && hasPermission(context, "ai.use");
   const canSeeCustomer = hasPermission(context, "customers.read");
   const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
   const mine = conversation.assignedUserId === context.userId;
@@ -63,6 +74,27 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
         {mine ? <Badge tone="success">Yours</Badge> : null}
       </div>
 
+      {ai.category ? (
+        <div
+          className="flex flex-col gap-2 rounded-card border border-line p-4 text-sm"
+          data-testid="support-ai-labels"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">AI sorting:</span>
+            <Badge tone={ai.needsPerson || ai.category === "spam" ? "warning" : "neutral"}>
+              {CATEGORY_LABEL[ai.category]}
+            </Badge>
+            {ai.urgency === "high" ? <Badge tone="warning">Urgent</Badge> : null}
+          </div>
+          {ai.summary ? <p className="text-ink-muted">{ai.summary}</p> : null}
+          {ai.needsPerson ? (
+            <p className="text-ink-muted" data-testid="support-ai-person">
+              A person handles this kind of message personally; check any draft with care.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <ol className="flex flex-col gap-3" data-testid="staff-messages">
         {conversation.messages.map((message) => (
           <li
@@ -94,14 +126,45 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
 
       {canReply ? (
         <>
-          <Card title="Reply">
+          <Card
+            title="Reply"
+            description={
+              ai.draft
+                ? "The AI drafted this from your shop's facts. Read it, change what you want, then send. Nothing was sent to the customer."
+                : undefined
+            }
+          >
+            {ai.draft && ai.draft.citations.length > 0 ? (
+              <div className="text-sm" data-testid="support-draft-facts">
+                <p className="font-medium">Facts the draft used</p>
+                <ul className="mt-1 list-disc ps-5 text-ink-muted">
+                  {ai.draft.citations.map((citation) => (
+                    <li key={citation.id}>{citation.text}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {ai.draft && !ai.draft.answered ? (
+              <p className="text-sm text-ink-muted" data-testid="support-draft-unanswered">
+                The shop's facts did not answer this; the draft says so. Add what you know before
+                sending.
+              </p>
+            ) : null}
             <ActionForm
               action={replyToConversationStaffAction}
               submitLabel="Send"
               testId="staff-reply-form"
             >
               <input type="hidden" name="id" value={conversation.id} />
-              <TextAreaField label="Message" name="message" rows={5} maxLength={5000} />
+              {ai.draft ? <input type="hidden" name="draftId" value={ai.draft.id} /> : null}
+              <TextAreaField
+                key={ai.draft?.id ?? "empty"}
+                label="Message"
+                name="message"
+                rows={ai.draft ? 8 : 5}
+                maxLength={5000}
+                defaultValue={ai.draft?.body ?? ""}
+              />
               <CheckboxField
                 label="Internal note: only staff see it, nothing is emailed"
                 name="internal"
@@ -109,6 +172,27 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             </ActionForm>
           </Card>
           <div className="flex flex-wrap gap-2">
+            {canDraft ? (
+              <ActionForm
+                action={draftSupportReplyAction}
+                submitLabel={ai.draft ? "Draft again with AI" : "Draft a reply with AI"}
+                submitTone="secondary"
+                testId="support-draft-form"
+              >
+                <input type="hidden" name="id" value={conversation.id} />
+              </ActionForm>
+            ) : null}
+            {ai.draft ? (
+              <ActionForm
+                action={dismissSupportDraftAction}
+                submitLabel="Dismiss draft"
+                submitTone="secondary"
+                testId="support-dismiss-form"
+              >
+                <input type="hidden" name="id" value={conversation.id} />
+                <input type="hidden" name="draftId" value={ai.draft.id} />
+              </ActionForm>
+            ) : null}
             {conversation.status !== "closed" ? (
               <ActionForm
                 action={updateConversationAction}

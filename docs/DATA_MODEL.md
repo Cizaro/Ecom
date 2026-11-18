@@ -70,7 +70,10 @@ erDiagram
 | product_translations, category_translations | Own tenant | Own tenant |
 | ai_settings, business_profiles | Own tenant | Own tenant, no delete |
 | ai_events | Own tenant | Own tenant, add only |
+| support_reply_drafts | Own tenant | Own tenant, no delete |
 | product_suggestions | Own tenant | Own tenant, no delete |
+
+**Support AI (2026-11-22, decision D103):** `support_conversations` gains AI labels (category, urgency, one-line summary, the newest customer message looked at, failed tries). `support_reply_drafts` (one per AI draft: the message it answers, text, the facts it used, whether the facts answered it, pending, sent, dismissed or replaced, whether staff edited it before sending, who decided and when).
 
 **AI (2026-11-21, decisions D96 to D98):** `ai_settings` (one per store: paused, monthly budget in millionths of a dollar or none for the platform limit, how much the AI does alone). `business_profiles` (one per store: what the AI is told about the business, as checked JSON). `ai_events` (one per AI run: task, provider, model, outcome, who must look at it, tokens, cost, time, problem, input without personal details, output, the fact ids it was given, the staff member).
 

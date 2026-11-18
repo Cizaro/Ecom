@@ -290,6 +290,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@ecom/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@ecom/config':
         specifier: workspace:*
         version: link:../../packages/config

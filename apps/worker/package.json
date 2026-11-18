@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ecom/ai": "workspace:*",
     "@ecom/config": "workspace:*",
     "@ecom/core": "workspace:*",
     "@ecom/db": "workspace:*",

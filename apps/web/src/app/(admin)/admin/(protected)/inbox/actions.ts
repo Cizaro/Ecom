@@ -1,6 +1,8 @@
 "use server";
 
 import {
+  dismissSupportDraft,
+  draftSupportReply,
   ForbiddenError,
   NotFoundError,
   replyAsStaff,
@@ -9,6 +11,7 @@ import {
 } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { forbidden, notFound } from "next/navigation";
+import { aiGateway } from "@/server/ai";
 import { requirePermission, tenantDb } from "@/server/access";
 import { sendWaitingEmails } from "@/server/notifications";
 import type { FormState } from "../../actions";
@@ -45,7 +48,11 @@ export async function replyToConversationStaffAction(
   const values = { message: field(formData, "message") };
   return attempt(async () => {
     const db = tenantDb(context);
-    await replyAsStaff(db, context, id, { message: values.message, internal });
+    await replyAsStaff(db, context, id, {
+      message: values.message,
+      internal,
+      draftId: field(formData, "draftId") || undefined,
+    });
     if (!internal) await sendWaitingEmails(db);
     revalidatePath("/admin/inbox");
     revalidatePath(`/admin/inbox/${id}`);
@@ -69,5 +76,39 @@ export async function updateConversationAction(
     revalidatePath("/admin/inbox");
     revalidatePath(`/admin/inbox/${id}`);
     return { notice: "Saved." };
+  });
+}
+
+/** A new AI draft of a reply (staff edit and send it; nothing is sent here). */
+export async function draftSupportReplyAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("inbox.reply");
+  const id = field(formData, "id");
+  return attempt(async () => {
+    const result = await draftSupportReply(
+      tenantDb(context),
+      context,
+      aiGateway(context.userId),
+      id,
+    );
+    revalidatePath(`/admin/inbox/${id}`);
+    return result.ok
+      ? { notice: "Draft ready below. Check it before sending." }
+      : { error: result.message };
+  });
+}
+
+export async function dismissSupportDraftAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("inbox.reply");
+  const id = field(formData, "id");
+  return attempt(async () => {
+    await dismissSupportDraft(tenantDb(context), context, id, field(formData, "draftId"));
+    revalidatePath(`/admin/inbox/${id}`);
+    return { notice: "Draft dismissed." };
   });
 }

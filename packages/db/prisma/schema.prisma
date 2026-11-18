@@ -100,6 +100,7 @@ model Tenant {
   aiSettings              AiSettings?
   businessProfile         BusinessProfile?
   aiEvents                AiEvent[]
+  supportReplyDrafts      SupportReplyDraft[]
   productSuggestions      ProductSuggestion[]
 
   @@map("tenants")
@@ -1320,23 +1321,34 @@ model ShippingZone {
 /// belongs to their account; a guest opens theirs with the private link
 /// emailed to them (only the hash of its key is stored).
 model SupportConversation {
-  id             String   @id @default(uuid(7)) @db.Uuid
-  tenantId       String   @map("tenant_id") @db.Uuid
-  customerId     String?  @map("customer_id") @db.Uuid
+  id                 String              @id @default(uuid(7)) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  customerId         String?             @map("customer_id") @db.Uuid
   /// Always lowercase.
-  email          String
-  name           String
-  subject        String
+  email              String
+  name               String
+  subject            String
   /// The shop language the shopper wrote in; emails to them use it.
-  locale         String   @default("en")
+  locale             String              @default("en")
   /// open (store to answer), waiting (customer to answer) or closed.
-  status         String   @default("open")
-  orderId        String?  @map("order_id") @db.Uuid
-  assignedUserId String?  @map("assigned_user_id") @db.Uuid
-  accessKeyHash  String   @unique @map("access_key_hash")
-  lastMessageAt  DateTime @default(now()) @map("last_message_at") @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  status             String              @default("open")
+  orderId            String?             @map("order_id") @db.Uuid
+  assignedUserId     String?             @map("assigned_user_id") @db.Uuid
+  /// AI labels for staff (decision D103): what the newest customer message is about.
+  aiCategory         String?             @map("ai_category")
+  /// normal or high.
+  aiUrgency          String?             @map("ai_urgency")
+  /// One line for staff: what the customer wants.
+  aiSummary          String?             @map("ai_summary")
+  /// The newest customer message the AI has looked at.
+  aiCheckedMessageId String?             @map("ai_checked_message_id") @db.Uuid
+  /// Tries for that message that failed (the sweep gives up after three).
+  aiCheckAttempts    Int                 @default(0) @map("ai_check_attempts")
+  replyDrafts        SupportReplyDraft[]
+  accessKeyHash      String              @unique @map("access_key_hash")
+  lastMessageAt      DateTime            @default(now()) @map("last_message_at") @db.Timestamptz(3)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   customer Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
@@ -1855,4 +1867,37 @@ model ProductSuggestion {
 
   @@index([tenantId, productId, status])
   @@map("product_suggestions")
+}
+
+/// A reply the AI drafted for a support conversation, from the shop's facts.
+/// Staff edit and send it themselves (or dismiss it); the AI never sends.
+model SupportReplyDraft {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  conversationId  String    @map("conversation_id") @db.Uuid
+  /// The customer message it answers.
+  messageId       String    @map("message_id") @db.Uuid
+  /// pending, sent, dismissed, or replaced by a newer draft.
+  status          String    @default("pending")
+  body            String
+  /// The facts it relies on: [{ id, text }].
+  citations       Json      @default("[]")
+  /// Whether the facts answered the question.
+  answered        Boolean   @default(false)
+  /// A person should take over.
+  handover        Boolean   @default(false)
+  /// Staff changed the text before sending.
+  edited          Boolean   @default(false)
+  aiEventId       String?   @map("ai_event_id") @db.Uuid
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  decidedByUserId String?   @map("decided_by_user_id") @db.Uuid
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, conversationId, status])
+  @@map("support_reply_drafts")
 }

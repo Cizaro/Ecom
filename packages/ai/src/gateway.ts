@@ -176,6 +176,20 @@ export function createGateway(options: GatewayOptions) {
   }
 
   return {
+    /**
+     * Whether AI may run for this business now (not paused, budget left),
+     * without recording anything: for background work that would otherwise
+     * log a refused run on every pass.
+     */
+    async available(tenantId: string): Promise<boolean> {
+      const settings = await options.ledger.settings(tenantId);
+      if (options.globalPaused || settings.paused) return false;
+      const budget = Math.min(
+        settings.monthlyBudgetMicros ?? options.platformMonthlyBudgetMicros,
+        options.platformMonthlyBudgetMicros,
+      );
+      return (await options.ledger.spentThisMonth(tenantId, now())) < budget;
+    },
     providerName: options.provider.name,
     model: options.model,
     /** Runs a task by name. */

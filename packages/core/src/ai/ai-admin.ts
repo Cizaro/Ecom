@@ -286,7 +286,12 @@ export async function tryCustomerAnswer(
 export async function answerCustomerQuestion(
   db: TenantDb,
   gateway: AiGateway,
-  input: { question: unknown; language: unknown },
+  input: {
+    question: unknown;
+    language: unknown;
+    /** Earlier messages of the conversation, oldest first. */
+    history?: { from: "customer" | "business"; text: string }[];
+  },
 ): Promise<RunResult<CustomerAnswerOutput> & { facts?: Fact[] }> {
   const [store, profile] = await Promise.all([storeIn(db), getBusinessProfile(db)]);
   const context = { tenantId: db.tenantId, profile, knowledge: createCommerceKnowledge(db, store) };
@@ -301,6 +306,7 @@ export async function answerCustomerQuestion(
       question: input.question,
       language: input.language,
       ...(words.ok && words.output.terms.length > 0 ? { terms: words.output.terms } : {}),
+      ...(input.history && input.history.length > 0 ? { history: input.history } : {}),
     },
     context,
   );

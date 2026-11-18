@@ -2,6 +2,7 @@ import { listConversations, SUPPORT_STATUSES } from "@ecom/core";
 import { Badge, buttonClasses, EmptyState, Field, List, ListItem, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CATEGORY_LABEL } from "./labels";
 import { requirePermission, tenantDb } from "@/server/access";
 
 export const metadata: Metadata = { title: "Inbox" };
@@ -82,8 +83,27 @@ export default async function InboxPage({
                 <p className="truncate text-sm text-ink-muted">
                   {item.name} · {item.email}
                 </p>
+                {item.aiSummary ? (
+                  <p className="truncate text-sm text-ink-muted" data-testid="inbox-ai-summary">
+                    {item.aiSummary}
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+                {item.aiCategory && item.aiCategory in CATEGORY_LABEL ? (
+                  <Badge
+                    tone={
+                      item.aiCategory === "question" ||
+                      item.aiCategory === "order_status" ||
+                      item.aiCategory === "other"
+                        ? "neutral"
+                        : "warning"
+                    }
+                  >
+                    {CATEGORY_LABEL[item.aiCategory as keyof typeof CATEGORY_LABEL]}
+                  </Badge>
+                ) : null}
+                {item.aiUrgency === "high" ? <Badge tone="warning">Urgent</Badge> : null}
                 {item.assignedUserId === context.userId ? (
                   <Badge tone="success">Yours</Badge>
                 ) : null}
