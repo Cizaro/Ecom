@@ -157,14 +157,27 @@ export function createCommerceKnowledge(
 
       // Delivery areas: few, and asked about often.
       const { zones } = await getCheckoutOptions(db);
-      for (const zone of zones.slice(0, 5)) {
+      // Short, readable ids: models copy them back more reliably than long codes.
+      const zoneIds = new Set<string>();
+      const zoneId = (name: string, index: number) => {
+        const slug = name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .slice(0, 40);
+        let id = `delivery:${slug || `area-${index + 1}`}`;
+        if (zoneIds.has(id)) id = `${id}-${index + 1}`;
+        zoneIds.add(id);
+        return id;
+      };
+      for (const [index, zone] of zones.slice(0, 5).entries()) {
         const price = zone.rateAmount === 0 ? "free" : formatMoney(zone.rateAmount, zone.currency);
         const free =
           zone.freeOverAmount !== null
             ? `, free for orders over ${formatMoney(zone.freeOverAmount, zone.currency)}`
             : "";
         facts.push({
-          id: `delivery:${zone.id}`,
+          id: zoneId(zone.name, index),
           kind: "delivery",
           text: `Delivery to ${zone.name} costs ${price}${free}.`,
         });

@@ -71,8 +71,27 @@ const answerOutput = z.object({
 export type CustomerAnswerInput = z.infer<typeof answerInput>;
 export type CustomerAnswerOutput = z.infer<typeof answerOutput>;
 
-/** Every number in a text ("12", "4.50", "9:30"), as written. */
-const numbersIn = (text: string) => text.match(/\d+(?:[.,:]\d+)*/g) ?? [];
+/** Arabic-Indic and Persian digits as Western ones, so "٤" cannot slip past the check as "4". */
+const westernDigits = (text: string) =>
+  text
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/٫/g, ".")
+    .replace(/٬/g, ",");
+
+/** "4.00" and "4" are the same amount; "1,299.00" is 1299. Times and other forms stay as written. */
+const sameValue = (number: string) =>
+  /^\d{1,3}(,\d{3})*(\.\d+)?$|^\d+(\.\d+)?$/.test(number)
+    ? String(Number(number.replace(/,/g, "")))
+    : number;
+
+/**
+ * Every number in a text ("12", "4.50", "9:30"), compared by value. Digits
+ * joined to letters are not numbers: Arabic written in Latin letters uses
+ * them as letters ("3endkon", "7elwe").
+ */
+const numbersIn = (text: string) =>
+  (westernDigits(text).match(/(?<![\p{L}\d])\d+(?:[.,:]\d+)*(?![\p{L}\d])/gu) ?? []).map(sameValue);
 
 export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAnswerOutput> = {
   name: "customer.answer",
@@ -94,7 +113,7 @@ export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAns
         "",
         "Your job: draft a reply to the customer's message below, for a member of staff to check.",
         GROUNDING_RULES,
-        `- Reply in the language with code "${input.language}".`,
+        `- Reply in the same language, dialect and script the customer used: Lebanese Arabic in Lebanese Arabic, Arabic written in Latin letters and numbers ("kifak", "3endkon") in the same way. When that is unclear, reply in the language with code "${input.language}".`,
         "- Set answered to false when the facts do not answer the question; then citations may be empty.",
         "- Mention only items that are what the customer asked about; leave out facts that merely share a word or a detail with the question.",
         "- Choose the topic that fits the message; set handover to true when a person should take over.",

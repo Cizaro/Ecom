@@ -231,3 +231,27 @@ describe("reusable for any business (decision D88)", () => {
     ).toBe("Mail [email] or call [phone], card [number], order 1042");
   });
 });
+
+describe("number check of customer answers", () => {
+  const facts = [{ id: "delivery:all", kind: "delivery", text: "Delivery costs $4.00." }];
+  const check = (reply: string, question = "How much is delivery?") =>
+    customerAnswerTask.check(
+      { answered: true, reply, citations: ["delivery:all"], topic: "question", handover: false },
+      { input: { question, language: "ar" }, profile: clinicProfile, facts },
+    );
+
+  it("treats 4 and 4.00 as the same amount", () => {
+    expect(check("Delivery is 4 dollars.")).toEqual([]);
+    expect(check("التوصيل ٤ دولارات")).toEqual([]);
+  });
+
+  it("catches an invented amount written in Arabic digits", () => {
+    expect(check("التوصيل ٩ دولارات").join(" ")).toMatch(/numbers no cited fact contains: 9/);
+  });
+
+  it("does not count Arabic written in Latin letters as numbers", () => {
+    expect(check("el delivery 3al jnoub b $4.00, 7abibi", "addesh el delivery 3al jnoub?")).toEqual(
+      [],
+    );
+  });
+});
