@@ -24,4 +24,14 @@ Storefront, admin, AI assistant, social inbox, marketing and giveaway platform f
 3. Copy `.env.example` to `.env` and fill in values. Never commit `.env`.
 4. Follow the commands in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
+## Working from two computers
+
+The project is built from more than one computer, through GitHub. At the start of every session, on whichever computer:
+
+```
+pnpm sync
+```
+
+It pulls the latest `main`, installs packages if they changed, adds new settings from `.env.example` to `.env`, starts the local services, and updates the development and test databases. It changes nothing and says why if there are uncommitted changes or both computers changed `main`. At the end of every session, commit and push, so the other computer can pick up the work. Each computer keeps its own local data; only code and database structure travel through GitHub.
+
 Diagrams are written in Mermaid and render on GitHub, in VS Code (with a Mermaid extension) and in most Markdown viewers.
