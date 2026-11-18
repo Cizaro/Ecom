@@ -72,6 +72,7 @@ erDiagram
 | ai_events | Own tenant | Own tenant, add only |
 | support_reply_drafts | Own tenant | Own tenant, no delete |
 | product_suggestions | Own tenant | Own tenant, no delete |
+| analytics_events | Own tenant | Own tenant, add only |
 
 **Support AI (2026-11-22, decision D103):** `support_conversations` gains AI labels (category, urgency, one-line summary, the newest customer message looked at, failed tries). `support_reply_drafts` (one per AI draft: the message it answers, text, the facts it used, whether the facts answered it, pending, sent, dismissed or replaced, whether staff edited it before sending, who decided and when).
 
@@ -302,6 +303,8 @@ erDiagram
 Observed facts and AI output are in different tables with an explicit `origin`, so the UI can never present a recommendation as an observation.
 
 **Built in Milestone 7.2 (D108):** `competitors` (name unique per store, website, facebook, instagram, tiktok, tags[], notes, archived_at), `research_observations` (competitor_id, kind product/price/promotion/post/hook/hashtag/review/other, title, detail, price_amount and currency, product_id of a similar product of ours, source_url, observed_on, collection_method manual only) and `research_ideas` (title, idea, score 0 to 100, rationale, observation_ids[] 1 to 20, status new/accepted/dismissed, origin ai_generated, model, decided_by_user_id, decided_at). The planned ProductOpportunityScore is `research_ideas`.
+
+**Built in Milestone 7.4 (D109, D110):** `analytics_events` (name product_view, add_to_cart, checkout_started, search or link_click; product_id, utm_link_id, query for searches only, lowercased, at most 100 characters; result_count; locale; occurred_at). No customer, session, address or IP. Indexed by store, name and time. The planned AnalyticsEvent without the session, customer and UTM fields: campaign attribution comes from the tracking link and the discount code.
 
 ## 6. Giveaways
 

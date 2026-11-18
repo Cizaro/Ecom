@@ -13,6 +13,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cartOwner, getCurrentCustomer } from "@/server/customer";
 import { shopT } from "@/server/i18n";
+import { trackShopEvent } from "@/server/analytics";
 import { storefrontDb } from "@/server/storefront";
 import {
   AccountCheckbox,
@@ -43,6 +44,7 @@ export default async function CheckoutPage() {
     getCheckoutOptions(db),
   ]);
   if (cart.lines.length === 0) redirect("/cart");
+  await trackShopEvent(db, { name: "checkout_started" });
   const currency = cart.currency ?? "USD";
   const blocked = cart.lines.some((line) => !line.available || line.onlyLeft !== null);
   const saved = customer ? await listAddresses(db, customer.id) : [];

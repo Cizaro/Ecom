@@ -4,7 +4,7 @@ Last updated: 2026-11-26
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** 6.3 to 6.5 skipped until the owner's Meta accounts are ready (docs/META_SETUP.md). **Phase 7 started: Milestones 7.1 (marketing plan, campaigns, segments, tracking links) and 7.2 (competitor research and AI ideas) built.** Next: 7.4. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** 6.3 to 6.5 skipped until the owner's Meta accounts are ready (docs/META_SETUP.md). **Phase 7: Milestones 7.1 (marketing plan, campaigns, segments, tracking links), 7.2 (competitor research and AI ideas) and 7.4 (shop events, reports, forecasts, questions about the figures) built.** 7.3 waits for the ad account. Next: Phase 8 (giveaways) once the owner confirms the prize structure, or Phase 10 readiness work. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -239,6 +239,11 @@ Last updated: 2026-11-26
   - A price seen next to our similar product's price, with the difference.
   - **Research ideas** (`/admin/research/ideas`): AI drafts up to 5 ideas with a score from 0 to 100, the reasons and the observations each cites; shown as "AI suggestion"; keep or dismiss. No fake urgency, fake reviews or copying is ever suggested (the answer is refused).
 
+- **Milestone 7.4, analytics and reports (D109, D110):**
+  - Shop events counted in our own database with no personal details: product views, adds to cart, checkouts opened, searches with their result counts, tracking-link clicks. Crawlers and prefetches skipped.
+  - **Reports** (`/admin/reports`, in the menu): 7, 30 or 90 days; sales against the period before, orders, units, average order, new and returning customers; sales per day with the next 14 days' expected range; sales by category; top products with views and adds to cart (CSV download); the view-to-order funnel; searches, marking those that found nothing; campaign clicks and code orders; products running out within 3 weeks.
+  - **Ask about these figures**: a question in plain words, answered only from the report's figures, citing them; needs `ai.use`.
+
 ## In progress
 
 Nothing.
@@ -426,21 +431,21 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 7.2)
+## Checks run this session (Milestone 7.4, on the second computer)
 
 | Check | Result |
 | --- | --- |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 464 tests (new: the research ideas task accepts ideas citing the given observations with their numbers; refuses unknown citations, invented numbers, urgency or scarcity, copying competitors' content, fake reviews and bought followers; keeps staff text as data) |
-| `pnpm test:int` | Pass, 296 tests (new: competitors with tidy addresses and account names, unique names; observations with price, source and date, no future dates; our price next to theirs; AI ideas stored as suggestions with the model and their citations; keep or dismiss; deleted observations drop out; archived competitors left out; research.write needed; another store's competitor or product refused) |
+| `pnpm test` | Pass, 482 tests (new: the forecast by weekday with its range, too little history, days after today ignored; running-out order and negative stock; percentages; the report question task answers from the figures and cites them, accepts the same amount written differently and numbers from the question, refuses worked-out numbers and unknown figures after a second try, keeps the question as data, uses no shop words) |
+| `pnpm test:int` | Pass, 301 tests (5 new: searches normalised and bots recognised; invalid events refused and the database refuses a search without its words; the report counts sales, units, guests, top products with views and adds, categories, the funnel, searches that found nothing, campaign link clicks and what will run out, its facts and CSV; questions answered from the figures and recorded, ai.use and reports.read both needed; another store sees none of it and cannot record an event about its product) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 162 passed, 64 skipped (new: a marketer adds a competitor and a price observation with its source, a bad link is refused, AI ideas cite the observation and one is kept) |
-| Competitors' sites | Never fetched or called: everything is typed by staff |
+| `pnpm test:e2e` | Pass, 168 passed, 66 skipped by design (new: a shopper's product view and search raise the figures, the owner asks a question and sees the figures used, the period switch and CSV download work; an inventory manager sees reports without the question box; customer service gets 403 for the page and the CSV) |
+| Real AI provider | Not called: no API key on this computer; the built-in test stand-in was used |
 
 ## Recommended next task
 
-Milestone 7.4 (analytics and reporting). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
+Phase 8 (giveaways) once the owner confirms the prize and entry structure (COMPLIANCE.md), otherwise Phase 10 readiness work (security, accessibility and performance passes; monitoring). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: open Reports and try a question. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
 
 ## Session log
 
@@ -488,5 +493,6 @@ Milestone 7.4 (analytics and reporting). 6.3 to 6.5 and 7.3 wait for the owner's
 | 2026-11-24 | Meta and TikTok setup checklist for the owner (docs/META_SETUP.md); 6.3 to 6.5 and 7.3 skipped until the accounts are ready |
 | 2026-11-25 | Milestone 7.1: marketing plan with campaign briefs, customer segments with consent-only export, tracking links with short addresses and click counts on posts and campaigns |
 | 2026-11-26 | Milestone 7.2: competitor research typed by staff with price comparison, AI opportunity ideas scored and citing the observations |
+| 2026-11-27 | Milestone 7.4: shop events without personal details, Reports page with forecasts and running-out stock, questions answered from the figures (second computer) |
 
 Commit hashes: `git log --oneline`.

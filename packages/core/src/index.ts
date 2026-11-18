@@ -743,3 +743,24 @@ export type {
   Observation,
   ResearchKind,
 } from "./research/research";
+
+// Analytics and reports (Milestone 7.4)
+export { isBot, normalizeQuery, recordShopEvent, SHOP_EVENTS } from "./analytics/events";
+export type { ShopEvent, ShopEventName } from "./analytics/events";
+export { forecastSales, percent, stockRunOut } from "./analytics/forecast";
+export type {
+  DayFigures,
+  ForecastDay,
+  RunOut,
+  SalesForecast,
+  StockLine,
+} from "./analytics/forecast";
+export {
+  askAboutReport,
+  getAnalyticsReport,
+  productsCsv,
+  REPORT_PERIODS,
+  reportFacts,
+  reportPeriod,
+} from "./analytics/report";
+export type { AnalyticsReport, ProductRow, ReportPeriod } from "./analytics/report";

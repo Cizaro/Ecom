@@ -110,6 +110,7 @@ model Tenant {
   researchObservations    ResearchObservation[]
   researchIdeas           ResearchIdea[]
   productSuggestions      ProductSuggestion[]
+  analyticsEvents         AnalyticsEvent[]
 
   @@map("tenants")
 }
@@ -641,7 +642,8 @@ model Product {
 
   ugcItems UgcItem[]
 
-  suggestions ProductSuggestion[]
+  suggestions     ProductSuggestion[]
+  analyticsEvents AnalyticsEvent[]
 
   @@unique([tenantId, slug])
   @@index([tenantId, status, createdAt])
@@ -2114,6 +2116,7 @@ model UtmLink {
   tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   campaign MarketingCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   post     ContentPost?       @relation(fields: [postId], references: [id], onDelete: SetNull)
+  events   AnalyticsEvent[]
 
   @@unique([tenantId, shortCode])
   @@index([campaignId])
@@ -2201,4 +2204,28 @@ model ResearchIdea {
 
   @@index([tenantId, status, score])
   @@map("research_ideas")
+}
+
+/// One shop moment (Milestone 7.4): a product viewed, added to the cart, a
+/// checkout started, a search, a tracking-link click. No personal details:
+/// no customer, session, address or IP. Never changed by the app.
+model AnalyticsEvent {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  /// product_view, add_to_cart, checkout_started, search or link_click.
+  name        String
+  productId   String?  @map("product_id") @db.Uuid
+  utmLinkId   String?  @map("utm_link_id") @db.Uuid
+  /// What was searched for, lowercased (search only).
+  query       String?
+  resultCount Int?     @map("result_count")
+  locale      String?
+  occurredAt  DateTime @default(now()) @map("occurred_at") @db.Timestamptz(3)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  utmLink UtmLink? @relation(fields: [utmLinkId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, name, occurredAt])
+  @@map("analytics_events")
 }

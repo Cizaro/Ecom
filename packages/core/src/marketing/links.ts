@@ -252,9 +252,10 @@ export async function followLink(db: TenantDb, code: string): Promise<string | n
       data: { clickCount: { increment: 1 }, lastClickedAt: new Date() },
     });
     if (updated.count === 0) return null;
-    return tx.utmLink.findFirst({
+    const found = await tx.utmLink.findFirst({
       where: { shortCode },
       select: {
+        id: true,
         destinationPath: true,
         source: true,
         medium: true,
@@ -262,6 +263,14 @@ export async function followLink(db: TenantDb, code: string): Promise<string | n
         content: true,
       },
     });
+    // Counted for the reports by day (7.4); no details about the visitor.
+    if (found) {
+      await tx.analyticsEvent.create({
+        data: { tenantId: db.tenantId, name: "link_click", utmLinkId: found.id },
+        select: { id: true },
+      });
+    }
+    return found;
   });
   if (!link) return null;
   // A relative address: the browser stays on the store's own host.

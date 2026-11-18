@@ -18,6 +18,7 @@ import { getCurrentCustomer } from "@/server/customer";
 import { shopT } from "@/server/i18n";
 import { viewOf } from "@/server/media";
 import { parseRecent, RECENT_COOKIE } from "@/server/recently-viewed";
+import { trackShopEvent } from "@/server/analytics";
 import { publicOrNotFound, storefrontDb, storefrontOrigin } from "@/server/storefront";
 import {
   breadcrumbStructuredData,
@@ -110,6 +111,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const [{ db }, t] = await Promise.all([storefrontDb(), shopT()]);
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const { shown: product } = await loadProduct(slug);
+  await trackShopEvent(db, { name: "product_view", productId: product.id });
 
   const selection = selectVariant(product.variants, {
     color: first(query.color),

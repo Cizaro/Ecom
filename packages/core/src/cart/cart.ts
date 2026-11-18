@@ -323,7 +323,13 @@ export async function addToCart(
   return db.run(async (tx) => {
     const variant = await tx.productVariant.findFirst({
       where: { id: input.variantId, status: "active", product: { status: "active" } },
-      select: { id: true, priceAmount: true, discountPriceAmount: true, currency: true },
+      select: {
+        id: true,
+        productId: true,
+        priceAmount: true,
+        discountPriceAmount: true,
+        currency: true,
+      },
     });
     if (!variant) throw new CartError("unavailable");
     const price = variant.discountPriceAmount ?? variant.priceAmount;
@@ -380,6 +386,11 @@ export async function addToCart(
       });
     }
     await tx.cart.update({ where: { id: cart.id }, data: { expiresAt: expiry() } });
+    // Counted for the reports (7.4): which product, nothing about who.
+    await tx.analyticsEvent.create({
+      data: { tenantId: db.tenantId, name: "add_to_cart", productId: variant.productId },
+      select: { id: true },
+    });
 
     return { token: cartToken, tokenIsNew, capped, cart: await loadView(tx, cart) };
   });

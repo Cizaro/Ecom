@@ -92,6 +92,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/reviews", access: { level: "permission", permission: "reviews.moderate" } },
   { path: "/admin/content", access: { level: "permission", permission: "reviews.moderate" } },
   { path: "/admin/ai", access: { level: "permission", permission: "ai.use" } },
+  { path: "/admin/reports", access: { level: "permission", permission: "reports.read" } },
   // Content planning: approving and publishing need more, checked per step.
   { path: "/admin/marketing/library", access: CONTENT_WRITE },
   { path: "/admin/marketing/library/[id]", access: CONTENT_WRITE },
@@ -328,6 +329,11 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
     id: "(admin)/admin/(protected)/ai/actions.ts#tryAnswerAction",
     access: { level: "permission", permission: "ai.use" },
   },
+  // Questions about the reports: the service also requires ai.use.
+  {
+    id: "(admin)/admin/(protected)/reports/actions.ts#askReportsAction",
+    access: { level: "permission", permission: "reports.read" },
+  },
   // AI drafts for a product: the services also require ai.use.
   ...[
     "draftProductCopyAction",
@@ -341,6 +347,11 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
 ];
 
 export const ADMIN_API: readonly ApiEntry[] = [
+  {
+    path: "/api/v1/admin/reports/products",
+    method: "GET",
+    access: { level: "permission", permission: "reports.read" },
+  },
   { path: "/api/v1/admin/me", method: "GET", access: { level: "tenant" } },
   { path: "/api/v1/admin/catalog/import-template", method: "GET", access: CATALOG_WRITE },
   // Holds customers' contact details, so it needs customers.export (the

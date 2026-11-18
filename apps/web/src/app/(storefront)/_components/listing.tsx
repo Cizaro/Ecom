@@ -17,6 +17,7 @@ import {
 import { shopT } from "@/server/i18n";
 import { ProductGrid } from "./product-card";
 import { SortSelect } from "./sort-select";
+import { trackShopEvent } from "@/server/analytics";
 
 const SORT_LABELS: Record<PublicSort, string> = {
   relevance: msg("Best match"),
@@ -89,6 +90,10 @@ export async function ProductListing({
     listPublicProducts(db, { ...scope, ...toListInput(state, currency) }),
     shopT(),
   ]);
+  // A search is counted once, on its first page and before filters (7.4).
+  if (basePath === "/search" && state.q && state.page <= 1 && activeFilterCount(state) === 0) {
+    await trackShopEvent(db, { name: "search", query: state.q, resultCount: list.total });
+  }
   const filterCount = activeFilterCount(state);
   const sorts = (Object.keys(SORT_LABELS) as PublicSort[]).filter(
     (sort) => sort !== "relevance" || state.q !== "",
