@@ -44,7 +44,7 @@ export function judge(expect: Expect, outcome: string, output: unknown): string[
     return expect.blockedOk ? [] : [`The gateway did not use the answer (${outcome}).`];
   }
   const out = (output ?? {}) as Record<string, unknown>;
-  const reply = String(out.reply ?? "");
+  const reply = String(out.reply ?? out.caption ?? "");
   const text = lower(reply);
   const citations = Array.isArray(out.citations) ? (out.citations as string[]) : [];
   const problems: string[] = [];

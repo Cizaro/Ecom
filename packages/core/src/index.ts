@@ -434,7 +434,15 @@ export {
 export type { RefundMethod, ReturnInput, ReturnReason } from "./orders/returns";
 export { csvField, EXPORT_LIMIT, exportOrdersCsv, getDashboard } from "./reports/reports";
 export type { Dashboard, PeriodFigures } from "./reports/reports";
-export { addDays, isCalendarDate, safeTimeZone, zonedDay, zonedDayStart } from "./platform/time";
+export {
+  addDays,
+  isCalendarDate,
+  safeTimeZone,
+  zonedDateTime,
+  zonedDay,
+  zonedDayStart,
+  zonedLocalInput,
+} from "./platform/time";
 
 export {
   checkDiscountCode,
@@ -632,3 +640,26 @@ export {
 } from "./support/support-ai";
 export { listTenantsWithSupportToCheck } from "./platform/support-lookup";
 export type { SupportAiView } from "./support/support-ai";
+export {
+  addLibraryFile,
+  ContentError,
+  getLibraryFile,
+  listLibrary,
+  updateLibraryFile,
+} from "./content/library";
+export type { LibraryItem } from "./content/library";
+export {
+  createPost,
+  deletePost,
+  draftPostCaption,
+  getPost,
+  listPosts,
+  movePost,
+  POST_CHANNELS,
+  POST_FORMATS,
+  POST_STATUSES,
+  postCalendar,
+  productsForPosts,
+  updatePost,
+} from "./content/posts";
+export type { PostChannel, PostFormat, PostStatus, PostSummary, PostView } from "./content/posts";

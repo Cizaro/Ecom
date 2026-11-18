@@ -101,6 +101,8 @@ model Tenant {
   businessProfile         BusinessProfile?
   aiEvents                AiEvent[]
   supportReplyDrafts      SupportReplyDraft[]
+  contentAssets           ContentAsset[]
+  contentPosts            ContentPost[]
   productSuggestions      ProductSuggestion[]
 
   @@map("tenants")
@@ -623,6 +625,7 @@ model Product {
   attributes   ProductAttribute[]
   images       ProductImage[]
   translations ProductTranslation[]
+  contentPosts ContentPostProduct[]
 
   importImages ProductImportImage[]
 
@@ -762,6 +765,7 @@ model MediaAsset {
   category     Category?
   brand        Brand?
   store        Store?
+  contentAsset ContentAsset?
 
   ugcItem UgcItem?
 
@@ -1900,4 +1904,99 @@ model SupportReplyDraft {
 
   @@index([tenantId, conversationId, status])
   @@map("support_reply_drafts")
+}
+
+// ---------------------------------------------------------------------------
+// Content (Phase 6, decision D105): the store's library of photos and videos
+// for marketing, posts planned for social channels, and their approval.
+// Publishing is recorded by staff in this milestone; automatic publishing
+// comes with the social connections (6.3 to 6.5).
+
+/// A photo or video in the content library, with where it came from and the right to use it.
+model ContentAsset {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  mediaAssetId    String    @unique @map("media_asset_id") @db.Uuid
+  title           String
+  altText         String    @default("") @map("alt_text")
+  tags            String[]  @default([])
+  /// Who owns it and the permission to use it.
+  usageNote       String    @default("") @map("usage_note")
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  media  MediaAsset         @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  posts  ContentPostAsset[]
+
+  @@index([tenantId, createdAt])
+  @@map("content_assets")
+}
+
+/// A post planned for a social channel, from draft to approval to published.
+model ContentPost {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  /// For staff: what the post is.
+  title            String
+  /// instagram, facebook, tiktok, whatsapp or other.
+  channel          String
+  /// post, reel, story or carousel.
+  format           String    @default("post")
+  caption          String    @default("")
+  /// draft, in_review, changes_requested, approved or published.
+  status           String    @default("draft")
+  /// When it is planned to go out (the calendar).
+  plannedFor       DateTime? @map("planned_for") @db.Timestamptz(3)
+  reviewNote       String?   @map("review_note")
+  submittedAt      DateTime? @map("submitted_at") @db.Timestamptz(3)
+  approvedByUserId String?   @map("approved_by_user_id") @db.Uuid
+  approvedAt       DateTime? @map("approved_at") @db.Timestamptz(3)
+  publishedAt      DateTime? @map("published_at") @db.Timestamptz(3)
+  /// The live post's address, recorded when it is published.
+  publishedUrl     String?   @map("published_url")
+  createdByUserId  String?   @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assets   ContentPostAsset[]
+  products ContentPostProduct[]
+
+  @@index([tenantId, status, plannedFor])
+  @@index([tenantId, plannedFor])
+  @@map("content_posts")
+}
+
+/// The library files a post uses, in order.
+model ContentPostAsset {
+  tenantId String @map("tenant_id") @db.Uuid
+  postId   String @map("post_id") @db.Uuid
+  assetId  String @map("asset_id") @db.Uuid
+  position Int    @default(0)
+
+  post  ContentPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  asset ContentAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@id([postId, assetId])
+  @@index([tenantId])
+  @@index([assetId])
+  @@map("content_post_assets")
+}
+
+/// The products a post features.
+model ContentPostProduct {
+  tenantId  String @map("tenant_id") @db.Uuid
+  postId    String @map("post_id") @db.Uuid
+  productId String @map("product_id") @db.Uuid
+
+  post    ContentPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  product Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([postId, productId])
+  @@index([tenantId])
+  @@index([productId])
+  @@map("content_post_products")
 }

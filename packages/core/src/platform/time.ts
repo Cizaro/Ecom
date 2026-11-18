@@ -74,3 +74,35 @@ export function addDays(day: string, days: number): string {
   const [y, m, d] = day.split("-").map(Number) as [number, number, number];
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
 }
+
+const LOCAL = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})$/;
+
+/** The instant a wall-clock time ("2026-11-21T18:00") is in the zone, or null if not one. */
+export function zonedDateTime(local: string, timeZone: string): Date | null {
+  const match = LOCAL.exec(local);
+  if (!match) return null;
+  const hours = Number(match[2]);
+  const minutes = Number(match[3]);
+  if (hours > 23 || minutes > 59) return null;
+  const dayStart = zonedDayStart(match[1]!, timeZone);
+  if (!dayStart) return null;
+  const guess = new Date(dayStart.getTime() + (hours * 60 + minutes) * 60_000);
+  // A clock change during the day moves the wall clock against the guess.
+  const drift = offsetMinutes(guess, timeZone) - offsetMinutes(dayStart, timeZone);
+  return new Date(guess.getTime() - drift * 60_000);
+}
+
+/** An instant as the zone's wall-clock time, for a form field ("2026-11-21T18:00"). */
+export function zonedLocalInput(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)!.value;
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}

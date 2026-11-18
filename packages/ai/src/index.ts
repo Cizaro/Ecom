@@ -16,3 +16,4 @@ export {
 } from "./providers/openai-compatible";
 export * from "./eval/cases";
 export * from "./eval/runner";
+export * from "./caption-task";

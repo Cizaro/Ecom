@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-11-22
+Last updated: 2026-11-23
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 started: Milestones 5.1 (the AI gateway) and 5.2 (AI product drafts) built.** Next: Milestone 5.3 (support message classification and reply drafts). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestone 6.1 (content library, posts with approval, calendar, AI captions) built.** Next: Milestone 6.2 (image processing per platform). The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -213,6 +213,15 @@ Last updated: 2026-11-22
   - Product page: an **AI drafts** panel to draft the wording and search text, or the Arabic wording, then tick the parts to apply or dismiss the draft. Tags are added to the current ones.
   - Table `product_suggestions` with Row-Level Security; drafting and deciding need `catalog.write` and `ai.use`.
 - **Free AI services for testing:** Groq and Moonshot (Kimi) through one OpenAI-compatible provider, with a backup provider when the main one is busy; `pnpm ai:models` lists a service's models and `pnpm ai:try` asks a question from the terminal.
+- **Milestone 5.3, support inbox AI** and **Milestone 5.4, AI evaluation set:** see decisions D103 and D104.
+- **Milestone 6.1, content planning (D105):**
+  - **Content library** (`/admin/marketing/library`): upload photos and videos with a title, tags, a description and a note of who owns each and the permission to use it; filter by tag; archive.
+  - **Content posts** (`/admin/marketing/posts`): name, channel, kind, planned time in the store's time zone, caption, photos and featured products.
+  - Approval: draft → waiting for approval → approved → published, or changes requested with a note. Content editors write and send; marketers, managers and owners approve and record publishing. Changing a waiting or approved post sends it back to draft.
+  - Publishing is recorded by hand with an optional link: no social account is connected and nothing is posted automatically.
+  - **Content calendar** (`/admin/marketing/calendar`): the month by day in the store's time zone, with the count of unplanned posts.
+  - **AI caption** from the featured products' real details: no invented numbers, no pressure or fake scarcity, English or Arabic; a draft copied into the caption and still approved.
+  - Tables `content_assets`, `content_posts`, `content_post_assets`, `content_post_products` with Row-Level Security.
 
 ## In progress
 
@@ -401,21 +410,21 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 5.2, on the second computer)
+## Checks run this session (Milestone 6.1)
 
 | Check | Result |
 | --- | --- |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 350 tests (new: the two content tasks against the made-up clinic: drafts from the item's own details, always for a person; invented numbers, unknown categories, bad tags and English in an Arabic draft refused after a second try; translations keep exactly the original's numbers, Arabic-Indic digits accepted; text from the item's page kept as data; no shop words in the prompts) |
-| `pnpm test:int` | Pass, 281 tests, on the separate test database (7 new: drafts and replacement, applying ticked parts only with tags added and an audit entry, Arabic draft replacing only chosen parts, dismissing, no draft while AI is paused, catalog.write and ai.use both needed, one store never sees or decides another's drafts and the database refuses a draft under another store's product) |
+| `pnpm test` | Pass, 411 tests (new: the caption task: numbers only from the products' details, pressure words refused in English, Arabic and Arabizi, Arabic letters for an Arabic caption, hashtags tidied; three caption cases in the evaluation set) |
+| `pnpm test:int` | Pass, 288 tests, on the separate test database (new: library upload and archive; the whole post workflow with the Beirut time conversion, AI caption, calendar and each role's permissions; one store never sees another's library or posts) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | 131 passed, 5 failed, 48 skipped on the first full run. 2 failures were the new AI test (fixed: the editor now signs in in a browser session of their own, and the draft buttons got their own test ids). 3 were timeouts in sitemap, stock and storefront tests while the database stalled (one transaction waited over 10 minutes); all 3 passed on rerun. After the fix, `e2e/ai.spec.ts` passed, 8 tests on desktop and mobile. The full suite was not rerun end to end after the fix. |
-| Real AI provider | Not called: no API key on this computer |
+| `pnpm test:e2e` | Pass, 145 passed, 53 skipped (new: an editor uploads a photo and prepares a post with an AI caption and cannot approve it; a marketer asks for a change, approves and records it as published; the calendar shows it on its day) |
+| Real AI provider | Not called by the tests (test stand-in only) |
 
 ## Recommended next task
 
-Milestone 5.3 (classifying support messages and drafting replies in the inbox, with approval). Owner: fill in the AI business profile; add an Anthropic API key when ready; try the AI drafts on a product.
+Milestone 6.2 (image processing per platform). Owner: try the content library, a post with an AI caption and the approval steps; tell us your Instagram and Facebook accounts when you want posting connected (6.3).
 
 ## Session log
 
@@ -458,5 +467,6 @@ Milestone 5.3 (classifying support messages and drafting replies in the inbox, w
 | 2026-11-22 | AI in Lebanese Arabic and Arabizi: word list and AI search words for finding products, replies in the customer's dialect, number check by value; automated tests never call a real AI |
 | 2026-11-22 | Milestone 5.3: support inbox AI (labels, urgency, summary, reply drafts staff edit and send), worker pass, ai:inbox command |
 | 2026-11-22 | Milestone 5.4: AI evaluation set (35 cases, 7 groups), misbehaving-AI tests, stricter number and leak checks, ai:eval command; Groq scored 35 of 35. Phase 5 complete |
+| 2026-11-23 | Milestone 6.1: content library, posts with an approval workflow, calendar in the store's time zone, AI captions without invented numbers or pressure |
 
 Commit hashes: `git log --oneline`.

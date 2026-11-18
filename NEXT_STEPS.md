@@ -38,7 +38,11 @@ The demo store offers Arabic already. For each product and category, open it in 
 
 ## Next development task: Phase 6 (content and social)
 
-Phase 5 (AI foundation) is complete: the gateway (5.1), product drafts (5.2), the support inbox (5.3) and the evaluation set (5.4, D104; Groq scored 35 of 35). Run `pnpm ai:eval` again after changing the AI provider or a prompt. Next in the plan: 6.1, an asset library, content posts, a calendar and an approval workflow.
+Phase 5 (AI foundation) is complete: the gateway (5.1), product drafts (5.2), the support inbox (5.3) and the evaluation set (5.4, D104; Groq scored 35 of 35). Run `pnpm ai:eval` again after changing the AI provider or a prompt. Milestone 6.1 is built (D105): a content library, posts with an approval workflow, a calendar in the store's time zone and AI captions. Next in the plan: 6.2 (see PROJECT_PLAN.md section 4). Instagram, Facebook and TikTok publishing (6.3, 6.5) need the owner's accounts (Q10 to Q13).
+
+## Owner: content planning
+
+Open **Content library** in the admin and add a few of your own photos, with a note of who owns each one. Then **Content posts** → New post: pick the photos and products, plan a time, try **Draft a caption with AI**, and send it for approval. Whoever approves (owner, manager or marketer) approves it, you post it on Instagram yourself, then press **Mark as published** with the link. **Content calendar** shows the month. Give staff who only prepare posts the "Content editor" role: they cannot approve or publish.
 
 ## Return rules (owner)
 

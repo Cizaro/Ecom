@@ -41,6 +41,7 @@ const CATALOG_WRITE: RouteAccess = { level: "permission", permission: "catalog.w
 const INVENTORY_READ: RouteAccess = { level: "permission", permission: "inventory.read" };
 const INVENTORY_ADJUST: RouteAccess = { level: "permission", permission: "inventory.adjust" };
 const SETTINGS_WRITE: RouteAccess = { level: "permission", permission: "settings.write" };
+const CONTENT_WRITE: RouteAccess = { level: "permission", permission: "content.write" };
 
 /**
  * A path segment in square brackets (`[id]`) stands for a record identifier.
@@ -89,6 +90,12 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/reviews", access: { level: "permission", permission: "reviews.moderate" } },
   { path: "/admin/content", access: { level: "permission", permission: "reviews.moderate" } },
   { path: "/admin/ai", access: { level: "permission", permission: "ai.use" } },
+  // Content planning: approving and publishing need more, checked per step.
+  { path: "/admin/marketing/library", access: CONTENT_WRITE },
+  { path: "/admin/marketing/posts", access: CONTENT_WRITE },
+  { path: "/admin/marketing/posts/new", access: CONTENT_WRITE },
+  { path: "/admin/marketing/posts/[id]", access: CONTENT_WRITE },
+  { path: "/admin/marketing/calendar", access: CONTENT_WRITE },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -207,6 +214,22 @@ const CONTENT_ACTION_ENTRIES: readonly ActionEntry[] = [
   },
 ];
 
+// Content planning. Moving a post also needs content.approve to approve or
+// ask for changes, and social.publish to mark it published: the action and
+// the service check the step. Drafting a caption also needs ai.use.
+const MARKETING_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "addLibraryFileAction",
+  "updateLibraryFileAction",
+  "createPostAction",
+  "updatePostAction",
+  "movePostAction",
+  "deletePostAction",
+  "draftCaptionAction",
+].map((name) => ({
+  id: `(admin)/admin/(protected)/marketing/actions.ts#${name}`,
+  access: CONTENT_WRITE,
+}));
+
 const INBOX_ACTION_ENTRIES: readonly ActionEntry[] = [
   "replyToConversationStaffAction",
   "updateConversationAction",
@@ -251,6 +274,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...PROMOTION_ACTION_ENTRIES,
   ...REVIEW_ACTION_ENTRIES,
   ...CONTENT_ACTION_ENTRIES,
+  ...MARKETING_ACTION_ENTRIES,
   ...INBOX_ACTION_ENTRIES,
   ...CUSTOMER_ACTION_ENTRIES,
   // AI: settings and the profile need ai.configure; trying an answer needs ai.use.

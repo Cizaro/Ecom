@@ -252,7 +252,9 @@ erDiagram
 | UGCSubmission | customer_id, product_id, media_asset_id, caption, moderation_status, permission_status (not_requested, requested, granted, denied, expired), permission_granted_at, permission_expires_at |
 | ContentAsset | media_asset_id, source (upload, ugc, ai_enhanced), folder, tags[], derived_from_asset_id |
 | ContentPost | platform, connection_id, type (post, reel, story, carousel), caption, hashtags[], asset_ids[], product_ids[], status (draft, pending_approval, approved, scheduled, published, failed), scheduled_at, published_at, platform_post_id, approved_by, utm_link_id |
-| ContentCalendar | name, period, campaign_id |
+| ContentCalendar | name, period, campaign_id (not built: the calendar is a view of planned posts, D105) |
+
+**Built in Milestone 6.1 (D105):** `content_assets` (media_asset_id unique, title, alt_text, tags[], usage_note, archived_at), `content_posts` (title, channel instagram/facebook/tiktok/whatsapp/other, format post/reel/story/carousel, caption, status draft/in_review/changes_requested/approved/published, planned_for, review_note, submitted_at, approved_by_user_id, approved_at, published_at, published_url https only, created_by_user_id), `content_post_assets` (post_id, content_asset_id, position) and `content_post_products` (post_id, product_id). All four have Row-Level Security and same-tenant triggers; library entries are archived, never deleted. Connections, platform post ids, hashtags as a column and scheduling to a platform come with the social integrations (6.3 onward).
 | SocialAccountConnection | platform, external_account_id, display_name, access_token_encrypted, refresh_token_encrypted, token_expires_at, scopes[], capabilities[], status (connected, expired, revoked) |
 | Conversation | connection_id, channel (dm, comment_thread), external_thread_id, customer_id, assigned_user_id, status, priority, tags[], sla_due_at, automation_paused |
 | SocialMessage | conversation_id, direction, external_id (unique per connection), body, attachments, sent_by_user_id, ai_draft_id, received_at |
