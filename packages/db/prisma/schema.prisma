@@ -106,6 +106,9 @@ model Tenant {
   marketingCampaigns      MarketingCampaign[]
   customerSegments        CustomerSegment[]
   utmLinks                UtmLink[]
+  competitors             Competitor[]
+  researchObservations    ResearchObservation[]
+  researchIdeas           ResearchIdea[]
   productSuggestions      ProductSuggestion[]
 
   @@map("tenants")
@@ -630,6 +633,7 @@ model Product {
   translations ProductTranslation[]
   contentPosts ContentPostProduct[]
   campaigns    MarketingCampaignProduct[]
+  observations ResearchObservation[]
 
   importImages ProductImportImage[]
 
@@ -2115,4 +2119,86 @@ model UtmLink {
   @@index([campaignId])
   @@index([postId])
   @@map("utm_links")
+}
+
+/// A competitor the store watches (Milestone 7.2, decision D108).
+model Competitor {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  name            String
+  website         String?
+  instagram       String?
+  facebook        String?
+  tiktok          String?
+  tags            String[]  @default([])
+  notes           String    @default("")
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  observations ResearchObservation[]
+
+  @@unique([tenantId, name])
+  @@map("competitors")
+}
+
+/// Something staff saw a competitor do or sell, with where and when (D108).
+/// Observed facts only: AI suggestions live in research_ideas.
+model ResearchObservation {
+  id               String   @id @default(uuid(7)) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  competitorId     String   @map("competitor_id") @db.Uuid
+  /// product, price, promotion, post, hook, hashtag, review, other
+  kind             String
+  title            String
+  detail           String   @default("")
+  /// A price seen, in minor units of currency.
+  priceAmount      Int?     @map("price_amount")
+  currency         String?  @db.Char(3)
+  /// A similar product of ours, to compare with.
+  productId        String?  @map("product_id") @db.Uuid
+  sourceUrl        String?  @map("source_url")
+  observedOn       DateTime @map("observed_on") @db.Date
+  /// How it was collected: manual (typed by staff) only, today.
+  collectionMethod String   @default("manual") @map("collection_method")
+  createdByUserId  String?  @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  product    Product?   @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, observedOn])
+  @@index([competitorId])
+  @@index([productId])
+  @@map("research_observations")
+}
+
+/// An opportunity idea with a score, drafted by AI from observations (D108).
+/// Always shown as a suggestion, with the observations it cites.
+model ResearchIdea {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  title           String
+  idea            String
+  /// 0 to 100: how promising, in the AI's judgement.
+  score           Int
+  rationale       String
+  observationIds  String[]  @map("observation_ids") @db.Uuid
+  /// new, accepted, dismissed
+  status          String    @default("new")
+  /// ai_generated
+  origin          String    @default("ai_generated")
+  model           String    @default("")
+  decidedByUserId String?   @map("decided_by_user_id") @db.Uuid
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(3)
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, score])
+  @@map("research_ideas")
 }

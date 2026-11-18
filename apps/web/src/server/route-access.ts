@@ -43,6 +43,7 @@ const INVENTORY_ADJUST: RouteAccess = { level: "permission", permission: "invent
 const SETTINGS_WRITE: RouteAccess = { level: "permission", permission: "settings.write" };
 const CONTENT_WRITE: RouteAccess = { level: "permission", permission: "content.write" };
 const MARKETING_WRITE: RouteAccess = { level: "permission", permission: "marketing.write" };
+const RESEARCH_WRITE: RouteAccess = { level: "permission", permission: "research.write" };
 
 /**
  * A path segment in square brackets (`[id]`) stands for a record identifier.
@@ -106,6 +107,10 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/marketing/segments", access: MARKETING_WRITE },
   { path: "/admin/marketing/segments/[id]", access: MARKETING_WRITE },
   { path: "/admin/marketing/links", access: MARKETING_WRITE },
+  // Competitor research (D108); drafting ideas also needs ai.use.
+  { path: "/admin/research", access: RESEARCH_WRITE },
+  { path: "/admin/research/[id]", access: RESEARCH_WRITE },
+  { path: "/admin/research/ideas", access: RESEARCH_WRITE },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -254,6 +259,17 @@ const CAMPAIGN_ACTION_ENTRIES: readonly ActionEntry[] = [
   access: MARKETING_WRITE,
 }));
 
+const RESEARCH_ACTION_ENTRIES: readonly ActionEntry[] = [
+  "saveCompetitorAction",
+  "addObservationAction",
+  "deleteObservationAction",
+  "draftIdeasAction",
+  "decideIdeaAction",
+].map((name) => ({
+  id: `(admin)/admin/(protected)/research/actions.ts#${name}`,
+  access: RESEARCH_WRITE,
+}));
+
 const INBOX_ACTION_ENTRIES: readonly ActionEntry[] = [
   "replyToConversationStaffAction",
   "updateConversationAction",
@@ -300,6 +316,7 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...CONTENT_ACTION_ENTRIES,
   ...MARKETING_ACTION_ENTRIES,
   ...CAMPAIGN_ACTION_ENTRIES,
+  ...RESEARCH_ACTION_ENTRIES,
   ...INBOX_ACTION_ENTRIES,
   ...CUSTOMER_ACTION_ENTRIES,
   // AI: settings and the profile need ai.configure; trying an answer needs ai.use.

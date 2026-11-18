@@ -24,6 +24,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: "Content library", path: "/admin/marketing/library" },
   { label: "Tracking links", path: "/admin/marketing/links" },
   { label: "Customer segments", path: "/admin/marketing/segments" },
+  { label: "Competitor research", path: "/admin/research" },
   { label: "Discount codes", path: "/admin/promotions" },
   { label: "AI assistant", path: "/admin/ai" },
   { label: "Store and look", path: "/admin/settings/store" },

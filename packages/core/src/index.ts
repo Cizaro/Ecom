@@ -720,3 +720,26 @@ export {
   utmTag,
 } from "./marketing/links";
 export type { TrackingLink } from "./marketing/links";
+export {
+  addObservation,
+  decideIdea,
+  deleteObservation,
+  draftResearchIdeas,
+  getCompetitor,
+  IDEA_STATUSES,
+  listCompetitors,
+  listIdeas,
+  productsForResearch,
+  recentObservations,
+  RESEARCH_KINDS,
+  ResearchError,
+  saveCompetitor,
+} from "./research/research";
+export type {
+  CompetitorSummary,
+  CompetitorView,
+  Idea,
+  IdeaStatus,
+  Observation,
+  ResearchKind,
+} from "./research/research";

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { asData, factsSection, GROUNDING_RULES, profileSection, redactPersonal } from "./prompt";
 import { postCaptionTask } from "./caption-task";
+import { researchIdeasTask } from "./research-task";
 import { itemCopyTask, itemTranslateTask } from "./content-tasks";
 import type { BusinessProfile, Fact, KnowledgeSource } from "./types";
 
@@ -479,6 +480,7 @@ export const TASKS = {
   "item.copy": itemCopyTask,
   "item.translate": itemTranslateTask,
   "post.caption": postCaptionTask,
+  "research.ideas": researchIdeasTask,
 } as const;
 
 export type TaskName = keyof typeof TASKS;

@@ -301,6 +301,8 @@ erDiagram
 
 Observed facts and AI output are in different tables with an explicit `origin`, so the UI can never present a recommendation as an observation.
 
+**Built in Milestone 7.2 (D108):** `competitors` (name unique per store, website, facebook, instagram, tiktok, tags[], notes, archived_at), `research_observations` (competitor_id, kind product/price/promotion/post/hook/hashtag/review/other, title, detail, price_amount and currency, product_id of a similar product of ours, source_url, observed_on, collection_method manual only) and `research_ideas` (title, idea, score 0 to 100, rationale, observation_ids[] 1 to 20, status new/accepted/dismissed, origin ai_generated, model, decided_by_user_id, decided_at). The planned ProductOpportunityScore is `research_ideas`.
+
 ## 6. Giveaways
 
 ```mermaid

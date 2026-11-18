@@ -17,3 +17,4 @@ export {
 export * from "./eval/cases";
 export * from "./eval/runner";
 export * from "./caption-task";
+export * from "./research-task";

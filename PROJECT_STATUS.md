@@ -1,10 +1,10 @@
 # Project Status
 
-Last updated: 2026-11-25
+Last updated: 2026-11-26
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** 6.3 to 6.5 skipped until the owner's Meta accounts are ready (docs/META_SETUP.md). **Phase 7 started: Milestone 7.1 (marketing plan, campaigns, segments, tracking links) built.** Next: 7.2 or 7.4. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** 6.3 to 6.5 skipped until the owner's Meta accounts are ready (docs/META_SETUP.md). **Phase 7 started: Milestones 7.1 (marketing plan, campaigns, segments, tracking links) and 7.2 (competitor research and AI ideas) built.** Next: 7.4. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -234,6 +234,10 @@ Last updated: 2026-11-25
   - Posts can belong to a campaign; the campaign lists its posts.
   - **Tracking links** (`/admin/marketing/links`, and on each post and campaign): a page of the shop with UTM tags and a short address `/go/<code>` that counts clicks. Links only lead to the shop itself; no visitor data is kept.
   - **Customer segments** (`/admin/marketing/segments`): by orders, spend, recency, lapsed customers or category; count now and how many agreed to marketing emails; members for staff who can see customers; CSV of consenting emails for owners (audited).
+- **Milestone 7.2, competitor research (D108):**
+  - **Competitor research** (`/admin/research`): competitors with their website and social accounts; observations typed by staff (products, prices, promotions, posts, hooks, hashtags, reviews) with the link and the date. Nothing is collected automatically.
+  - A price seen next to our similar product's price, with the difference.
+  - **Research ideas** (`/admin/research/ideas`): AI drafts up to 5 ideas with a score from 0 to 100, the reasons and the observations each cites; shown as "AI suggestion"; keep or dismiss. No fake urgency, fake reviews or copying is ever suggested (the answer is refused).
 
 ## In progress
 
@@ -422,21 +426,21 @@ After pulling Milestone 2.2 on a computer that already has the services running,
 
 Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, storage API `localhost:9000`, email inbox http://localhost:8025 (password-reset emails arrive here).
 
-## Checks run this session (Milestone 7.1)
+## Checks run this session (Milestone 7.2)
 
 | Check | Result |
 | --- | --- |
 | `pnpm lint`, `pnpm format:check`, `pnpm typecheck` | Pass |
-| `pnpm test` | Pass, 445 tests (new: links only lead to the store's own pages, never another site, admin, API or another short link; typed UTM tags dropped; tags made safe; full tagged address) |
-| `pnpm test:int` | Pass, 293 tests (new: a campaign's brief, posts and links; clicks counted through the short address; orders with its code counted only while it ran, not cancelled, after refunds; editors see a post's links but cannot make them; another store's campaign, product or code refused; segments by orders, spend, recency, lapsed and category; latest email choice counts; export only for owners, consenting customers only, audited) |
+| `pnpm test` | Pass, 464 tests (new: the research ideas task accepts ideas citing the given observations with their numbers; refuses unknown citations, invented numbers, urgency or scarcity, copying competitors' content, fake reviews and bought followers; keeps staff text as data) |
+| `pnpm test:int` | Pass, 296 tests (new: competitors with tidy addresses and account names, unique names; observations with price, source and date, no future dates; our price next to theirs; AI ideas stored as suggestions with the model and their citations; keep or dismiss; deleted observations drop out; archived competitors left out; research.write needed; another store's competitor or product refused) |
 | `pnpm db:drift` | Pass, no difference |
 | `pnpm build` | Pass |
-| `pnpm test:e2e` | Pass, 157 passed, 61 skipped (new: a marketer plans a campaign, ties a post to it, makes a tracking link, a visitor follows the short link and lands on the tagged page, the click shows on the post, the links page and the campaign; a segment is counted and the marketer cannot export) |
-| Social platforms, ad accounts | None connected or called |
+| `pnpm test:e2e` | Pass, 162 passed, 64 skipped (new: a marketer adds a competitor and a price observation with its source, a bad link is refused, AI ideas cite the observation and one is kept) |
+| Competitors' sites | Never fetched or called: everything is typed by staff |
 
 ## Recommended next task
 
-Milestone 7.2 (competitor research) or 7.4 (analytics and reporting). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
+Milestone 7.4 (analytics and reporting). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
 
 ## Session log
 
@@ -483,5 +487,6 @@ Milestone 7.2 (competitor research) or 7.4 (analytics and reporting). 6.3 to 6.5
 | 2026-11-24 | Milestone 6.2: photo versions for each platform (sizes, crop or whole photo on a background, light correction within limits, plain-background removal), made on our server and kept in the library |
 | 2026-11-24 | Meta and TikTok setup checklist for the owner (docs/META_SETUP.md); 6.3 to 6.5 and 7.3 skipped until the accounts are ready |
 | 2026-11-25 | Milestone 7.1: marketing plan with campaign briefs, customer segments with consent-only export, tracking links with short addresses and click counts on posts and campaigns |
+| 2026-11-26 | Milestone 7.2: competitor research typed by staff with price comparison, AI opportunity ideas scored and citing the observations |
 
 Commit hashes: `git log --oneline`.

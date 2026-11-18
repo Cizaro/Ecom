@@ -34,7 +34,7 @@ export type CaptionInput = z.infer<typeof captionInput>;
 export type CaptionOutput = z.infer<typeof captionOutput>;
 
 /** Pressure the project never uses: urgency or scarcity it cannot prove (English, Arabic, Arabizi). */
-const PRESSURE = [
+export const PRESSURE = [
   /\bonly\s+\d+\s+(left|remaining)\b/i,
   /\b(last|final)\s+chance\b/i,
   /\bhurry\b/i,
