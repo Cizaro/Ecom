@@ -2,9 +2,9 @@
 
 Prioritized continuation plan. The top item is always the next thing to do. Update at the end of every session.
 
-## Owner: connect Instagram and Facebook (skipped for now, 2026-11-24)
+## Owner: connect Instagram and Facebook (Milestone 6.3 built, 2026-11-29)
 
-**Paused until you are back home.** Milestones 6.3, 6.4, 6.5 and 7.3 need your Meta (and optionally TikTok) accounts, so development skipped ahead to Phase 7. Follow the checklist in **docs/META_SETUP.md** (accounts, business verification, the developer app, keys in `.env`), then say "the Meta app is ready" with the App ID to continue with 6.3.
+The Meta app (App ID 1414532210811508) and its keys are in `.env`, and the connection screen is built. To connect for real, follow **Part 3b of docs/META_SETUP.md**: allow the callback address in the app's Facebook Login settings, then open **Instagram and Facebook** in the admin and click **Connect Facebook and Instagram**. Webhooks (messages and comments arriving) need the site online with https, or a tunnel. Next: 6.4, the social inbox.
 
 ## Owner actions (do not block development)
 

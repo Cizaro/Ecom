@@ -44,6 +44,7 @@ const SETTINGS_WRITE: RouteAccess = { level: "permission", permission: "settings
 const CONTENT_WRITE: RouteAccess = { level: "permission", permission: "content.write" };
 const MARKETING_WRITE: RouteAccess = { level: "permission", permission: "marketing.write" };
 const RESEARCH_WRITE: RouteAccess = { level: "permission", permission: "research.write" };
+const SOCIAL_CONNECT: RouteAccess = { level: "permission", permission: "social.connect" };
 
 /**
  * A path segment in square brackets (`[id]`) stands for a record identifier.
@@ -112,6 +113,8 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/research", access: RESEARCH_WRITE },
   { path: "/admin/research/[id]", access: RESEARCH_WRITE },
   { path: "/admin/research/ideas", access: RESEARCH_WRITE },
+  // Instagram and Facebook connection (D112): owners only.
+  { path: "/admin/social", access: SOCIAL_CONNECT },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -318,6 +321,10 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...MARKETING_ACTION_ENTRIES,
   ...CAMPAIGN_ACTION_ENTRIES,
   ...RESEARCH_ACTION_ENTRIES,
+  ...["connectMetaAction", "choosePageAction", "disconnectMetaAction"].map((name) => ({
+    id: `(admin)/admin/(protected)/social/actions.ts#${name}`,
+    access: SOCIAL_CONNECT,
+  })),
   ...INBOX_ACTION_ENTRIES,
   ...CUSTOMER_ACTION_ENTRIES,
   // AI: settings and the profile need ai.configure; trying an answer needs ai.use.
@@ -353,6 +360,8 @@ export const ADMIN_API: readonly ApiEntry[] = [
     access: { level: "permission", permission: "reports.read" },
   },
   { path: "/api/v1/admin/me", method: "GET", access: { level: "tenant" } },
+  // Meta's sign-in returns here (D112); it answers with a redirect to /admin/social.
+  { path: "/api/v1/admin/social/meta/callback", method: "GET", access: SOCIAL_CONNECT },
   { path: "/api/v1/admin/catalog/import-template", method: "GET", access: CATALOG_WRITE },
   // Holds customers' contact details, so it needs customers.export (the
   // service also checks orders.read).

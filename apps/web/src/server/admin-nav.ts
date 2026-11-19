@@ -28,6 +28,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: "Competitor research", path: "/admin/research" },
   { label: "Discount codes", path: "/admin/promotions" },
   { label: "AI assistant", path: "/admin/ai" },
+  { label: "Instagram and Facebook", path: "/admin/social" },
   { label: "Store and look", path: "/admin/settings/store" },
   { label: "Policy pages", path: "/admin/settings/pages" },
   { label: "Delivery and tax", path: "/admin/settings/shipping" },

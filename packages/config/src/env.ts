@@ -152,6 +152,50 @@ const envSchema = z.object({
     (value) => (value === "" || value === undefined ? undefined : Number(value)),
     z.number().min(0).max(100_000).default(50),
   ),
+  /**
+   * Meta (Facebook and Instagram) app, Milestone 6.3: the App ID and App
+   * Secret from the developer app, and the phrase Meta must send back when
+   * subscribing to webhooks. All three, or none (social features off).
+   */
+  META_APP_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^[0-9]{5,30}$/, "must be the numeric App ID")
+      .optional(),
+  ),
+  META_APP_SECRET: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^[0-9a-f]{32}$/i, "must be the 32-character App Secret")
+      .optional(),
+  ),
+  META_WEBHOOK_VERIFY_TOKEN: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(16, "use at least 16 characters").max(200).optional(),
+  ),
+  /** A Facebook Login for Business configuration ID; without it, permissions are asked for by name. */
+  META_LOGIN_CONFIG_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^[0-9]{5,30}$/, "must be the numeric configuration ID")
+      .optional(),
+  ),
+  META_GRAPH_VERSION: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^v\d{1,3}\.\d$/, "like v23.0")
+      .default("v23.0"),
+  ),
+  /**
+   * "live" talks to Meta; "fake" is a stand-in that never calls out (tests,
+   * trying the screens locally). The launch check refuses "fake".
+   */
+  META_GRAPH_MODE: z.enum(["live", "fake"]).default("live"),
+
   /** Emergency switch: "true" stops every AI task for every store at once. */
   AI_PAUSED: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -204,6 +248,14 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
   if (aiIssues.length > 0) throw new EnvValidationError([...new Set(aiIssues)]);
   if (env.EMAIL_PROVIDER === "smtp" && (!env.SMTP_HOST || !env.SMTP_PORT)) {
     throw new EnvValidationError(["SMTP_HOST and SMTP_PORT: required when EMAIL_PROVIDER is smtp"]);
+  }
+  const metaSet = [env.META_APP_ID, env.META_APP_SECRET, env.META_WEBHOOK_VERIFY_TOKEN].filter(
+    (value) => value !== undefined,
+  ).length;
+  if (metaSet !== 0 && metaSet !== 3) {
+    throw new EnvValidationError([
+      "META_APP_ID, META_APP_SECRET and META_WEBHOOK_VERIFY_TOKEN: set all three or none",
+    ]);
   }
   if (env.PAYMENT_PROVIDER === "mock" && !env.MOCK_PAYMENT_WEBHOOK_SECRET) {
     throw new EnvValidationError([

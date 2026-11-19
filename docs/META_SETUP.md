@@ -1,6 +1,6 @@
 # Connecting Instagram, Facebook and TikTok: owner checklist
 
-**Status (2026-11-24): skipped for now.** Milestones 6.3 (connecting Meta), 6.4 (social inbox), 6.5 (publishing and TikTok) and 7.3 (Meta ads) wait on the accounts below. Development moved on to Phase 7 (7.1, 7.2, 7.4) in the meantime. Until they are connected, posts are planned and approved in the admin and posted by hand (decision D105).
+**Status (2026-11-29):** Parts 1 to 3 are done: the developer app exists (App ID 1414532210811508) and its keys are in `.env`. Milestone 6.3 (connecting) is built (decision D112). Next for you: Part 3b below. 6.4 (social inbox), 6.5 (publishing and TikTok) and 7.3 (ads) follow.
 
 Do these steps when you are back home, in order. Use your own phone and computer; never send passwords, codes or the app secret to anyone, including in chat. When a step says "put it in `.env`", that is the `.env` file on your computer only, never `.env.example` and never a commit.
 
@@ -30,6 +30,15 @@ When adding permissions later, include **insights** (`instagram_manage_insights`
 
 That is all that is needed to start Milestone 6.3: connecting the Page and Instagram from the admin, receiving comments and messages, and publishing approved posts to your own accounts.
 
+## Part 3b: connect the shop's Page from the admin (about 5 minutes)
+
+1. In the developer app: **Use cases** → **Facebook Login for Business** → **Settings**. Under **Valid OAuth Redirect URIs** add the callback address: on this computer `http://localhost:3000/api/v1/admin/social/meta/callback` (Meta allows localhost while the app is in Development mode); on the live site the same path on its https address (it is built from `APP_URL`). Save.
+2. Optional: under **Facebook Login for Business** → **Configurations**, create a configuration (User access token, with the Page and Instagram permissions: pages_show_list, pages_read_engagement, pages_manage_metadata, pages_messaging, pages_manage_posts, read_insights, business_management, instagram_basic, instagram_manage_comments, instagram_manage_messages, instagram_content_publish, instagram_manage_insights) and put its ID in `.env` as `META_LOGIN_CONFIG_ID=`. Without it, the same permissions are asked for by name.
+3. Start the site (`pnpm dev`), sign in to the admin as the owner, open **Instagram and Facebook** and click **Connect Facebook and Instagram**. Sign in on Facebook's page, choose the shop's Page (and its Instagram account) and allow access. You come back to the admin with the Page and the Instagram name shown.
+4. **Webhooks** (so messages and comments arrive): in the app, **Webhooks** (or each use case's webhook settings), for **Page** and for **Instagram**, enter the callback address shown at the bottom of the admin page (`.../api/webhooks/meta`) and the verify token from `META_WEBHOOK_VERIFY_TOKEN` in `.env`, then subscribe to **messages** and **feed** (Page) and **messages** and **comments** (Instagram). Meta needs a public https address: this works once the site is online, or on this computer through a tunnel (for example Cloudflare Tunnel), which we can set up together.
+
+Changing names later (the app, the business, the Page) does not affect the connection: it depends on the IDs, not the names.
+
 ## Part 4: later, when the shop is live on its own domain
 
 11. **App review.** To publish and read messages for real (not only as a tester), Meta reviews each permission. It needs the live site's address with https, the privacy policy page and a data-deletion page (both are built), an app icon, and a short screen recording of each feature. We prepare these together after deployment (docs/DEPLOYMENT.md).
@@ -47,8 +56,11 @@ That is all that is needed to start Milestone 6.3: connecting the Page and Insta
 - [ ] Instagram linked to the Page
 - [ ] Business portfolio created, Page and Instagram added
 - [ ] Business verification started
-- [ ] Developer app created (Business type) with Facebook Login for Business, Instagram and Webhooks
-- [ ] `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` in `.env`
-- [ ] Told Claude "the Meta app is ready" with the App ID
+- [x] Developer app created (Business type) with Facebook Login for Business, Instagram and Webhooks
+- [x] `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` in `.env`
+- [x] Told Claude "the Meta app is ready" with the App ID
+- [ ] Callback address allowed in Facebook Login for Business settings (Part 3b)
+- [ ] Page connected from the admin (Part 3b)
+- [ ] Webhooks subscribed, once the site has a public https address (Part 3b)
 - [ ] Later: ad account with a payment method (7.3)
 - [ ] Optional: TikTok Business account and developer app (6.5)

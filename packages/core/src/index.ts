@@ -764,3 +764,36 @@ export {
   reportPeriod,
 } from "./analytics/report";
 export type { AnalyticsReport, ProductRow, ReportPeriod } from "./analytics/report";
+
+// Social connections (Milestone 6.3, D112).
+export { openSecret, sealSecret } from "./platform/secret-box";
+export { findSocialConnection } from "./platform/social-lookup";
+export {
+  createFakeMetaGraph,
+  createMetaGraph,
+  FAKE_META_CODE,
+  FAKE_META_PAGES,
+  META_SCOPES,
+  MetaError,
+  PAGE_WEBHOOK_FIELDS,
+  type MetaGraph,
+  type MetaPage,
+} from "./social/meta-graph";
+export {
+  parseMetaWebhook,
+  verifyMetaSignature,
+  verifyMetaSubscription,
+  type SocialWebhookItem,
+} from "./social/webhook";
+export {
+  connectMetaPage,
+  disconnectMeta,
+  getSocialConnection,
+  PAGE_TOKEN_PURPOSE,
+  pageChoices,
+  recentSocialEvents,
+  recordSocialWebhookItems,
+  SocialError,
+  type PageChoice,
+  type SocialConnectionSummary,
+} from "./social/connections";

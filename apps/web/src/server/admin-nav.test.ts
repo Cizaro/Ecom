@@ -49,6 +49,12 @@ describe("admin navigation", () => {
       "Access",
       "Security",
     ]);
+    expect(labels(visibleNav(context("social.connect")))).toEqual([
+      "Home",
+      "Instagram and Facebook",
+      "Access",
+      "Security",
+    ]);
     expect(labels(visibleNav(context("staff.manage")))).toEqual([
       "Home",
       "Access",

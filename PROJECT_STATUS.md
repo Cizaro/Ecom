@@ -4,7 +4,7 @@ Last updated: 2026-11-26
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** 6.3 to 6.5 skipped until the owner's Meta accounts are ready (docs/META_SETUP.md). **Phase 7: Milestones 7.1 (marketing plan, campaigns, segments, tracking links), 7.2 (competitor research and AI ideas) and 7.4 (shop events, reports, forecasts, questions about the figures) built.** 7.3 waits for the ad account. Next: Phase 8 (giveaways) once the owner confirms the prize structure, or Phase 10 readiness work. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** **6.3 (connecting Instagram and Facebook) built**; 6.4 (social inbox) next, 6.5 (publishing) after it. **Phase 7: Milestones 7.1 (marketing plan, campaigns, segments, tracking links), 7.2 (competitor research and AI ideas) and 7.4 (shop events, reports, forecasts, questions about the figures) built.** 7.3 waits for the ad account. Next: Phase 8 (giveaways) once the owner confirms the prize structure, or Phase 10 readiness work. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -244,6 +244,12 @@ Last updated: 2026-11-26
   - **Reports** (`/admin/reports`, in the menu): 7, 30 or 90 days; sales against the period before, orders, units, average order, new and returning customers; sales per day with the next 14 days' expected range; sales by category; top products with views and adds to cart (CSV download); the view-to-order funnel; searches, marking those that found nothing; campaign clicks and code orders; products running out within 3 weeks.
   - **Ask about these figures**: a question in plain words, answered only from the report's figures, citing them; needs `ai.use`.
 
+- **Milestone 6.3, connecting Instagram and Facebook (D112):**
+  - **Instagram and Facebook** (`/admin/social`, owners only): Connect goes to Meta's own sign-in; the owner chooses the shop's Page and its linked Instagram account; status, permissions granted, last notification, recent notifications, Disconnect.
+  - The Page's token is stored encrypted and never shown or logged; one connection per store; a Page belongs to one store at a time.
+  - Webhook address `/api/webhooks/meta`: Meta's subscription check with the verify token; notifications acted on only with a valid signature; each message or comment stored once for the store that owns the Page or account, ready for the inbox (6.4).
+  - Tests use a Meta stand-in (`META_GRAPH_MODE=fake`); the launch check fails if it is left on. Not yet tried against Meta itself.
+
 ## In progress
 
 **Launch hardening** (from Phase 10), in four parts: security, monitoring and restore, accessibility, performance.
@@ -252,7 +258,7 @@ Last updated: 2026-11-26
 
 ## Not started
 
-Phase 2 onward (PROJECT_PLAN.md section 4). No integration with payments, AI, Meta, Instagram, Facebook, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
+Phase 2 onward (PROJECT_PLAN.md section 4). Meta (Instagram and Facebook) connection and webhooks are implemented and tested against a stand-in, not yet against Meta itself (D112). No integration with card payments, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
 
 ## Known limitations of what is built
 
@@ -446,7 +452,7 @@ Local service addresses: PostgreSQL `localhost:5432`, Redis `localhost:6379`, st
 
 ## Recommended next task
 
-Launch hardening, security part 2: review file uploads, checkout and the admin API for gaps; then monitoring and a tested database restore, accessibility and performance. Phase 8 (giveaways) once the owner confirms the prize and entry structure (COMPLIANCE.md). 6.3 to 6.5 and 7.3 wait for the owner's Meta accounts: see docs/META_SETUP.md. Owner: open Reports and try a question. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
+Launch hardening, security part 2: review file uploads, checkout and the admin API for gaps; then monitoring and a tested database restore, accessibility and performance. Phase 8 (giveaways) once the owner confirms the prize and entry structure (COMPLIANCE.md). Owner: connect the real Page (docs/META_SETUP.md Part 3b), then 6.4 (social inbox). 7.3 waits for the ad account. Owner: open Reports and try a question. Owner: try a photo version (Sizes and versions in the library), a post with an AI caption and the approval steps.
 
 ## Session log
 
@@ -492,6 +498,7 @@ Launch hardening, security part 2: review file uploads, checkout and the admin A
 | 2026-11-23 | Milestone 6.1: content library, posts with an approval workflow, calendar in the store's time zone, AI captions without invented numbers or pressure |
 | 2026-11-24 | Milestone 6.2: photo versions for each platform (sizes, crop or whole photo on a background, light correction within limits, plain-background removal), made on our server and kept in the library |
 | 2026-11-24 | Meta and TikTok setup checklist for the owner (docs/META_SETUP.md); 6.3 to 6.5 and 7.3 skipped until the accounts are ready |
+| 2026-11-29 | Milestone 6.3: Instagram and Facebook connected through Meta's sign-in, Page token encrypted, signed webhooks stored once per store |
 | 2026-11-25 | Milestone 7.1: marketing plan with campaign briefs, customer segments with consent-only export, tracking links with short addresses and click counts on posts and campaigns |
 | 2026-11-26 | Milestone 7.2: competitor research typed by staff with price comparison, AI opportunity ideas scored and citing the observations |
 | 2026-11-27 | Milestone 7.4: shop events without personal details, Reports page with forecasts and running-out stock, questions answered from the figures (second computer) |

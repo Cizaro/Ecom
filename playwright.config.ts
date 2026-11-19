@@ -22,6 +22,13 @@ process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION = "true";
 process.env.IMPORT_ALLOW_PRIVATE_IMAGE_HOSTS = "true";
 // The tests act from one address all day; real limits would stop them.
 process.env.RATE_LIMIT_SCALE = "100";
+// Never the real Meta app in automated tests: the stand-in, with test-only keys
+// (e2e/social.spec.ts signs webhook notifications with this secret).
+process.env.META_GRAPH_MODE = "fake";
+process.env.META_APP_ID = "100000000000999";
+process.env.META_APP_SECRET = "e2e0e2e0e2e0e2e0e2e0e2e0e2e0e2e0";
+process.env.META_WEBHOOK_VERIFY_TOKEN = "e2e-meta-verify-token";
+process.env.META_LOGIN_CONFIG_ID = "";
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;

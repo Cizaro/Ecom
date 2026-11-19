@@ -30,6 +30,8 @@ type LaunchEnv = Pick<
   | "S3_PUBLIC_URL"
   | "AI_PROVIDER"
   | "AI_PAUSED"
+  | "META_GRAPH_MODE"
+  | "META_APP_ID"
 >;
 
 const finding = (
@@ -126,6 +128,24 @@ export function checkLaunchSettings(env: LaunchEnv): LaunchFinding[] {
       ),
     );
   }
+  if (env.META_GRAPH_MODE === "fake") {
+    results.push(
+      finding(
+        "fail",
+        "Test switch",
+        "META_GRAPH_MODE=fake is a stand-in that never talks to Meta; set it to live",
+      ),
+    );
+  }
+  results.push(
+    env.META_APP_ID
+      ? finding("pass", "Instagram and Facebook", "Meta app configured")
+      : finding(
+          "warn",
+          "Instagram and Facebook",
+          "no Meta app: messages, comments and publishing stay off (docs/META_SETUP.md)",
+        ),
+  );
   if (env.RATE_LIMIT_SCALE !== 1) {
     results.push(
       finding("fail", "Test switch", "RATE_LIMIT_SCALE is for automated tests only; set it to 1"),

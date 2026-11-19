@@ -107,6 +107,8 @@ model Tenant {
   customerSegments        CustomerSegment[]
   utmLinks                UtmLink[]
   competitors             Competitor[]
+  socialConnections       SocialConnection[]
+  socialWebhookEvents     SocialWebhookEvent[]
   researchObservations    ResearchObservation[]
   researchIdeas           ResearchIdea[]
   productSuggestions      ProductSuggestion[]
@@ -2228,4 +2230,62 @@ model AnalyticsEvent {
 
   @@index([tenantId, name, occurredAt])
   @@map("analytics_events")
+}
+
+// --- Social connections (Milestone 6.3, D112) -----------------------------------
+
+/// A store's connection to its Facebook Page and the Instagram account linked
+/// to it, made through Meta's own sign-in. The Page's access token is kept
+/// encrypted (ENCRYPTION_KEY) and never shown or logged.
+model SocialConnection {
+  id                   String    @id @default(uuid(7)) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  /// meta
+  provider             String
+  pageId               String    @map("page_id")
+  pageName             String    @map("page_name")
+  instagramAccountId   String?   @map("instagram_account_id")
+  instagramUsername    String?   @map("instagram_username")
+  accessTokenEncrypted String    @map("access_token_encrypted")
+  scopes               String[]  @default([])
+  /// active, needs_reconnect
+  status               String    @default("active")
+  connectedByUserId    String?   @map("connected_by_user_id") @db.Uuid
+  connectedAt          DateTime  @default(now()) @map("connected_at") @db.Timestamptz(3)
+  lastWebhookAt        DateTime? @map("last_webhook_at") @db.Timestamptz(3)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events SocialWebhookEvent[]
+
+  @@unique([tenantId, provider])
+  @@unique([provider, pageId])
+  @@map("social_connections")
+}
+
+/// What Meta reported for a connected Page or Instagram account (a message,
+/// a comment, ...), kept as received and once only. Milestone 6.4 turns them
+/// into inbox conversations.
+model SocialWebhookEvent {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  connectionId String    @map("connection_id") @db.Uuid
+  /// facebook, instagram
+  channel      String
+  /// message, comment, other
+  kind         String
+  /// The platform's identifier for the item, so a resent one is ignored.
+  externalKey  String    @map("external_key")
+  payload      Json
+  occurredAt   DateTime? @map("occurred_at") @db.Timestamptz(3)
+  receivedAt   DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt  DateTime? @map("processed_at") @db.Timestamptz(3)
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection SocialConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, externalKey])
+  @@index([tenantId, processedAt])
+  @@map("social_webhook_events")
 }

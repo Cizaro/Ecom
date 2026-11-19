@@ -45,6 +45,8 @@ describe("launch check of the server settings", () => {
     AI_PROVIDER: "anthropic" as const,
     AI_PAUSED: false,
     RATE_LIMIT_SCALE: 1,
+    META_GRAPH_MODE: "live" as "live" | "fake",
+    META_APP_ID: "1414532210811508" as string | undefined,
     TRUST_PROXY_HOPS: 1,
   };
 
@@ -82,6 +84,8 @@ describe("launch check of the server settings", () => {
     const find = (env: Partial<typeof live>, label: string) =>
       checkLaunchSettings({ ...live, ...env }).filter((f) => f.label === label);
     expect(find({ RATE_LIMIT_SCALE: 100 }, "Test switch")[0]?.detail).toMatch(/RATE_LIMIT_SCALE/);
+    expect(find({ META_GRAPH_MODE: "fake" }, "Test switch")[0]?.detail).toMatch(/META_GRAPH_MODE/);
+    expect(find({ META_APP_ID: undefined }, "Instagram and Facebook")[0]?.status).toBe("warn");
     expect(find({ TRUST_PROXY_HOPS: 0 }, "Visitor addresses")[0]?.status).toBe("warn");
     expect(find({}, "Visitor addresses")[0]?.status).toBe("pass");
   });

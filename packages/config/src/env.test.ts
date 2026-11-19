@@ -167,4 +167,25 @@ describe("AI provider settings", () => {
     expect(() => parseEnv({ ...valid, AI_FALLBACK_PROVIDER: "mock" })).toThrow();
     expect(() => parseEnv({ ...valid, AI_INPUT_PRICE_PER_MTOK: "1" })).toThrow(/both or neither/);
   });
+
+  it("takes the Meta app's three settings together or not at all", () => {
+    const meta = {
+      META_APP_ID: "1414532210811508",
+      META_APP_SECRET: "0123456789abcdef0123456789abcdef",
+      META_WEBHOOK_VERIFY_TOKEN: "a-long-verify-phrase",
+    };
+    const env = parseEnv({ ...valid, ...meta });
+    expect(env.META_GRAPH_VERSION).toBe("v23.0");
+    expect(env.META_GRAPH_MODE).toBe("live");
+    expect(() => parseEnv({ ...valid, META_APP_ID: meta.META_APP_ID })).toThrow(
+      /all three or none/,
+    );
+    expect(() => parseEnv({ ...valid, ...meta, META_APP_SECRET: "short" })).toThrow(
+      /META_APP_SECRET/,
+    );
+    expect(() => parseEnv({ ...valid, ...meta, META_GRAPH_VERSION: "23" })).toThrow(
+      /META_GRAPH_VERSION/,
+    );
+    expect(parseEnv({ ...valid, META_APP_ID: "" }).META_APP_ID).toBeUndefined();
+  });
 });
