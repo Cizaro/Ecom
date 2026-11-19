@@ -213,3 +213,11 @@ describe("Meta Graph client", () => {
     await expect(fake.userTokenFromCode({ code: "other", redirectUri: "" })).rejects.toThrow();
   });
 });
+
+describe("pageWebhookFields", () => {
+  it("asks for Messenger messages only when pages_messaging was granted", async () => {
+    const { pageWebhookFields } = await import("./meta-graph");
+    expect(pageWebhookFields(["pages_manage_metadata"])).toEqual(["feed"]);
+    expect(pageWebhookFields(["pages_messaging"])).toEqual(["feed", "messages"]);
+  });
+});

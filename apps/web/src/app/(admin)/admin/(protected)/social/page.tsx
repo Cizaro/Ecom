@@ -38,7 +38,16 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
   const connection = await getSocialConnection(db, context);
   const events = connection ? await recentSocialEvents(db, context, 10) : [];
   const graph = getMetaGraph();
-  const error = typeof params.error === "string" ? ERRORS[params.error] : undefined;
+  const detail =
+    params.error === "meta" &&
+    typeof params.detail === "string" &&
+    params.detail.startsWith("Meta said:")
+      ? params.detail.slice(0, 300)
+      : null;
+  const error =
+    typeof params.error === "string"
+      ? [ERRORS[params.error], detail].filter(Boolean).join(" ") || undefined
+      : undefined;
 
   let choices: PageChoice[] | null = null;
   let choiceError: string | null = null;

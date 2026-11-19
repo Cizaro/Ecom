@@ -21,8 +21,20 @@ export const META_SCOPES = [
   "instagram_manage_insights",
 ] as const;
 
-/** What the Page is subscribed to: Page messages and Page activity (comments, posts). */
-export const PAGE_WEBHOOK_FIELDS = ["messages", "feed"] as const;
+/**
+ * What the Page is subscribed to: Page activity (comments, posts), and
+ * Messenger messages when pages_messaging was granted (Meta refuses the
+ * messages field without it). Instagram messages and comments come through
+ * the app's Instagram webhook subscription once the Page is subscribed.
+ */
+export function pageWebhookFields(grantedScopes: readonly string[]): string[] {
+  return grantedScopes.includes("pages_messaging") ? ["feed", "messages"] : ["feed"];
+}
+
+/** A MetaError, also when the error object crossed a module boundary. */
+export function isMetaError(error: unknown): error is MetaError {
+  return error instanceof Error && error.name === "MetaError";
+}
 
 export class MetaError extends Error {
   constructor(
@@ -52,7 +64,7 @@ export interface MetaGraph {
   userTokenFromCode(input: { code: string; redirectUri: string }): Promise<string>;
   grantedScopes(userToken: string): Promise<string[]>;
   listPages(userToken: string): Promise<MetaPage[]>;
-  subscribePage(pageId: string, pageToken: string): Promise<void>;
+  subscribePage(pageId: string, pageToken: string, fields: string[]): Promise<void>;
   unsubscribePage(pageId: string, pageToken: string): Promise<void>;
 }
 
@@ -190,12 +202,15 @@ export function createMetaGraph(config: MetaGraphConfig): MetaGraph {
       }
       return pages;
     },
-    async subscribePage(pageId, pageToken) {
+    async subscribePage(pageId, pageToken, fields) {
       if (!ID.test(pageId)) throw new MetaError("That is not a Facebook Page.");
+      if (fields.length === 0 || fields.some((f) => !/^[a-z_]{1,40}$/.test(f))) {
+        throw new MetaError("No webhook fields to subscribe to.");
+      }
       await call(`/${pageId}/subscribed_apps`, {
         method: "POST",
         token: pageToken,
-        params: { subscribed_fields: PAGE_WEBHOOK_FIELDS.join(",") },
+        params: { subscribed_fields: fields.join(",") },
       });
     },
     async unsubscribePage(pageId, pageToken) {

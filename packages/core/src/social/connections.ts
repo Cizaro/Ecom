@@ -2,7 +2,7 @@ import type { Prisma } from "@ecom/db";
 import { assertPermission, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
 import { openSecret, sealSecret } from "../platform/secret-box";
-import { MetaError, type MetaGraph, type MetaPage } from "./meta-graph";
+import { MetaError, pageWebhookFields, type MetaGraph, type MetaPage } from "./meta-graph";
 import type { SocialWebhookItem } from "./webhook";
 
 // A store's connection to its Facebook Page and linked Instagram account
@@ -117,7 +117,7 @@ export async function connectMetaPage(
       select: { id: true, pageId: true, accessTokenEncrypted: true },
     }),
   );
-  await deps.graph.subscribePage(page.id, page.accessToken);
+  await deps.graph.subscribePage(page.id, page.accessToken, pageWebhookFields(scopes));
 
   const data = {
     pageId: page.id,

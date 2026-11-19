@@ -1,4 +1,4 @@
-import { connectMetaPage, MetaError, pageChoices, SocialError } from "@ecom/core";
+import { connectMetaPage, isMetaError, pageChoices, SocialError } from "@ecom/core";
 import { getEnv } from "@ecom/config";
 import { z } from "zod";
 import { tenantDb } from "@/server/access";
@@ -61,8 +61,10 @@ export const GET = apiRoute(
       await keepPendingToken(context, userToken);
       return back({ choose: "1" });
     } catch (error) {
-      if (error instanceof SocialError) return back({ error: "page-taken" });
-      if (error instanceof MetaError) return back({ error: "meta" });
+      if (error instanceof Error && error.name === SocialError.name) {
+        return back({ error: "page-taken" });
+      }
+      if (isMetaError(error)) return back({ error: "meta", detail: error.message.slice(0, 300) });
       throw error;
     }
   },

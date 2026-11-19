@@ -1,7 +1,7 @@
 "use server";
 
 import { getEnv } from "@ecom/config";
-import { connectMetaPage, disconnectMeta, MetaError, SocialError } from "@ecom/core";
+import { connectMetaPage, disconnectMeta, isMetaError, SocialError } from "@ecom/core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requirePermission, tenantDb } from "@/server/access";
@@ -46,7 +46,7 @@ export async function choosePageAction(
       { userToken, pageId: typeof pageId === "string" ? pageId : "" },
     );
   } catch (error) {
-    if (error instanceof SocialError || error instanceof MetaError) return { error: error.message };
+    if (error instanceof SocialError || isMetaError(error)) return { error: error.message };
     throw error;
   }
   await clearPendingToken();

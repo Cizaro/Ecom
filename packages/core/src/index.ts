@@ -775,7 +775,8 @@ export {
   FAKE_META_PAGES,
   META_SCOPES,
   MetaError,
-  PAGE_WEBHOOK_FIELDS,
+  isMetaError,
+  pageWebhookFields,
   type MetaGraph,
   type MetaPage,
 } from "./social/meta-graph";
