@@ -571,6 +571,7 @@ export {
   replyAsShopper,
   replyAsStaff,
   startConversation,
+  SUPPORT_CHANNELS,
   SUPPORT_STATUSES,
   supportAccessKey,
   SupportError,
@@ -579,6 +580,7 @@ export {
 export type {
   ConversationSummary,
   ConversationView,
+  SupportChannel,
   SupportMessageView,
   SupportStatus,
 } from "./support/support";
@@ -771,6 +773,7 @@ export { findSocialConnection } from "./platform/social-lookup";
 export {
   createFakeMetaGraph,
   createMetaGraph,
+  metaGraphFromSettings,
   FAKE_META_CODE,
   FAKE_META_PAGES,
   META_SCOPES,
@@ -798,3 +801,14 @@ export {
   type PageChoice,
   type SocialConnectionSummary,
 } from "./social/connections";
+
+// Social inbox (Milestone 6.4, D113).
+export {
+  checkInstagramNow,
+  deliverSocialReply,
+  interpretSocialEvent,
+  processSocialEvents,
+  retrySocialReply,
+  type SocialDeps,
+} from "./social/inbox";
+export { listTenantsWithInstagram, listTenantsWithSocialToProcess } from "./platform/social-lookup";

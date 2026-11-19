@@ -1,4 +1,5 @@
 import { createHmac } from "node:crypto";
+import type { SocialWebhookItem } from "./webhook";
 
 // Meta's Graph API, through its official endpoints only (Milestone 6.3, D112):
 // the sign-in exchange, the Pages a person manages with their linked Instagram
@@ -66,6 +67,30 @@ export interface MetaGraph {
   listPages(userToken: string): Promise<MetaPage[]>;
   subscribePage(pageId: string, pageToken: string, fields: string[]): Promise<void>;
   unsubscribePage(pageId: string, pageToken: string): Promise<void>;
+  /** Sends a direct message (Instagram or Messenger) from the Page; returns the message id. */
+  sendMessage(input: {
+    pageId: string;
+    pageToken: string;
+    recipientId: string;
+    text: string;
+  }): Promise<string>;
+  /** Replies publicly under a comment; returns the new comment's id. */
+  replyToComment(input: {
+    channel: "instagram" | "facebook";
+    commentId: string;
+    pageToken: string;
+    text: string;
+  }): Promise<string>;
+  /**
+   * Recent Instagram messages and comments, read from the API: the backup for
+   * notifications Meta did not send. Shaped like webhook items, with the same
+   * keys, so an item already received is not stored twice.
+   */
+  recentInstagramItems(input: {
+    pageId: string;
+    instagramAccountId: string;
+    pageToken: string;
+  }): Promise<SocialWebhookItem[]>;
 }
 
 export interface MetaGraphConfig {
@@ -217,8 +242,120 @@ export function createMetaGraph(config: MetaGraphConfig): MetaGraph {
       if (!ID.test(pageId)) return;
       await call(`/${pageId}/subscribed_apps`, { method: "DELETE", token: pageToken });
     },
+    async sendMessage({ pageId, pageToken, recipientId, text }) {
+      if (!ID.test(pageId) || !/^[0-9]{1,40}$/.test(recipientId)) {
+        throw new MetaError("That conversation cannot be answered from here.");
+      }
+      const body = await call(`/${pageId}/messages`, {
+        method: "POST",
+        token: pageToken,
+        params: {
+          recipient: JSON.stringify({ id: recipientId }),
+          message: JSON.stringify({ text }),
+          messaging_type: "RESPONSE",
+        },
+      });
+      return typeof body.message_id === "string" ? body.message_id : "";
+    },
+    async replyToComment({ channel, commentId, pageToken, text }) {
+      if (!/^[0-9_]{1,80}$/.test(commentId))
+        throw new MetaError("That comment cannot be answered.");
+      const body = await call(`/${commentId}/${channel === "instagram" ? "replies" : "comments"}`, {
+        method: "POST",
+        token: pageToken,
+        params: { message: text },
+      });
+      return typeof body.id === "string" ? body.id : "";
+    },
+    async recentInstagramItems({ pageId, instagramAccountId, pageToken }) {
+      if (!ID.test(pageId) || !ID.test(instagramAccountId)) return [];
+      const items: SocialWebhookItem[] = [];
+      const conversations = await call(`/${pageId}/conversations`, {
+        token: pageToken,
+        params: {
+          platform: "instagram",
+          fields: "messages.limit(10){id,created_time,from,message}",
+          limit: "10",
+        },
+      });
+      for (const conversation of list(conversations.data)) {
+        for (const message of list((conversation.messages as Record<string, unknown>)?.data)) {
+          const from = (message.from ?? {}) as { id?: unknown; username?: unknown };
+          if (typeof message.id !== "string" || typeof from.id !== "string") continue;
+          // The shop's own messages (sent from Instagram or from here).
+          if (from.id === instagramAccountId) continue;
+          const at = Date.parse(String(message.created_time ?? ""));
+          items.push({
+            channel: "instagram",
+            accountId: instagramAccountId,
+            kind: "message",
+            externalKey: `instagram:message:${message.id}`,
+            occurredAt: Number.isNaN(at) ? null : new Date(at),
+            payload: {
+              sender: {
+                id: from.id,
+                username: typeof from.username === "string" ? from.username : undefined,
+              },
+              recipient: { id: instagramAccountId },
+              timestamp: Number.isNaN(at) ? undefined : at,
+              message: {
+                mid: message.id,
+                text: typeof message.message === "string" ? message.message : "",
+              },
+              source: "api",
+            },
+          });
+        }
+      }
+      const media = await call(`/${instagramAccountId}/media`, {
+        token: pageToken,
+        params: {
+          fields: "id,comments.limit(25){id,text,timestamp,username,from}",
+          limit: "10",
+        },
+      });
+      for (const post of list(media.data)) {
+        for (const comment of list((post.comments as Record<string, unknown>)?.data)) {
+          const from = (comment.from ?? {}) as { id?: unknown; username?: unknown };
+          if (typeof comment.id !== "string") continue;
+          if (from.id === instagramAccountId) continue;
+          const at = Date.parse(String(comment.timestamp ?? ""));
+          items.push({
+            channel: "instagram",
+            accountId: instagramAccountId,
+            kind: "comment",
+            externalKey: `instagram:comment:${comment.id}`,
+            occurredAt: Number.isNaN(at) ? null : new Date(at),
+            payload: {
+              field: "comments",
+              value: {
+                id: comment.id,
+                text: typeof comment.text === "string" ? comment.text : "",
+                from: {
+                  id: typeof from.id === "string" ? from.id : undefined,
+                  username:
+                    typeof from.username === "string"
+                      ? from.username
+                      : typeof comment.username === "string"
+                        ? comment.username
+                        : undefined,
+                },
+                media: { id: typeof post.id === "string" ? post.id : undefined },
+              },
+              source: "api",
+            },
+          });
+        }
+      }
+      return items;
+    },
   };
 }
+
+const list = (value: unknown): Record<string, unknown>[] =>
+  Array.isArray(value)
+    ? value.filter((v): v is Record<string, unknown> => typeof v === "object" && v !== null)
+    : [];
 
 /** Pages the fake offers: one with Instagram linked, one without. */
 export const FAKE_META_PAGES: readonly MetaPage[] = [
@@ -245,13 +382,30 @@ export const FAKE_META_CODE = "fake-meta-code";
  * own callback with a fixed code. For tests and for trying the screens
  * locally (META_GRAPH_MODE=fake); the launch check refuses it on a live site.
  */
-export function createFakeMetaGraph(
-  pages: readonly MetaPage[] = FAKE_META_PAGES,
-): MetaGraph & { subscribed: Set<string> } {
+export function createFakeMetaGraph(pages: readonly MetaPage[] = FAKE_META_PAGES): MetaGraph & {
+  subscribed: Set<string>;
+  sent: { kind: "message" | "comment"; to: string; text: string }[];
+  /** Items the backup check returns next (tests add to it). */
+  pending: SocialWebhookItem[];
+  /** When set, sending fails with this message (tests). */
+  failWith: string | null;
+} {
   const subscribed = new Set<string>();
+  const sent: { kind: "message" | "comment"; to: string; text: string }[] = [];
+  const pending: SocialWebhookItem[] = [];
+  const state = { failWith: null as string | null };
+  let counter = 0;
   return {
     mode: "fake",
     subscribed,
+    sent,
+    pending,
+    get failWith() {
+      return state.failWith;
+    },
+    set failWith(value: string | null) {
+      state.failWith = value;
+    },
     loginUrl({ redirectUri, state }) {
       const url = new URL(redirectUri);
       url.searchParams.set("code", FAKE_META_CODE);
@@ -276,5 +430,40 @@ export function createFakeMetaGraph(
     async unsubscribePage(pageId) {
       subscribed.delete(pageId);
     },
+    async sendMessage({ recipientId, text }) {
+      if (state.failWith) throw new MetaError(`Meta said: ${state.failWith}`);
+      sent.push({ kind: "message", to: recipientId, text });
+      return `fake-mid-${Date.now()}-${++counter}`;
+    },
+    async replyToComment({ commentId, text }) {
+      if (state.failWith) throw new MetaError(`Meta said: ${state.failWith}`);
+      sent.push({ kind: "comment", to: commentId, text });
+      return `900${Date.now()}${++counter}`;
+    },
+    async recentInstagramItems() {
+      return pending.splice(0, pending.length);
+    },
   };
+}
+
+/**
+ * The Graph client the settings ask for (web app and worker alike): the
+ * stand-in for META_GRAPH_MODE=fake, null when the Meta app is not set up.
+ */
+export function metaGraphFromSettings(env: {
+  META_APP_ID?: string;
+  META_APP_SECRET?: string;
+  META_WEBHOOK_VERIFY_TOKEN?: string;
+  META_GRAPH_MODE: "live" | "fake";
+  META_GRAPH_VERSION: string;
+  META_LOGIN_CONFIG_ID?: string;
+}): MetaGraph | null {
+  if (!env.META_APP_ID || !env.META_APP_SECRET || !env.META_WEBHOOK_VERIFY_TOKEN) return null;
+  if (env.META_GRAPH_MODE === "fake") return createFakeMetaGraph();
+  return createMetaGraph({
+    appId: env.META_APP_ID,
+    appSecret: env.META_APP_SECRET,
+    version: env.META_GRAPH_VERSION,
+    loginConfigId: env.META_LOGIN_CONFIG_ID,
+  });
 }

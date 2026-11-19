@@ -1360,17 +1360,31 @@ model SupportConversation {
   aiCheckedMessageId String?             @map("ai_checked_message_id") @db.Uuid
   /// Tries for that message that failed (the sweep gives up after three).
   aiCheckAttempts    Int                 @default(0) @map("ai_check_attempts")
+  /// web (the shop's contact form), instagram or facebook (Milestone 6.4, D113).
+  channel            String              @default("web")
+  /// message (a direct message thread) or comment (a comment and its replies).
+  kind               String              @default("message")
+  socialConnectionId String?             @map("social_connection_id") @db.Uuid
+  /// The platform thread this conversation follows, so new messages join it.
+  externalThreadKey  String?             @map("external_thread_key")
+  /// Who wrote: the platform's id for the person (for replies).
+  externalUserId     String?             @map("external_user_id")
+  externalUsername   String?             @map("external_username")
+  /// What a reply answers: the comment id for a comment thread.
+  externalReplyToId  String?             @map("external_reply_to_id")
   replyDrafts        SupportReplyDraft[]
   accessKeyHash      String              @unique @map("access_key_hash")
   lastMessageAt      DateTime            @default(now()) @map("last_message_at") @db.Timestamptz(3)
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  order    Order?           @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  messages SupportMessage[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order            Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  messages         SupportMessage[]
+  socialConnection SocialConnection? @relation(fields: [socialConnectionId], references: [id], onDelete: SetNull)
 
+  @@unique([tenantId, externalThreadKey])
   @@index([tenantId, status, lastMessageAt])
   @@index([customerId, lastMessageAt])
   @@map("support_conversations")
@@ -1387,11 +1401,18 @@ model SupportMessage {
   /// The staff member's name as shown with a reply.
   authorName     String   @map("author_name")
   body           String
+  /// The platform's id for a social message or comment (D113), once only.
+  externalId     String?  @map("external_id")
+  /// For staff replies on a social channel: sending, sent or failed.
+  deliveryStatus String?  @map("delivery_status")
+  /// Why sending failed, as the platform said.
+  deliveryError  String?  @map("delivery_error")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, externalId])
   @@index([conversationId, createdAt])
   @@index([tenantId])
   @@map("support_messages")
@@ -2256,8 +2277,9 @@ model SocialConnection {
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  events SocialWebhookEvent[]
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events        SocialWebhookEvent[]
+  conversations SupportConversation[]
 
   @@unique([tenantId, provider])
   @@unique([provider, pageId])

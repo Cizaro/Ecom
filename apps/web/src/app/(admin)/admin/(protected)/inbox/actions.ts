@@ -1,7 +1,11 @@
 "use server";
 
 import {
+  checkInstagramNow,
+  deliverSocialReply,
   dismissSupportDraft,
+  isMetaError,
+  retrySocialReply,
   draftSupportReply,
   ForbiddenError,
   NotFoundError,
@@ -14,6 +18,7 @@ import { forbidden, notFound } from "next/navigation";
 import { aiGateway } from "@/server/ai";
 import { requirePermission, tenantDb } from "@/server/access";
 import { sendWaitingEmails } from "@/server/notifications";
+import { socialDeps } from "@/server/social";
 import type { FormState } from "../../actions";
 
 // Support inbox. Every action checks inbox.reply itself; the services check
@@ -48,16 +53,62 @@ export async function replyToConversationStaffAction(
   const values = { message: field(formData, "message") };
   return attempt(async () => {
     const db = tenantDb(context);
-    await replyAsStaff(db, context, id, {
+    const saved = await replyAsStaff(db, context, id, {
       message: values.message,
       internal,
       draftId: field(formData, "draftId") || undefined,
     });
-    if (!internal) await sendWaitingEmails(db);
+    // Instagram and Facebook replies go through Meta now; others are emailed.
+    const delivery = saved.social
+      ? await deliverSocialReply(db, socialDeps(), saved.messageId)
+      : null;
+    if (!internal && !saved.social) await sendWaitingEmails(db);
     revalidatePath("/admin/inbox");
     revalidatePath(`/admin/inbox/${id}`);
+    if (delivery && !delivery.ok) {
+      return { error: `Saved, but not sent: ${delivery.error} Use "Try again" on the reply.` };
+    }
     return { notice: internal ? "Note added (staff only)." : "Reply sent." };
   }, values);
+}
+
+/** Sends a failed Instagram or Facebook reply again. */
+export async function retrySocialReplyAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("inbox.reply");
+  const id = field(formData, "id");
+  return attempt(async () => {
+    const result = await retrySocialReply(
+      tenantDb(context),
+      context,
+      socialDeps(),
+      field(formData, "messageId"),
+    );
+    revalidatePath(`/admin/inbox/${id}`);
+    return result.ok ? { notice: "Reply sent." } : { error: `Not sent: ${result.error}` };
+  });
+}
+
+/** Reads recent Instagram messages and comments now (the backup check). */
+export async function checkInstagramNowAction(_previous: FormState): Promise<FormState> {
+  const { context } = await requirePermission("inbox.reply");
+  const deps = socialDeps();
+  if (!deps) return { error: "Meta is not set up for this installation." };
+  try {
+    const result = await checkInstagramNow(tenantDb(context), deps);
+    revalidatePath("/admin/inbox");
+    return {
+      notice:
+        result.newConversations > 0
+          ? `${result.newConversations} new conversation(s) from Instagram.`
+          : "Checked: nothing new from Instagram.",
+    };
+  } catch (error) {
+    if (isMetaError(error)) return { error: error.message };
+    throw error;
+  }
 }
 
 export async function updateConversationAction(

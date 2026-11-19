@@ -213,6 +213,8 @@ export async function recordSocialWebhookItems(
   db: TenantDb,
   connectionId: string,
   items: SocialWebhookItem[],
+  /** Whether this counts as a notification from Meta (false for the backup check). */
+  options: { touch?: boolean } = {},
 ): Promise<number> {
   if (items.length === 0) return 0;
   return db.run(async (tx) => {
@@ -228,10 +230,12 @@ export async function recordSocialWebhookItems(
       })),
       skipDuplicates: true,
     });
-    await tx.socialConnection.update({
-      where: { id: connectionId },
-      data: { lastWebhookAt: new Date() },
-    });
+    if (options.touch !== false) {
+      await tx.socialConnection.update({
+        where: { id: connectionId },
+        data: { lastWebhookAt: new Date() },
+      });
+    }
     return result.count;
   });
 }

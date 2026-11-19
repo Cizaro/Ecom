@@ -353,7 +353,9 @@ export function staffSupportMessageEmail(
     to,
     subject: oneLine(`New message: ${conversation.subject}`),
     text: [
-      `${oneLine(conversation.name)} (${conversation.email}) wrote to ${oneLine(store.name)}:`,
+      conversation.email
+        ? `${oneLine(conversation.name)} (${conversation.email}) wrote to ${oneLine(store.name)}:`
+        : `${oneLine(conversation.name)} wrote to ${oneLine(store.name)}:`,
       "",
       conversation.message.body,
       "",

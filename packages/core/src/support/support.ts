@@ -56,7 +56,13 @@ export interface SupportMessageView {
   authorName: string;
   body: string;
   createdAt: Date;
+  /** Staff replies on Instagram or Facebook: sending, sent or failed (D113). */
+  deliveryStatus: "sending" | "sent" | "failed" | null;
+  deliveryError: string | null;
 }
+
+export const SUPPORT_CHANNELS = ["web", "instagram", "facebook"] as const;
+export type SupportChannel = (typeof SUPPORT_CHANNELS)[number];
 
 export interface ConversationView {
   id: string;
@@ -69,6 +75,9 @@ export interface ConversationView {
   assignedUserId: string | null;
   createdAt: Date;
   lastMessageAt: Date;
+  channel: SupportChannel;
+  kind: "message" | "comment";
+  externalUsername: string | null;
   messages: SupportMessageView[];
 }
 
@@ -82,9 +91,20 @@ const SELECT = {
   assignedUserId: true,
   createdAt: true,
   lastMessageAt: true,
+  channel: true,
+  kind: true,
+  externalUsername: true,
   order: { select: { id: true, number: true } },
   messages: {
-    select: { id: true, authorType: true, authorName: true, body: true, createdAt: true },
+    select: {
+      id: true,
+      authorType: true,
+      authorName: true,
+      body: true,
+      createdAt: true,
+      deliveryStatus: true,
+      deliveryError: true,
+    },
     // IDs are time-ordered (UUID v7), so this keeps messages in the order written.
     orderBy: { id: "asc" as const },
   },
@@ -100,11 +120,14 @@ async function viewIn(
   return {
     ...row,
     status: row.status as SupportStatus,
+    channel: row.channel as SupportChannel,
+    kind: row.kind === "comment" ? "comment" : "message",
     messages: row.messages
       .filter((message) => withNotes || message.authorType !== "note")
       .map((message) => ({
         ...message,
         authorType: message.authorType as SupportMessageView["authorType"],
+        deliveryStatus: message.deliveryStatus as SupportMessageView["deliveryStatus"],
       })),
   };
 }
@@ -267,6 +290,7 @@ export interface ConversationSummary {
   lastMessageAt: Date;
   assignedUserId: string | null;
   customerId: string | null;
+  channel?: string;
   /** AI labels, for staff lists only. */
   aiCategory?: string | null;
   aiUrgency?: string | null;
@@ -313,7 +337,7 @@ async function staffNameIn(tx: AppTransaction, context: RequestContext): Promise
 export async function listConversations(
   db: TenantDb,
   context: RequestContext,
-  input: { status?: SupportStatus; mine?: boolean; search?: string } = {},
+  input: { status?: SupportStatus; mine?: boolean; search?: string; channel?: SupportChannel } = {},
 ): Promise<{ items: ConversationSummary[]; counts: Record<SupportStatus, number> }> {
   assertPermission(context, "inbox.read");
   const status = input.status && SUPPORT_STATUSES.includes(input.status) ? input.status : "open";
@@ -325,17 +349,21 @@ export async function listConversations(
     const rows = await tx.supportConversation.findMany({
       where: {
         status,
+        ...(input.channel && SUPPORT_CHANNELS.includes(input.channel)
+          ? { channel: input.channel }
+          : {}),
         ...(input.mine ? { assignedUserId: context.userId } : {}),
         ...(search
           ? {
               OR: [
                 { email: { contains: search } },
+                { name: { contains: search, mode: "insensitive" as const } },
                 { subject: { contains: search, mode: "insensitive" as const } },
               ],
             }
           : {}),
       },
-      select: { ...SUMMARY, aiCategory: true, aiUrgency: true, aiSummary: true },
+      select: { ...SUMMARY, channel: true, aiCategory: true, aiUrgency: true, aiSummary: true },
       // Waiting longest first, so nobody is forgotten.
       orderBy: { lastMessageAt: status === "open" ? "asc" : "desc" },
       take: 100,
@@ -370,16 +398,23 @@ export async function replyAsStaff(
     /** The AI draft this reply started from, if any (it is then marked sent). */
     draftId?: string;
   },
-): Promise<void> {
+): Promise<{ messageId: string; social: boolean }> {
   assertPermission(context, "inbox.reply");
   if (!UUID.test(conversationId)) throw new NotFoundError("conversation");
   const body = cleanBody(input.message);
-  await db.run(async (tx) => {
+  return db.run(async (tx) => {
     const found = await tx.supportConversation.findUnique({
       where: { id: conversationId },
-      select: { id: true, assignedUserId: true },
+      select: { id: true, assignedUserId: true, channel: true },
     });
     if (!found) throw new NotFoundError("conversation");
+    const social = found.channel !== "web";
+    if (social && !input.internal && body.length > 1000) {
+      throw new SupportError(
+        "Shorten the reply for Instagram and Facebook (1,000 characters at most).",
+        "message",
+      );
+    }
     const authorName = await staffNameIn(tx, context);
     const message = await tx.supportMessage.create({
       data: {
@@ -389,6 +424,8 @@ export async function replyAsStaff(
         authorUserId: context.userId,
         authorName,
         body,
+        // Sent through Meta after this transaction (deliverSocialReply).
+        ...(social && !input.internal ? { deliveryStatus: "sending" } : {}),
       },
       select: { id: true },
     });
@@ -419,18 +456,21 @@ export async function replyAsStaff(
           ...(found.assignedUserId ? {} : { assignedUserId: context.userId }),
         },
       });
-      await enqueueEmailIn(
-        tx,
-        db.tenantId,
-        EMAIL_EVENTS.supportReply,
-        { conversationId, messageId: message.id },
-        `support-reply:${message.id}`,
-      );
+      if (!social) {
+        await enqueueEmailIn(
+          tx,
+          db.tenantId,
+          EMAIL_EVENTS.supportReply,
+          { conversationId, messageId: message.id },
+          `support-reply:${message.id}`,
+        );
+      }
     }
     await audit(tx, context, input.internal ? "support.note_added" : "support.replied", {
       type: "support_conversation",
       id: conversationId,
     });
+    return { messageId: message.id, social: social && !input.internal };
   });
 }
 

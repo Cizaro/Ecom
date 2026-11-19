@@ -4,7 +4,7 @@ Last updated: 2026-11-26
 
 ## Current phase
 
-**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** **6.3 (connecting Instagram and Facebook) built**; 6.4 (social inbox) next, 6.5 (publishing) after it. **Phase 7: Milestones 7.1 (marketing plan, campaigns, segments, tracking links), 7.2 (competitor research and AI ideas) and 7.4 (shop events, reports, forecasts, questions about the figures) built.** 7.3 waits for the ad account. Next: Phase 8 (giveaways) once the owner confirms the prize structure, or Phase 10 readiness work. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
+**Phase 3 (checkout and operations): Milestones 3.1 to 3.3 and 3.5 to 3.8 complete, plus cash on delivery.** Phases 1 and 2 are complete. Bulk product import from a spreadsheet is built too. **Phase 4 (reviews, UGC, CRM) complete: 4.1 reviews, 4.2 customer photos and videos, 4.3 support conversations and customer timeline.** **Launch readiness built:** policy pages, launch check, backups, production image and deployment guide. **Arabic shop built:** English by default, Arabic by choice, right to left, Arabic emails. **Phase 5 (AI foundation) complete: 5.1 gateway, 5.2 product drafts, 5.3 support inbox AI, 5.4 evaluation set.** **Phase 6 started: Milestones 6.1 (content library, posts with approval, calendar, AI captions) and 6.2 (photo versions for each platform) built.** **6.3 (connecting Instagram and Facebook) and 6.4 (social inbox) built**; 6.5 (publishing) next. **Phase 7: Milestones 7.1 (marketing plan, campaigns, segments, tracking links), 7.2 (competitor research and AI ideas) and 7.4 (shop events, reports, forecasts, questions about the figures) built.** 7.3 waits for the ad account. Next: Phase 8 (giveaways) once the owner confirms the prize structure, or Phase 10 readiness work. The card gateway (3.4) waits on a Lebanese merchant account (areeba or NetCommerce); Stripe is not available in Lebanon.
 
 ## Completed
 
@@ -249,6 +249,13 @@ Last updated: 2026-11-26
   - The Page's token is stored encrypted and never shown or logged; one connection per store; a Page belongs to one store at a time.
   - Webhook address `/api/webhooks/meta`: Meta's subscription check with the verify token; notifications acted on only with a valid signature; each message or comment stored once for the store that owns the Page or account, ready for the inbox (6.4).
   - Tests use a Meta stand-in (`META_GRAPH_MODE=fake`); the launch check fails if it is left on. Tried against Meta on 2026-11-19: the Page Moonlight14a and @moonlight_14a connected with 12 permissions. Webhooks not yet received (need a public https address). Facebook Messenger messages need `pages_messaging` (Messenger use case, not added yet).
+
+- **Milestone 6.4, social inbox (D113):**
+  - Instagram and Facebook direct messages and comments appear in the **Inbox** next to contact-form messages, with a channel filter and badges; one conversation per person for messages, one per comment thread.
+  - Same tools as before: take, notes, close, AI sorting and AI reply drafts; staff are emailed about new conversations.
+  - Replies are sent through Meta after Send: a direct message, or a public reply under the comment (the screen says which); delivery shown as Sent or Not sent with Meta's reason and **Try again**.
+  - Filed right after Meta's notification, by the worker every 30 seconds, and found by a backup check of Instagram every 5 minutes (**Check Instagram now** in the Inbox).
+  - Real customers' messages need Meta's Advanced access (app review); until then Meta shows the app only people with a role on it.
 
 ## In progress
 
@@ -499,6 +506,7 @@ Launch hardening, security part 2: review file uploads, checkout and the admin A
 | 2026-11-24 | Milestone 6.2: photo versions for each platform (sizes, crop or whole photo on a background, light correction within limits, plain-background removal), made on our server and kept in the library |
 | 2026-11-24 | Meta and TikTok setup checklist for the owner (docs/META_SETUP.md); 6.3 to 6.5 and 7.3 skipped until the accounts are ready |
 | 2026-11-29 | Milestone 6.3: Instagram and Facebook connected through Meta's sign-in, Page token encrypted, signed webhooks stored once per store |
+| 2026-11-29 | Milestone 6.4: Instagram and Facebook messages and comments in the inbox, replies sent through Meta with delivery status, backup check every 5 minutes |
 | 2026-11-25 | Milestone 7.1: marketing plan with campaign briefs, customer segments with consent-only export, tracking links with short addresses and click counts on posts and campaigns |
 | 2026-11-26 | Milestone 7.2: competitor research typed by staff with price comparison, AI opportunity ideas scored and citing the observations |
 | 2026-11-27 | Milestone 7.4: shop events without personal details, Reports page with forecasts and running-out stock, questions answered from the figures (second computer) |

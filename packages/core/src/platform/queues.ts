@@ -25,6 +25,10 @@ export const MAINTENANCE_JOBS = {
   importImagesSweep: "import-images-sweep",
   /** Labels new support messages and drafts replies with AI (staff send them). */
   supportAiSweep: "support-ai-sweep",
+  /** Files Meta notifications in the inbox (most are filed by the webhook). */
+  socialSweep: "social-sweep",
+  /** The backup check: reads recent Instagram messages and comments from the API. */
+  instagramCheck: "instagram-check",
 } as const;
 
 export const MEDIA_JOBS = {

@@ -15,3 +15,10 @@ export const CATEGORY_LABEL: Record<MessageCategory, string> = {
   spam: "Spam",
   abuse: "Abuse",
 };
+
+/** Where a conversation came from (D113). */
+export const CHANNEL_LABEL = {
+  web: "Shop contact form",
+  instagram: "Instagram",
+  facebook: "Facebook",
+} as const;

@@ -4,7 +4,7 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 
 ## Instagram and Facebook (connected 2026-11-19)
 
-The Page **Moonlight14a** and Instagram **@moonlight_14a** are connected from the admin. Done 2026-11-19: app published, webhooks verified through a tunnel (Meta's test notification accepted), Instagram message access on. **Blocker for real customers' messages: Advanced access** (Meta App Review and business verification): with Standard access Meta shows the app only people with a role on the app, so a DM from a normal follower does not reach the shop. Apply once the site is online (docs/META_SETUP.md Part 4). Facebook Messenger messages also need the Messenger use case (pages_messaging). Next milestone: 6.4, the social inbox, built on webhooks plus a check every few minutes.
+The Page **Moonlight14a** and Instagram **@moonlight_14a** are connected from the admin. Done 2026-11-19: app published, webhooks verified through a tunnel (Meta's test notification accepted), Instagram message access on. **Blocker for real customers' messages: Advanced access** (Meta App Review and business verification): with Standard access Meta shows the app only people with a role on the app, so a DM from a normal follower does not reach the shop. Apply once the site is online (docs/META_SETUP.md Part 4). Facebook Messenger messages also need the Messenger use case (pages_messaging). Milestone 6.4 (social inbox) is built: messages and comments land in the Inbox, replies go back through Meta. Next: 6.5 (publishing approved posts), and applying for Advanced access once the site is online.
 
 ## Owner actions (do not block development)
 

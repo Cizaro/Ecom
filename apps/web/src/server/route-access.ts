@@ -280,6 +280,9 @@ const INBOX_ACTION_ENTRIES: readonly ActionEntry[] = [
   // Drafting also needs ai.use, which the service checks.
   "draftSupportReplyAction",
   "dismissSupportDraftAction",
+  // Social inbox (D113): sending again through Meta, and the backup check.
+  "retrySocialReplyAction",
+  "checkInstagramNowAction",
 ].map((name) => ({
   id: `(admin)/admin/(protected)/inbox/actions.ts#${name}`,
   access: { level: "permission", permission: "inbox.reply" } as const,

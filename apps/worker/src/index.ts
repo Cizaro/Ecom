@@ -2,7 +2,12 @@ import { createGateway, dollarsToMicros } from "@ecom/ai";
 import { getEnv } from "@ecom/config";
 import {
   aiProviderFromSettings,
+  checkInstagramNow,
   checkNewSupportMessages,
+  listTenantsWithInstagram,
+  listTenantsWithSocialToProcess,
+  metaGraphFromSettings,
+  processSocialEvents,
   createAiLedger,
   listTenantsWithSupportToCheck,
   createEmailProvider,
@@ -53,6 +58,9 @@ const aiGateway = createGateway({
   globalPaused: env.AI_PAUSED,
   platformMonthlyBudgetMicros: dollarsToMicros(env.AI_MONTHLY_BUDGET_USD),
 });
+
+/** Meta's Graph API (or its stand-in), when the Meta app is set up. */
+const metaGraph = metaGraphFromSettings(env);
 
 /** An upload is given this long to be queued normally before the sweep queues it. */
 const SWEEP_AFTER_MS = 2 * 60_000;
@@ -131,6 +139,34 @@ const maintenanceWorker = new Worker(
         }
         if (total.labelled > 0 || total.failed > 0) logger.info(total, "support AI sweep");
         return total;
+      }
+      case MAINTENANCE_JOBS.socialSweep: {
+        const tenants = await listTenantsWithSocialToProcess(env.DATABASE_ADMIN_URL);
+        let messages = 0;
+        for (const tenantId of tenants) {
+          messages += (await processSocialEvents(tenantDb(tenantId))).messages;
+        }
+        if (messages > 0) logger.info({ messages }, "social sweep filed messages");
+        return { messages };
+      }
+      case MAINTENANCE_JOBS.instagramCheck: {
+        if (!metaGraph) return { skipped: "Meta app not set up" };
+        const tenants = await listTenantsWithInstagram(env.DATABASE_ADMIN_URL);
+        let stored = 0;
+        for (const tenantId of tenants) {
+          try {
+            const result = await checkInstagramNow(tenantDb(tenantId), {
+              graph: metaGraph,
+              encryptionKey: env.ENCRYPTION_KEY,
+            });
+            stored += result.stored;
+          } catch (error) {
+            // One store's problem (a revoked token, Meta down) does not stop the others.
+            logger.warn({ tenantId, err: (error as Error).message }, "instagram check failed");
+          }
+        }
+        if (stored > 0) logger.info({ stored }, "instagram check found new items");
+        return { stored };
       }
       default:
         throw new Error(`Unknown maintenance job: ${job.name}`);
@@ -213,6 +249,18 @@ await maintenanceQueue.upsertJobScheduler(
   MAINTENANCE_JOBS.supportAiSweep,
   { every: 60_000 },
   { name: MAINTENANCE_JOBS.supportAiSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.socialSweep,
+  { every: 30_000 },
+  { name: MAINTENANCE_JOBS.socialSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.instagramCheck,
+  { every: 5 * 60_000 },
+  { name: MAINTENANCE_JOBS.instagramCheck, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
 logger.info({ queues: Object.values(QUEUES), aiProvider: ai.provider.name }, "worker started");

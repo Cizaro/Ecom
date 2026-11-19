@@ -9,9 +9,10 @@ import {
   dismissSupportDraftAction,
   draftSupportReplyAction,
   replyToConversationStaffAction,
+  retrySocialReplyAction,
   updateConversationAction,
 } from "../actions";
-import { CATEGORY_LABEL } from "../labels";
+import { CATEGORY_LABEL, CHANNEL_LABEL } from "../labels";
 
 export const metadata: Metadata = { title: "Conversation" };
 
@@ -30,6 +31,13 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   const canSeeCustomer = hasPermission(context, "customers.read");
   const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
   const mine = conversation.assignedUserId === context.userId;
+  const social = conversation.channel !== "web";
+  const where = CHANNEL_LABEL[conversation.channel];
+  const replyHow = !social
+    ? "Your reply is emailed to the customer."
+    : conversation.kind === "comment"
+      ? `Your reply is posted publicly under the comment on ${where}. Everyone can see it.`
+      : `Your reply is sent as a direct message on ${where}. Meta allows replies within 24 hours of the customer's last message.`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,7 +45,8 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
         title={conversation.subject}
         description={
           <>
-            {conversation.name} · {conversation.email}
+            {conversation.name}
+            {conversation.email ? ` · ${conversation.email}` : ""}
             {conversation.customerId && canSeeCustomer ? (
               <>
                 {" · "}
@@ -72,6 +81,10 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           {LABEL[conversation.status]}
         </Badge>
         {mine ? <Badge tone="success">Yours</Badge> : null}
+        <Badge tone="neutral">
+          {where}
+          {social ? (conversation.kind === "comment" ? " comment" : " message") : ""}
+        </Badge>
       </div>
 
       {ai.category ? (
@@ -120,6 +133,39 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
               </span>
             </p>
             <p className="whitespace-pre-line">{message.body}</p>
+            {message.deliveryStatus ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="delivery">
+                <Badge
+                  tone={
+                    message.deliveryStatus === "sent"
+                      ? "success"
+                      : message.deliveryStatus === "failed"
+                        ? "warning"
+                        : "neutral"
+                  }
+                >
+                  {message.deliveryStatus === "sent"
+                    ? `Sent on ${where}`
+                    : message.deliveryStatus === "failed"
+                      ? "Not sent"
+                      : "Sending"}
+                </Badge>
+                {message.deliveryError ? (
+                  <span className="text-ink-muted">{message.deliveryError}</span>
+                ) : null}
+                {message.deliveryStatus === "failed" && canReply ? (
+                  <ActionForm
+                    action={retrySocialReplyAction}
+                    submitLabel="Try again"
+                    submitTone="secondary"
+                    testId="delivery-retry"
+                  >
+                    <input type="hidden" name="id" value={conversation.id} />
+                    <input type="hidden" name="messageId" value={message.id} />
+                  </ActionForm>
+                ) : null}
+              </div>
+            ) : null}
           </li>
         ))}
       </ol>
@@ -130,8 +176,8 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             title="Reply"
             description={
               ai.draft
-                ? "The AI drafted this from your shop's facts. Read it, change what you want, then send. Nothing was sent to the customer."
-                : undefined
+                ? `The AI drafted this from your shop's facts. Read it, change what you want, then send. Nothing was sent to the customer. ${replyHow}`
+                : replyHow
             }
           >
             {ai.draft && ai.draft.citations.length > 0 ? (
@@ -162,11 +208,11 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
                 label="Message"
                 name="message"
                 rows={ai.draft ? 8 : 5}
-                maxLength={5000}
+                maxLength={social ? 1000 : 5000}
                 defaultValue={ai.draft?.body ?? ""}
               />
               <CheckboxField
-                label="Internal note: only staff see it, nothing is emailed"
+                label="Internal note: only staff see it, nothing is sent to the customer"
                 name="internal"
               />
             </ActionForm>

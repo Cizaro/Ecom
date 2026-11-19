@@ -4,6 +4,7 @@ import {
   createTenantDb,
   findSocialConnection,
   parseMetaWebhook,
+  processSocialEvents,
   recordSocialWebhookItems,
   verifyMetaSignature,
   verifyMetaSubscription,
@@ -86,6 +87,12 @@ export async function POST(request: Request): Promise<Response> {
         items,
       );
       logger.info({ tenantId: owner.tenantId, channel, stored }, "meta webhook stored");
+      // Filed in the inbox now; the worker's sweep catches anything left.
+      await processSocialEvents(
+        createTenantDb(getAppPrisma(env.DATABASE_URL), { tenantId: owner.tenantId }),
+      ).catch((error: Error) =>
+        logger.warn({ tenantId: owner.tenantId, err: error.message }, "meta webhook not filed yet"),
+      );
     } catch (error) {
       // Answer with an error so Meta sends the notification again later.
       logger.error(

@@ -21,3 +21,24 @@ export async function findSocialConnection(
   });
   return row ? { tenantId: row.tenantId, connectionId: row.id } : null;
 }
+
+/** Stores with Meta notifications not yet filed in the inbox (worker). */
+export async function listTenantsWithSocialToProcess(adminDatabaseUrl: string): Promise<string[]> {
+  const rows = await getAdminPrisma(adminDatabaseUrl).socialWebhookEvent.findMany({
+    where: { processedAt: null },
+    select: { tenantId: true },
+    distinct: ["tenantId"],
+    take: 200,
+  });
+  return rows.map((row) => row.tenantId);
+}
+
+/** Stores with a working Instagram connection, for the backup check (worker). */
+export async function listTenantsWithInstagram(adminDatabaseUrl: string): Promise<string[]> {
+  const rows = await getAdminPrisma(adminDatabaseUrl).socialConnection.findMany({
+    where: { provider: "meta", status: "active", instagramAccountId: { not: null } },
+    select: { tenantId: true },
+    take: 500,
+  });
+  return rows.map((row) => row.tenantId);
+}

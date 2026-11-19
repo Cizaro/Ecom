@@ -3,8 +3,7 @@ import "server-only";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { getEnv } from "@ecom/config";
 import {
-  createFakeMetaGraph,
-  createMetaGraph,
+  metaGraphFromSettings,
   openSecret,
   sealSecret,
   type MetaGraph,
@@ -38,21 +37,14 @@ export function metaConfigured(): boolean {
 }
 
 export function getMetaGraph(): MetaGraph | null {
-  if (globals.__metaGraph !== undefined) return globals.__metaGraph;
-  const env = getEnv();
-  if (!metaConfigured()) {
-    globals.__metaGraph = null;
-  } else if (env.META_GRAPH_MODE === "fake") {
-    globals.__metaGraph = createFakeMetaGraph();
-  } else {
-    globals.__metaGraph = createMetaGraph({
-      appId: env.META_APP_ID!,
-      appSecret: env.META_APP_SECRET!,
-      version: env.META_GRAPH_VERSION,
-      loginConfigId: env.META_LOGIN_CONFIG_ID,
-    });
-  }
+  if (globals.__metaGraph === undefined) globals.__metaGraph = metaGraphFromSettings(getEnv());
   return globals.__metaGraph;
+}
+
+/** What the social inbox services need to talk to Meta, or null when it is not set up. */
+export function socialDeps(): { graph: MetaGraph; encryptionKey: string } | null {
+  const graph = getMetaGraph();
+  return graph ? { graph, encryptionKey: getEnv().ENCRYPTION_KEY } : null;
 }
 
 export function redirectUri(): string {

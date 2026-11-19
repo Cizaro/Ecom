@@ -83,6 +83,47 @@ test("the owner connects Facebook and Instagram, receives notifications and disc
   await expect(page.getByTestId("meta-events")).toContainText("instagram comment");
   await expect(connection).not.toContainText("None yet");
 
+  // Milestone 6.4: an Instagram direct message lands in the inbox, and the
+  // reply goes back through Meta (the stand-in) after staff press Send.
+  const text = `Do you deliver to Tyre? ${Date.now()}`;
+  // A new sender each run, so the message starts its own conversation.
+  const sender = `555${Date.now() % 1_000_000_000}`;
+  const dm = JSON.stringify({
+    object: "instagram",
+    entry: [
+      {
+        id: INSTAGRAM_ID,
+        messaging: [
+          {
+            sender: { id: sender },
+            recipient: { id: INSTAGRAM_ID },
+            timestamp: Date.now(),
+            message: { mid: `e2e-${Date.now()}`, text },
+          },
+        ],
+      },
+    ],
+  });
+  const delivered = await request.post("/api/webhooks/meta", {
+    data: dm,
+    headers: { "content-type": "application/json", "x-hub-signature-256": sign(dm) },
+  });
+  expect(delivered.status()).toBe(200);
+  await page.goto("/admin/inbox?channel=instagram");
+  const row = page.getByTestId("inbox-row").filter({ hasText: text });
+  await expect(row).toContainText("Instagram");
+  await row.getByRole("link").first().click();
+  await expect(page.getByTestId("conversation-status")).toContainText("Instagram message");
+  await expect(page.getByTestId("staff-message").filter({ hasText: text })).toBeVisible();
+  const reply = page.getByTestId("staff-reply-form");
+  await reply.getByLabel("Message").fill("Yes, $4 anywhere in Lebanon.");
+  await reply.getByRole("button", { name: "Send" }).click();
+  await expect(reply.getByTestId("form-notice")).toHaveText("Reply sent.");
+  await expect(
+    page.getByTestId("staff-message").filter({ hasText: "$4 anywhere" }).getByTestId("delivery"),
+  ).toContainText("Sent on Instagram");
+
+  await page.goto("/admin/social");
   await page.getByTestId("meta-disconnect").getByRole("button", { name: "Disconnect" }).click();
   await expect(page.getByTestId("meta-disconnected-notice")).toBeVisible();
   await expect(page.getByTestId("meta-connection")).toBeHidden();
