@@ -175,6 +175,18 @@ const envSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().min(16, "use at least 16 characters").max(200).optional(),
   ),
+  /**
+   * The Instagram app secret (Use cases > Instagram API > API setup with
+   * Instagram login). Meta signs the Instagram webhooks configured there with
+   * it instead of the App Secret. Optional.
+   */
+  META_INSTAGRAM_APP_SECRET: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z
+      .string()
+      .regex(/^[0-9a-f]{32}$/i, "must be the 32-character Instagram app secret")
+      .optional(),
+  ),
   /** A Facebook Login for Business configuration ID; without it, permissions are asked for by name. */
   META_LOGIN_CONFIG_ID: z.preprocess(
     (value) => (value === "" ? undefined : value),

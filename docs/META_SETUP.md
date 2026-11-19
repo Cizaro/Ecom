@@ -37,6 +37,8 @@ That is all that is needed to start Milestone 6.3: connecting the Page and Insta
 3. Start the site (`pnpm dev`), sign in to the admin as the owner, open **Instagram and Facebook** and click **Connect Facebook and Instagram**. Sign in on Facebook's page, choose the shop's Page (and its Instagram account) and allow access. You come back to the admin with the Page and the Instagram name shown.
 4. **Webhooks** (so messages and comments arrive): in the app, **Webhooks** (or each use case's webhook settings), for **Page** and for **Instagram**, enter the callback address shown at the bottom of the admin page (`.../api/webhooks/meta`) and the verify token from `META_WEBHOOK_VERIFY_TOKEN` in `.env`, then subscribe to **messages** and **feed** (Page) and **messages** and **comments** (Instagram). Meta needs a public https address: this works once the site is online, or on this computer through a tunnel (for example Cloudflare Tunnel), which we can set up together.
 
+**On this computer:** run the site (`pnpm.cmd dev`) and a quick tunnel (`cloudflared tunnel --url http://localhost:3000`). The tunnel address changes on every start: put the new `https://....trycloudflare.com/api/webhooks/meta` in Meta (Use cases > Instagram API > API setup with Instagram login > 3. Configure webhooks) each time. Instagram webhooks set there are signed with the **Instagram app secret** (same page): put it in `.env` as `META_INSTAGRAM_APP_SECRET=`.
+
 Changing names later (the app, the business, the Page) does not affect the connection: it depends on the IDs, not the names.
 
 ## Part 4: later, when the shop is live on its own domain
@@ -61,6 +63,7 @@ Changing names later (the app, the business, the Page) does not affect the conne
 - [x] Told Claude "the Meta app is ready" with the App ID
 - [x] Callback address allowed in Facebook Login for Business settings (Part 3b)
 - [x] Page connected from the admin (Part 3b): Moonlight14a with @moonlight_14a, 2026-11-19
-- [ ] Webhooks subscribed, once the site has a public https address (Part 3b)
+- [x] Webhooks verified and subscribed (2026-11-19, through a Cloudflare quick tunnel; Instagram webhooks configured under API setup with Instagram login, signed with the Instagram app secret in META_INSTAGRAM_APP_SECRET)
+- [ ] App published, so Meta delivers webhooks for everyone (Meta: "To receive webhooks, your app must be in published state")
 - [ ] Later: ad account with a payment method (7.3)
 - [ ] Optional: TikTok Business account and developer app (6.5)

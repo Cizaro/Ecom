@@ -38,9 +38,13 @@ export async function POST(request: Request): Promise<Response> {
   if (length > MAX_BODY_BYTES) return new Response(null, { status: 413 });
   const rawBody = await request.text();
   if (rawBody.length > MAX_BODY_BYTES) return new Response(null, { status: 413 });
-  if (
-    !verifyMetaSignature(rawBody, request.headers.get("x-hub-signature-256"), env.META_APP_SECRET)
-  ) {
+  // Signed with the App Secret, or with the Instagram app secret for the
+  // Instagram webhooks configured under "API setup with Instagram login".
+  const signature = request.headers.get("x-hub-signature-256");
+  const secrets = [env.META_APP_SECRET, env.META_INSTAGRAM_APP_SECRET].filter(
+    (secret): secret is string => Boolean(secret),
+  );
+  if (!secrets.some((secret) => verifyMetaSignature(rawBody, signature, secret))) {
     return new Response(null, { status: 401 });
   }
   let body: unknown;
