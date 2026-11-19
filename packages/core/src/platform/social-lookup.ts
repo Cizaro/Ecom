@@ -42,3 +42,22 @@ export async function listTenantsWithInstagram(adminDatabaseUrl: string): Promis
   });
   return rows.map((row) => row.tenantId);
 }
+
+/** Stores with scheduled posts whose time has come (worker). */
+export async function listTenantsWithDuePosts(
+  adminDatabaseUrl: string,
+  now = new Date(),
+): Promise<string[]> {
+  const rows = await getAdminPrisma(adminDatabaseUrl).contentPost.findMany({
+    where: {
+      status: "approved",
+      autoPublish: true,
+      plannedFor: { lte: now },
+      publishAttempts: { lt: 3 },
+    },
+    select: { tenantId: true },
+    distinct: ["tenantId"],
+    take: 200,
+  });
+  return rows.map((row) => row.tenantId);
+}

@@ -6,6 +6,7 @@ import {
   listLibrary,
   listLinks,
   productsForPosts,
+  publishBlocker,
   safeTimeZone,
   zonedLocalInput,
 } from "@ecom/core";
@@ -17,7 +18,13 @@ import { orNotFound } from "@/server/catalog-forms";
 import { shopOrigin } from "@/server/shop-url";
 import { TrackingLinks } from "../../_components/tracking-links";
 import { ActionForm, TextField } from "../../../../_components/form";
-import { deletePostAction, movePostAction, updatePostAction } from "../../actions";
+import {
+  deletePostAction,
+  movePostAction,
+  publishPostAction,
+  setAutoPublishAction,
+  updatePostAction,
+} from "../../actions";
 import { CHANNEL_LABEL, FORMAT_LABEL, STATUS_LABEL, STATUS_TONE } from "../../labels";
 import { PostFields } from "../post-fields";
 import { CaptionDraft } from "./caption-draft";
@@ -68,6 +75,8 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   const canPublish = hasPermission(context, "social.publish");
   const canDraft = hasPermission(context, "ai.use");
   const editable = post.status !== "published";
+  const blocker = publishBlocker(post);
+  const where = post.channel === "instagram" ? "Instagram" : "Facebook";
   const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone });
   const step = (name: string, label: string, tone: "primary" | "secondary" = "secondary") => (
     <ActionForm
@@ -148,11 +157,64 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
               <TextField label="What should change?" name="note" maxLength={1000} />
             </ActionForm>
           ) : null}
+          {post.status === "approved" && canPublish && !blocker ? (
+            <div className="flex w-full flex-col gap-3" data-testid="post-meta-publish">
+              {post.publishError ? (
+                <Alert tone="error" testId="post-publish-error">
+                  Last try did not publish: {post.publishError}
+                </Alert>
+              ) : null}
+              {post.publishing ? (
+                <p className="text-sm text-ink-muted">Publishing now…</p>
+              ) : (
+                <ActionForm
+                  action={publishPostAction}
+                  submitLabel={`Publish to ${where} now`}
+                  submitTone="primary"
+                  testId="post-publish-now"
+                >
+                  <input type="hidden" name="id" value={post.id} />
+                  <p className="text-sm text-ink-muted">
+                    The caption and photos go out on the shop&apos;s {where} exactly as approved.
+                  </p>
+                </ActionForm>
+              )}
+              {post.plannedFor ? (
+                <ActionForm
+                  action={setAutoPublishAction}
+                  submitLabel={
+                    post.autoPublish
+                      ? "Stop automatic publishing"
+                      : `Publish automatically on ${when.format(post.plannedFor)}`
+                  }
+                  submitTone="secondary"
+                  testId="post-auto-publish"
+                >
+                  <input type="hidden" name="id" value={post.id} />
+                  <input type="hidden" name="on" value={post.autoPublish ? "0" : "1"} />
+                  {post.autoPublish ? (
+                    <p className="text-sm" data-testid="post-scheduled">
+                      Scheduled: goes out on {when.format(post.plannedFor)}.
+                    </p>
+                  ) : null}
+                </ActionForm>
+              ) : (
+                <p className="text-sm text-ink-muted">
+                  Set a planned date and time to publish it automatically.
+                </p>
+              )}
+            </div>
+          ) : null}
+          {post.status === "approved" && canPublish && blocker ? (
+            <p className="w-full text-sm text-ink-muted" data-testid="post-publish-blocker">
+              {blocker}
+            </p>
+          ) : null}
           {post.status === "approved" && canPublish ? (
             <ActionForm
               action={movePostAction}
-              submitLabel="Mark as published"
-              submitTone="primary"
+              submitLabel={blocker ? "Mark as published" : "I posted it myself"}
+              submitTone={blocker ? "primary" : "secondary"}
               testId="post-publish"
             >
               <input type="hidden" name="id" value={post.id} />

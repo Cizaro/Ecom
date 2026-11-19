@@ -322,6 +322,11 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   ...REVIEW_ACTION_ENTRIES,
   ...CONTENT_ACTION_ENTRIES,
   ...MARKETING_ACTION_ENTRIES,
+  // Publishing through Meta (D114): social.publish, approved posts only.
+  ...["publishPostAction", "setAutoPublishAction"].map((name) => ({
+    id: `(admin)/admin/(protected)/marketing/actions.ts#${name}`,
+    access: { level: "permission", permission: "social.publish" } as const,
+  })),
   ...CAMPAIGN_ACTION_ENTRIES,
   ...RESEARCH_ACTION_ENTRIES,
   ...["connectMetaAction", "choosePageAction", "disconnectMetaAction"].map((name) => ({

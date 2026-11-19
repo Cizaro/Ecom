@@ -61,6 +61,11 @@ export interface PostView extends PostSummary {
   products: { id: string; name: string; slug: string }[];
   /** The marketing campaign it belongs to (D107). */
   campaign: { id: string; name: string } | null;
+  /** Publishing through Meta (D114). */
+  autoPublish: boolean;
+  publishError: string | null;
+  publishAttempts: number;
+  publishing: boolean;
 }
 
 const COVER = {
@@ -238,6 +243,8 @@ export async function updatePost(
         caption: post.caption,
         plannedFor: post.plannedFor,
         campaignId: post.campaignId,
+        // A changed post is approved (and scheduled) again before it goes out.
+        autoPublish: false,
         ...(backToDraft
           ? { status: "draft", approvedByUserId: null, approvedAt: null, submittedAt: null }
           : {}),
@@ -321,7 +328,9 @@ export async function movePost(
           ? { approvedByUserId: context.userId, approvedAt: now, reviewNote: note || null }
           : {}),
         ...(step === "request_changes" ? { reviewNote: note } : {}),
-        ...(step === "publish" ? { publishedAt: now, publishedUrl: url || null } : {}),
+        ...(step === "publish"
+          ? { publishedAt: now, publishedUrl: url || null, autoPublish: false }
+          : {}),
       },
     });
     await audit(
@@ -431,6 +440,10 @@ export async function getPost(
         approvedByUserId: true,
         publishedAt: true,
         publishedUrl: true,
+        autoPublish: true,
+        publishError: true,
+        publishAttempts: true,
+        publishingSince: true,
         assets: {
           orderBy: { position: "asc" },
           select: {
@@ -477,6 +490,11 @@ export async function getPost(
     products: row.products.map(({ product }) => product),
     campaign: row.campaign,
     cover: files[0] ? { ...files[0].media, kind: files[0].kind } : null,
+    autoPublish: row.autoPublish,
+    publishError: row.publishError,
+    publishAttempts: row.publishAttempts,
+    publishing:
+      row.publishingSince !== null && Date.now() - row.publishingSince.getTime() < 10 * 60_000,
   };
 }
 

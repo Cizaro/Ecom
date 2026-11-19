@@ -812,3 +812,15 @@ export {
   type SocialDeps,
 } from "./social/inbox";
 export { listTenantsWithInstagram, listTenantsWithSocialToProcess } from "./platform/social-lookup";
+
+// Publishing approved posts (Milestone 6.5, D114).
+export {
+  MAX_AUTO_ATTEMPTS,
+  publishBlocker,
+  publishDuePosts,
+  PublishError,
+  publishPostNow,
+  setAutoPublish,
+  type PublishDeps,
+} from "./social/publish";
+export { listTenantsWithDuePosts } from "./platform/social-lookup";

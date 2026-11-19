@@ -4,7 +4,7 @@ Prioritized continuation plan. The top item is always the next thing to do. Upda
 
 ## Instagram and Facebook (connected 2026-11-19)
 
-The Page **Moonlight14a** and Instagram **@moonlight_14a** are connected from the admin. Done 2026-11-19: app published, webhooks verified through a tunnel (Meta's test notification accepted), Instagram message access on. **Blocker for real customers' messages: Advanced access** (Meta App Review and business verification): with Standard access Meta shows the app only people with a role on the app, so a DM from a normal follower does not reach the shop. Apply once the site is online (docs/META_SETUP.md Part 4). Facebook Messenger messages also need the Messenger use case (pages_messaging). Milestone 6.4 (social inbox) is built: messages and comments land in the Inbox, replies go back through Meta. Next: 6.5 (publishing approved posts), and applying for Advanced access once the site is online.
+The Page **Moonlight14a** and Instagram **@moonlight_14a** are connected from the admin. Done 2026-11-19: app published, webhooks verified through a tunnel (Meta's test notification accepted), Instagram message access on. **Blocker for real customers' messages: Advanced access** (Meta App Review and business verification): with Standard access Meta shows the app only people with a role on the app, so a DM from a normal follower does not reach the shop. Apply once the site is online (docs/META_SETUP.md Part 4). Facebook Messenger messages also need the Messenger use case (pages_messaging). Milestone 6.4 (social inbox) is built: messages and comments land in the Inbox, replies go back through Meta. Milestone 6.5 (publishing approved posts now or at the planned time) is built too, so Phase 6 is complete apart from TikTok. Real publishing needs the site online (Meta downloads the photos from the file storage). Next: launch hardening (security part 2), or Phase 8 (giveaways) once the prize structure is confirmed; applying for Advanced access once the site is online.
 
 ## Owner actions (do not block development)
 
@@ -71,6 +71,9 @@ Stripe and Tap Payments do not accept Lebanese merchants (decision D71). Apply t
 Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's priorities.
 
 ## Small follow-ups carried forward
+
+- Storefront: the header lists every top-level category; with hundreds (the test store reached 959 after many test runs) the home page outgrows its 150 KB budget. Cap the menu (for example 12, then "All categories").
+- Publishing: reels and stories through the API (video upload and processing), and TikTok once a TikTok developer app exists.
 
 - Cash on delivery: a maximum order amount for cash, and a store setting to switch cash on delivery off.
 - Store look: a home page banner image and text per store; more ready-made looks; a preview before saving.

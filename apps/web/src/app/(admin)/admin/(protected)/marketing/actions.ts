@@ -11,19 +11,25 @@ import {
   makeLibraryVersion,
   movePost,
   NotFoundError,
+  publishPostNow,
+  PublishError,
+  setAutoPublish,
   updateLibraryFile,
   updatePost,
 } from "@ecom/core";
+import { getEnv } from "@ecom/config";
 import { revalidatePath } from "next/cache";
 import { forbidden, notFound, redirect } from "next/navigation";
 import { aiGateway } from "@/server/ai";
 import { requirePermission, tenantDb } from "@/server/access";
-import { mediaDeps } from "@/server/media";
+import { getStorage, mediaDeps } from "@/server/media";
+import { getMetaGraph } from "@/server/social";
 import type { FormState } from "../../actions";
 
 // Content library, posts and their approval. Every action checks its own
 // permission; the services check again inside the staff member's tenant and
-// write the audit log. Nothing here posts to any platform.
+// write the audit log. Only publishPostAction and setAutoPublishAction post
+// to a platform (through Meta, D114), and only approved posts.
 
 const LIBRARY = "/admin/marketing/library";
 const POSTS = "/admin/marketing/posts";
@@ -248,6 +254,53 @@ export async function draftCaptionAction(
     );
     return result.ok ? { caption: result.caption } : { error: result.message };
   } catch (error) {
+    if (error instanceof NotFoundError) notFound();
+    if (error instanceof ForbiddenError) forbidden();
+    throw error;
+  }
+}
+
+/** Publishes an approved post to Instagram or Facebook now (social.publish). */
+export async function publishPostAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("social.publish");
+  const id = field(formData, "id");
+  const graph = getMetaGraph();
+  if (!graph) return { error: "Meta is not set up for this installation." };
+  try {
+    const result = await publishPostNow(
+      tenantDb(context),
+      context,
+      { graph, encryptionKey: getEnv().ENCRYPTION_KEY, storage: getStorage() },
+      id,
+    );
+    revalidatePath(`${POSTS}/${id}`);
+    revalidatePath(POSTS);
+    return result.ok ? { notice: "Published." } : { error: `Not published: ${result.error}` };
+  } catch (error) {
+    if (error instanceof PublishError) return { error: error.message };
+    if (error instanceof NotFoundError) notFound();
+    if (error instanceof ForbiddenError) forbidden();
+    throw error;
+  }
+}
+
+/** Turns automatic publishing at the planned time on or off (social.publish). */
+export async function setAutoPublishAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { context } = await requirePermission("social.publish");
+  const id = field(formData, "id");
+  const on = field(formData, "on") === "1";
+  try {
+    await setAutoPublish(tenantDb(context), context, id, on);
+    revalidatePath(`${POSTS}/${id}`);
+    return { notice: on ? "Scheduled." : "No longer scheduled." };
+  } catch (error) {
+    if (error instanceof PublishError) return { error: error.message };
     if (error instanceof NotFoundError) notFound();
     if (error instanceof ForbiddenError) forbidden();
     throw error;

@@ -100,9 +100,14 @@ test("an editor prepares a post, a marketer approves and publishes it, the calen
   // --- Approved, posted by hand, and recorded ----------------------------------------
   await page.getByTestId("post-approve").getByRole("button", { name: "Approve" }).click();
   await expect(page.getByTestId("post-status")).toContainText("Approved");
+  // The app can publish it through Meta (D114); this test posts it by hand.
+  await expect(
+    page.getByTestId("post-publish-now").getByRole("button", { name: "Publish to Instagram now" }),
+  ).toBeVisible();
+  await expect(page.getByTestId("post-auto-publish")).toContainText("Publish automatically on");
   const publish = page.getByTestId("post-publish");
   await publish.getByLabel("Link to the live post").fill("https://www.instagram.com/p/example/");
-  await publish.getByRole("button", { name: "Mark as published" }).click();
+  await publish.getByRole("button", { name: "I posted it myself" }).click();
   await expect(page.getByTestId("post-status")).toContainText("Published");
   await expect(page.getByTestId("post-caption")).toContainText("Free returns within 14 days.");
   await expect(page.getByTestId("post-form")).toHaveCount(0);

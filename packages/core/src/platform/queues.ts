@@ -29,6 +29,8 @@ export const MAINTENANCE_JOBS = {
   socialSweep: "social-sweep",
   /** The backup check: reads recent Instagram messages and comments from the API. */
   instagramCheck: "instagram-check",
+  /** Publishes approved posts scheduled for now (D114). */
+  publishSweep: "publish-sweep",
 } as const;
 
 export const MEDIA_JOBS = {

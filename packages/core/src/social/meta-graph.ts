@@ -91,6 +91,23 @@ export interface MetaGraph {
     instagramAccountId: string;
     pageToken: string;
   }): Promise<SocialWebhookItem[]>;
+  /**
+   * Publishes photos with a caption to Instagram (one photo, or a carousel of
+   * 2 to 10). The photos must be public JPEG addresses Meta can download.
+   */
+  publishInstagram(input: {
+    instagramAccountId: string;
+    pageToken: string;
+    imageUrls: string[];
+    caption: string;
+  }): Promise<{ id: string; url: string | null }>;
+  /** Publishes photos with a caption on the Facebook Page (one or several). */
+  publishFacebook(input: {
+    pageId: string;
+    pageToken: string;
+    imageUrls: string[];
+    caption: string;
+  }): Promise<{ id: string; url: string | null }>;
 }
 
 export interface MetaGraphConfig {
@@ -349,6 +366,111 @@ export function createMetaGraph(config: MetaGraphConfig): MetaGraph {
       }
       return items;
     },
+    async publishInstagram({ instagramAccountId, pageToken, imageUrls, caption }) {
+      if (!ID.test(instagramAccountId)) throw new MetaError("No Instagram account is connected.");
+      if (imageUrls.length < 1 || imageUrls.length > 10) {
+        throw new MetaError("Instagram takes 1 to 10 photos in a post.");
+      }
+      const idOf = (body: Record<string, unknown>) => {
+        if (typeof body.id !== "string") throw new MetaError("Meta did not return an id.");
+        return body.id;
+      };
+      let creationId: string;
+      if (imageUrls.length === 1) {
+        creationId = idOf(
+          await call(`/${instagramAccountId}/media`, {
+            method: "POST",
+            token: pageToken,
+            params: { image_url: imageUrls[0]!, caption },
+          }),
+        );
+      } else {
+        const children: string[] = [];
+        for (const url of imageUrls) {
+          children.push(
+            idOf(
+              await call(`/${instagramAccountId}/media`, {
+                method: "POST",
+                token: pageToken,
+                params: { image_url: url, is_carousel_item: "true" },
+              }),
+            ),
+          );
+        }
+        creationId = idOf(
+          await call(`/${instagramAccountId}/media`, {
+            method: "POST",
+            token: pageToken,
+            params: { media_type: "CAROUSEL", children: children.join(","), caption },
+          }),
+        );
+      }
+      const published = idOf(
+        await call(`/${instagramAccountId}/media_publish`, {
+          method: "POST",
+          token: pageToken,
+          params: { creation_id: creationId },
+        }),
+      );
+      const info = await call(`/${published}`, {
+        token: pageToken,
+        params: { fields: "permalink" },
+      }).catch(() => ({}) as Record<string, unknown>);
+      return {
+        id: published,
+        url:
+          typeof info.permalink === "string" && info.permalink.startsWith("https://")
+            ? info.permalink
+            : null,
+      };
+    },
+    async publishFacebook({ pageId, pageToken, imageUrls, caption }) {
+      if (!ID.test(pageId)) throw new MetaError("No Facebook Page is connected.");
+      if (imageUrls.length < 1 || imageUrls.length > 10) {
+        throw new MetaError("Use 1 to 10 photos for a Facebook post.");
+      }
+      let postId: string;
+      if (imageUrls.length === 1) {
+        const body = await call(`/${pageId}/photos`, {
+          method: "POST",
+          token: pageToken,
+          params: { url: imageUrls[0]!, caption, published: "true" },
+        });
+        postId = typeof body.post_id === "string" ? body.post_id : String(body.id ?? "");
+      } else {
+        const photos: string[] = [];
+        for (const url of imageUrls) {
+          const body = await call(`/${pageId}/photos`, {
+            method: "POST",
+            token: pageToken,
+            params: { url, published: "false" },
+          });
+          if (typeof body.id !== "string") throw new MetaError("Meta did not return a photo id.");
+          photos.push(body.id);
+        }
+        const body = await call(`/${pageId}/feed`, {
+          method: "POST",
+          token: pageToken,
+          params: {
+            message: caption,
+            attached_media: JSON.stringify(photos.map((id) => ({ media_fbid: id }))),
+          },
+        });
+        postId = typeof body.id === "string" ? body.id : "";
+      }
+      if (!postId) throw new MetaError("Meta did not return the post's id.");
+      const info = await call(`/${postId}`, {
+        token: pageToken,
+        params: { fields: "permalink_url" },
+      }).catch(() => ({}) as Record<string, unknown>);
+      return {
+        id: postId,
+        url:
+          typeof info.permalink_url === "string" && info.permalink_url.startsWith("https://")
+            ? info.permalink_url
+            : null,
+      };
+    },
   };
 }
 
@@ -385,6 +507,7 @@ export const FAKE_META_CODE = "fake-meta-code";
 export function createFakeMetaGraph(pages: readonly MetaPage[] = FAKE_META_PAGES): MetaGraph & {
   subscribed: Set<string>;
   sent: { kind: "message" | "comment"; to: string; text: string }[];
+  published: { channel: "instagram" | "facebook"; imageUrls: string[]; caption: string }[];
   /** Items the backup check returns next (tests add to it). */
   pending: SocialWebhookItem[];
   /** When set, sending fails with this message (tests). */
@@ -393,12 +516,15 @@ export function createFakeMetaGraph(pages: readonly MetaPage[] = FAKE_META_PAGES
   const subscribed = new Set<string>();
   const sent: { kind: "message" | "comment"; to: string; text: string }[] = [];
   const pending: SocialWebhookItem[] = [];
+  const published: { channel: "instagram" | "facebook"; imageUrls: string[]; caption: string }[] =
+    [];
   const state = { failWith: null as string | null };
   let counter = 0;
   return {
     mode: "fake",
     subscribed,
     sent,
+    published,
     pending,
     get failWith() {
       return state.failWith;
@@ -442,6 +568,18 @@ export function createFakeMetaGraph(pages: readonly MetaPage[] = FAKE_META_PAGES
     },
     async recentInstagramItems() {
       return pending.splice(0, pending.length);
+    },
+    async publishInstagram({ imageUrls, caption }) {
+      if (state.failWith) throw new MetaError(`Meta said: ${state.failWith}`);
+      published.push({ channel: "instagram", imageUrls, caption });
+      const id = `178${Date.now()}${++counter}`;
+      return { id, url: `https://www.instagram.com/p/fake${id}/` };
+    },
+    async publishFacebook({ imageUrls, caption }) {
+      if (state.failWith) throw new MetaError(`Meta said: ${state.failWith}`);
+      published.push({ channel: "facebook", imageUrls, caption });
+      const id = `100_${Date.now()}${++counter}`;
+      return { id, url: `https://www.facebook.com/${id}` };
     },
   };
 }

@@ -4,7 +4,9 @@ import {
   aiProviderFromSettings,
   checkInstagramNow,
   checkNewSupportMessages,
+  listTenantsWithDuePosts,
   listTenantsWithInstagram,
+  publishDuePosts,
   listTenantsWithSocialToProcess,
   metaGraphFromSettings,
   processSocialEvents,
@@ -168,6 +170,22 @@ const maintenanceWorker = new Worker(
         if (stored > 0) logger.info({ stored }, "instagram check found new items");
         return { stored };
       }
+      case MAINTENANCE_JOBS.publishSweep: {
+        if (!metaGraph) return { skipped: "Meta app not set up" };
+        const tenants = await listTenantsWithDuePosts(env.DATABASE_ADMIN_URL);
+        const total = { published: 0, failed: 0 };
+        for (const tenantId of tenants) {
+          const result = await publishDuePosts(tenantDb(tenantId), {
+            graph: metaGraph,
+            encryptionKey: env.ENCRYPTION_KEY,
+            storage,
+          });
+          total.published += result.published;
+          total.failed += result.failed;
+        }
+        if (total.published > 0 || total.failed > 0) logger.info(total, "publish sweep");
+        return total;
+      }
       default:
         throw new Error(`Unknown maintenance job: ${job.name}`);
     }
@@ -261,6 +279,12 @@ await maintenanceQueue.upsertJobScheduler(
   MAINTENANCE_JOBS.instagramCheck,
   { every: 5 * 60_000 },
   { name: MAINTENANCE_JOBS.instagramCheck, opts: { removeOnComplete: 10, removeOnFail: 50 } },
+);
+
+await maintenanceQueue.upsertJobScheduler(
+  MAINTENANCE_JOBS.publishSweep,
+  { every: 60_000 },
+  { name: MAINTENANCE_JOBS.publishSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
 logger.info({ queues: Object.values(QUEUES), aiProvider: ai.provider.name }, "worker started");

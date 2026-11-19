@@ -1998,6 +1998,15 @@ model ContentPost {
   publishedAt      DateTime? @map("published_at") @db.Timestamptz(3)
   /// The live post's address, recorded when it is published.
   publishedUrl     String?   @map("published_url")
+  /// Publish automatically at plannedFor (Milestone 6.5, D114).
+  autoPublish      Boolean   @default(false) @map("auto_publish")
+  /// Tries to publish through Meta, and why the last one failed.
+  publishAttempts  Int       @default(0) @map("publish_attempts")
+  publishError     String?   @map("publish_error")
+  /// Set while a publish is under way, so it is never done twice.
+  publishingSince  DateTime? @map("publishing_since") @db.Timestamptz(3)
+  /// The platform's id for the published post.
+  platformPostId   String?   @map("platform_post_id")
   /// The marketing campaign it belongs to (D107).
   campaignId       String?   @map("campaign_id") @db.Uuid
   createdByUserId  String?   @map("created_by_user_id") @db.Uuid
