@@ -248,7 +248,7 @@ Last updated: 2026-11-26
   - **Instagram and Facebook** (`/admin/social`, owners only): Connect goes to Meta's own sign-in; the owner chooses the shop's Page and its linked Instagram account; status, permissions granted, last notification, recent notifications, Disconnect.
   - The Page's token is stored encrypted and never shown or logged; one connection per store; a Page belongs to one store at a time.
   - Webhook address `/api/webhooks/meta`: Meta's subscription check with the verify token; notifications acted on only with a valid signature; each message or comment stored once for the store that owns the Page or account, ready for the inbox (6.4).
-  - Tests use a Meta stand-in (`META_GRAPH_MODE=fake`); the launch check fails if it is left on. Not yet tried against Meta itself.
+  - Tests use a Meta stand-in (`META_GRAPH_MODE=fake`); the launch check fails if it is left on. Tried against Meta on 2026-11-19: the Page Moonlight14a and @moonlight_14a connected with 12 permissions. Webhooks not yet received (need a public https address). Facebook Messenger messages need `pages_messaging` (Messenger use case, not added yet).
 
 ## In progress
 
@@ -258,7 +258,7 @@ Last updated: 2026-11-26
 
 ## Not started
 
-Phase 2 onward (PROJECT_PLAN.md section 4). Meta (Instagram and Facebook) connection and webhooks are implemented and tested against a stand-in, not yet against Meta itself (D112). No integration with card payments, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
+Phase 2 onward (PROJECT_PLAN.md section 4). Meta (Instagram and Facebook) connection is implemented and works against Meta (Page connected 2026-11-19); webhooks are tested against a stand-in only, because Meta needs a public https address (D112). No integration with card payments, TikTok or shipping has been implemented or tested. Email is implemented for SMTP only and tested against the local Mailpit inbox, not a real email provider.
 
 ## Known limitations of what is built
 

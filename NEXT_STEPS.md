@@ -2,9 +2,9 @@
 
 Prioritized continuation plan. The top item is always the next thing to do. Update at the end of every session.
 
-## Owner: connect Instagram and Facebook (Milestone 6.3 built, 2026-11-29)
+## Instagram and Facebook (connected 2026-11-19)
 
-The Meta app (App ID 1414532210811508) and its keys are in `.env`, and the connection screen is built. To connect for real, follow **Part 3b of docs/META_SETUP.md**: allow the callback address in the app's Facebook Login settings, then open **Instagram and Facebook** in the admin and click **Connect Facebook and Instagram**. Webhooks (messages and comments arriving) need the site online with https, or a tunnel. Next: 6.4, the social inbox.
+The Page **Moonlight14a** and Instagram **@moonlight_14a** are connected from the admin. Still to do: (1) webhooks, so messages and comments arrive: needs the site on a public https address or a tunnel (docs/META_SETUP.md Part 3b step 4); (2) the Messenger use case in the Meta app for `pages_messaging`, so Facebook Page messages arrive too (Instagram messages do not need it). Next milestone: 6.4, the social inbox.
 
 ## Owner actions (do not block development)
 

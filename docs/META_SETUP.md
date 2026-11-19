@@ -59,8 +59,8 @@ Changing names later (the app, the business, the Page) does not affect the conne
 - [x] Developer app created (Business type) with Facebook Login for Business, Instagram and Webhooks
 - [x] `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN` in `.env`
 - [x] Told Claude "the Meta app is ready" with the App ID
-- [ ] Callback address allowed in Facebook Login for Business settings (Part 3b)
-- [ ] Page connected from the admin (Part 3b)
+- [x] Callback address allowed in Facebook Login for Business settings (Part 3b)
+- [x] Page connected from the admin (Part 3b): Moonlight14a with @moonlight_14a, 2026-11-19
 - [ ] Webhooks subscribed, once the site has a public https address (Part 3b)
 - [ ] Later: ad account with a payment method (7.3)
 - [ ] Optional: TikTok Business account and developer app (6.5)
