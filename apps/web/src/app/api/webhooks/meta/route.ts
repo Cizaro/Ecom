@@ -60,10 +60,25 @@ export async function POST(request: Request): Promise<Response> {
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
   const logger = createLogger("web", env.LOG_LEVEL);
+  if (groups.size === 0) {
+    const object = (body as { object?: unknown } | null)?.object;
+    logger.info(
+      { object: typeof object === "string" ? object.slice(0, 40) : null },
+      "meta webhook with nothing we read",
+    );
+  }
   for (const items of groups.values()) {
     const { channel, accountId } = items[0]!;
     const owner = await findSocialConnection(env.DATABASE_ADMIN_URL, channel, accountId);
-    if (!owner) continue;
+    if (!owner) {
+      // Identifiers and kinds only, never the content: helps match a Page or
+      // account that Meta names differently from the connection.
+      logger.info(
+        { channel, accountId, kinds: items.map((i) => i.kind) },
+        "meta webhook for an account not connected to any store",
+      );
+      continue;
+    }
     try {
       const stored = await recordSocialWebhookItems(
         createTenantDb(getAppPrisma(env.DATABASE_URL), { tenantId: owner.tenantId }),

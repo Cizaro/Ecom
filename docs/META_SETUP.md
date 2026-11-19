@@ -64,6 +64,8 @@ Changing names later (the app, the business, the Page) does not affect the conne
 - [x] Callback address allowed in Facebook Login for Business settings (Part 3b)
 - [x] Page connected from the admin (Part 3b): Moonlight14a with @moonlight_14a, 2026-11-19
 - [x] Webhooks verified and subscribed (2026-11-19, through a Cloudflare quick tunnel; Instagram webhooks configured under API setup with Instagram login, signed with the Instagram app secret in META_INSTAGRAM_APP_SECRET)
-- [ ] App published, so Meta delivers webhooks for everyone (Meta: "To receive webhooks, your app must be in published state")
+- [x] App published (2026-11-19), temporary privacy policy on GitHub (docs/PRIVACY_POLICY_META_APP.md)
+- [x] Instagram: Settings > Messages and story replies > Message controls > Connected tools > **Allow access to messages** switched on
+- [ ] **Advanced access** (App Review + business verification): with Standard access, Meta shows the app only conversations and webhooks from people who have a role on the app, so real customers' DMs and comments do not reach the shop yet (tested 2026-11-19: a DM from a follower showed in Instagram but not to the app). Apply after the site is online (Part 4).
 - [ ] Later: ad account with a payment method (7.3)
 - [ ] Optional: TikTok Business account and developer app (6.5)
