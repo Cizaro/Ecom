@@ -2,13 +2,14 @@
 
 Storefront, admin, AI assistant, social inbox, marketing and giveaway platform for a fashion-accessories store (women's bags, men's wallets, watches, jewelry, accessories), designed to become a multi-tenant SaaS.
 
-**Status: Phase 1 (foundation) complete. Staff can sign in, choose a store and see what their role allows; the storefront shell shows a placeholder page. Catalog work (Phase 2) is next.** See [PROJECT_STATUS.md](PROJECT_STATUS.md).
+**Status:** the shop, checkout (cash on delivery), back office, AI assistant, marketing desk, research and reports are built; launch hardening is in progress. See [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Start here
 
 | If you want to | Read |
 | --- | --- |
 | Resume work on any computer | [PROJECT_STATUS.md](PROJECT_STATUS.md), then [NEXT_STEPS.md](NEXT_STEPS.md) |
+| Understand the business idea and workflows (no code knowledge needed) | [docs/BUSINESS_BLUEPRINT.md](docs/BUSINESS_BLUEPRINT.md) |
 | Understand scope, phases, risks, backlog | [PROJECT_PLAN.md](PROJECT_PLAN.md) |
 | Understand how the system is built | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | See what was decided and what is still open | [DECISIONS.md](DECISIONS.md) |
