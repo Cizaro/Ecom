@@ -10,6 +10,7 @@ import {
   listTenantsWithSocialToProcess,
   metaGraphFromSettings,
   processSocialEvents,
+  recordWorkerHeartbeat,
   createAiLedger,
   listTenantsWithSupportToCheck,
   createEmailProvider,
@@ -73,9 +74,12 @@ const maintenanceWorker = new Worker(
   QUEUES.maintenance,
   async (job) => {
     switch (job.name) {
-      case MAINTENANCE_JOBS.heartbeat:
+      case MAINTENANCE_JOBS.heartbeat: {
+        // The admin warns staff when this mark gets old (D118).
+        await recordWorkerHeartbeat(env.REDIS_URL);
         logger.debug({ jobId: job.id }, "heartbeat");
         return { at: new Date().toISOString() };
+      }
       case MAINTENANCE_JOBS.mediaSweep: {
         const waiting = await listUnprocessedMedia(env.DATABASE_ADMIN_URL, SWEEP_AFTER_MS);
         for (const item of waiting) await enqueueMediaProcessing(env.REDIS_URL, item);
@@ -294,6 +298,8 @@ await maintenanceQueue.upsertJobScheduler(
   { name: MAINTENANCE_JOBS.publishSweep, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 
+// Seen as running straight away, not only after the first scheduled heartbeat.
+await recordWorkerHeartbeat(env.REDIS_URL);
 logger.info({ queues: Object.values(QUEUES), aiProvider: ai.provider.name }, "worker started");
 
 let shuttingDown = false;

@@ -34,7 +34,8 @@
     "ai:try": "tsx scripts/ai-try.ts",
     "ai:inbox": "tsx scripts/ai-inbox.ts",
     "ai:eval": "tsx scripts/ai-eval.ts",
-    "sync": "node scripts/sync.mjs"
+    "sync": "node scripts/sync.mjs",
+    "db:restore-test": "tsx scripts/restore-test.ts"
   },
   "devDependencies": {
     "@ecom/ai": "workspace:*",

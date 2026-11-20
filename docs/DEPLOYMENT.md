@@ -124,7 +124,9 @@ Restore (with the app stopped):
 pg_restore --clean --if-exists --no-owner --dbname "<DATABASE_ADMIN_URL>" /srv/backups/<file>.dump
 ```
 
-Try a restore into a spare database once a month, so you know it works when you need it.
+Try a restore into a spare database once a month, so you know it works when you need it: `pnpm db:restore-test` does it in one step (fresh backup, restore into a spare database, every table's row count compared, spare removed).
+
+**Is the worker running?** The admin shows owners and managers a banner when the worker has not checked in for 3 minutes, and `pnpm healthcheck` reports it. Restart the worker container if you see it.
 
 Pictures live in the file storage, not the database: turn on versioning or replication for the bucket with your storage provider.
 

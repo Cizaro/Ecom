@@ -6,7 +6,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EnvValidationError, parseEnv, type Env } from "@ecom/config";
-import { checkReadiness, closeReadinessConnections } from "@ecom/core";
+import { checkReadiness, closeReadinessConnections, workerStatus } from "@ecom/core";
 
 const root = resolve(import.meta.dirname, "..");
 let failures = 0;
@@ -86,6 +86,16 @@ if (env) {
     );
   }
   await closeReadinessConnections();
+  // Not a failure here (the worker may simply not be started yet), but say so:
+  // automatic replies, emails and scheduled posts need it (D118).
+  const worker = await workerStatus(env.REDIS_URL);
+  console.log(
+    worker.state === "running"
+      ? "[ ok ] Background worker: running"
+      : worker.state === "stopped"
+        ? `[info] Background worker: not running${worker.lastSeen ? ` (last seen ${worker.lastSeen.toISOString()})` : ""}\n         -> pnpm --filter @ecom/worker dev`
+        : "[info] Background worker: unknown (Redis not reachable)",
+  );
 } else {
   report(false, "Services", "skipped because the environment is invalid");
 }

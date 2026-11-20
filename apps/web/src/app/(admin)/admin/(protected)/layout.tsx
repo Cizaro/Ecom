@@ -1,3 +1,5 @@
+import { getEnv } from "@ecom/config";
+import { workerStatus } from "@ecom/core";
 import { buttonClasses } from "@ecom/ui";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -13,6 +15,12 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   const session = await requireSession();
   const outcome = await getAccessOutcome();
   const context = outcome.status === "ok" ? outcome.context : null;
+  // Owners and managers are told when the background worker has stopped (D118).
+  const worker =
+    context && (context.roleKey === "store_owner" || context.roleKey === "store_manager")
+      ? await workerStatus(getEnv().REDIS_URL)
+      : null;
+  const when = new Intl.DateTimeFormat("en", { timeStyle: "short", dateStyle: "medium" });
 
   return (
     <div className="min-h-dvh bg-canvas">
@@ -59,6 +67,16 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
           </nav>
         </div>
       </header>
+      {worker?.state === "stopped" ? (
+        <div className="border-b border-warning-line bg-warning-soft" data-testid="worker-stopped">
+          <p className="mx-auto max-w-5xl px-4 py-2 text-sm">
+            <strong>Background tasks are not running</strong>
+            {worker.lastSeen ? ` (last seen ${when.format(worker.lastSeen)})` : ""}: automatic
+            replies, emails, the Instagram check and scheduled posts are paused. Start the worker
+            (on a server, restart the worker container).
+          </p>
+        </div>
+      ) : null}
       <main id="main" className="mx-auto max-w-5xl px-4 py-8">
         {children}
       </main>

@@ -824,3 +824,11 @@ export {
   type PublishDeps,
 } from "./social/publish";
 export { listTenantsWithDuePosts } from "./platform/social-lookup";
+
+// Worker heartbeat (launch hardening, D118).
+export {
+  recordWorkerHeartbeat,
+  WORKER_STALE_AFTER_MS,
+  workerStatus,
+  type WorkerStatus,
+} from "./platform/worker-heartbeat";
