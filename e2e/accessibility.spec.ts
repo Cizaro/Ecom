@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { signIn } from "./catalog-helpers";
-import { roleEmail } from "./users";
+import { PLATFORM_ADMIN_EMAIL, roleEmail } from "./users";
 
 // Accessibility (launch hardening, D119): the main shop and admin pages are
 // checked against WCAG 2.1 A and AA with axe. Any violation fails the test
@@ -84,5 +84,26 @@ test("admin pages meet WCAG 2.1 AA", async ({ page }) => {
     const list = await violations(page);
     if (list.length > 0) found[path] = list;
   }
+  expect(found).toEqual({});
+});
+
+test("platform panel pages meet WCAG 2.1 AA", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/admin/sign-in");
+  await page.getByLabel("Email").fill(PLATFORM_ADMIN_EMAIL);
+  await page.getByLabel("Password").fill(process.env.E2E_PASSWORD!);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/admin\/platform$/);
+  const found: Record<string, unknown> = {};
+  for (const path of ["/admin/platform", "/admin/platform/shops", "/admin/platform/shops/new"]) {
+    await page.goto(path);
+    const list = await violations(page);
+    if (list.length > 0) found[path] = list;
+  }
+  // A shop's own page in the panel.
+  await page.goto("/admin/platform/shops");
+  await page.getByTestId("platform-shop-row").first().getByRole("link").first().click();
+  const list = await violations(page);
+  if (list.length > 0) found["/admin/platform/shops/[id]"] = list;
   expect(found).toEqual({});
 });

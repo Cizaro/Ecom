@@ -17,7 +17,12 @@ export type RouteAccess =
   /** Signed in with a chosen tenant. Guard: requireTenantContext(). */
   | { level: "tenant" }
   /** Signed in, chosen tenant, and this permission. Guard: requirePermission(). */
-  | { level: "permission"; permission: PermissionKey };
+  | { level: "permission"; permission: PermissionKey }
+  /**
+   * The platform owner's panel (D120): signed in as a platform administrator,
+   * no tenant needed and no tenant permission enough. Guard: requirePlatformAdmin().
+   */
+  | { level: "platform" };
 
 export interface PageEntry {
   path: string;
@@ -115,6 +120,11 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/research/ideas", access: RESEARCH_WRITE },
   // Instagram and Facebook connection (D112): owners only.
   { path: "/admin/social", access: SOCIAL_CONNECT },
+  // The platform owner's panel (D120): platform administrators only.
+  { path: "/admin/platform", access: { level: "platform" } },
+  { path: "/admin/platform/shops", access: { level: "platform" } },
+  { path: "/admin/platform/shops/new", access: { level: "platform" } },
+  { path: "/admin/platform/shops/[id]", access: { level: "platform" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -335,6 +345,11 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   })),
   ...INBOX_ACTION_ENTRIES,
   ...CUSTOMER_ACTION_ENTRIES,
+  // The platform owner's panel (D120).
+  ...["createShopAction", "setShopStatusAction"].map((name) => ({
+    id: `(admin)/admin/(platform)/platform/actions.ts#${name}`,
+    access: { level: "platform" } as const,
+  })),
   // Requiring two-factor for owners and managers: the service also requires the owner role.
   {
     id: "(admin)/admin/(protected)/team/actions.ts#setRequireTwoFactorAction",
@@ -469,5 +484,7 @@ export function guardCallFor(access: RouteAccess): string | null {
       return "requireTenantContext()";
     case "permission":
       return `requirePermission("${access.permission}")`;
+    case "platform":
+      return "requirePlatformAdmin()";
   }
 }

@@ -265,6 +265,8 @@ Last updated: 2026-11-26
 
 - **Automatic replies (D115):** with **AI assistant > Settings > Reply automatically** on, the AI answers questions, order-status questions and everyday chat (greetings, thanks) by itself on the contact form, Instagram and Facebook, using only the shop's facts (D116); when the facts do not answer, it says so and the conversation stays for staff. Refunds, complaints, payment, legal and privacy questions wait for staff. At most ten automatic replies in an hour per conversation.
 
+- **Platform owner's panel (D120, roadmap Stage B):** `/admin/platform` for platform administrators only: dashboard across all shops (shops, sales, AI cost, orders per day, busiest and newest shops), shops list with search and figures, create a shop with its web address and owner (emailed to set a password), shop page with team, connections, activity, suspend and resume. `pnpm platform:admin --email ...` makes an account a platform administrator.
+
 ## In progress
 
 **Launch hardening** (from Phase 10), in four parts: security, monitoring and restore, accessibility, performance. All four done on the development computer (D111, D117, D118, D119); what remains needs the live site (timings, real email domain, Meta review).

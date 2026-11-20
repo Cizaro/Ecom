@@ -1,6 +1,7 @@
 import { getDashboard, hasPermission } from "@ecom/core";
 import { Alert, Card, List, ListItem, PageHeader } from "@ecom/ui";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getAccessOutcome, tenantDb } from "@/server/access";
 import { requireSession } from "@/server/auth";
 import { DashboardView } from "./_components/dashboard";
@@ -10,6 +11,8 @@ import { DashboardView } from "./_components/dashboard";
 export default async function AdminHomePage() {
   const session = await requireSession();
   const { user, memberships } = session;
+  // The platform owner with no shop of their own goes straight to the platform panel (D120).
+  if (user.isPlatformAdmin && memberships.length === 0) redirect("/admin/platform");
   const outcome = await getAccessOutcome();
   const dashboard =
     outcome.status === "ok" && hasPermission(outcome.context, "reports.read")

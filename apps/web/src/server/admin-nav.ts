@@ -47,6 +47,9 @@ function canOpen(access: RouteAccess, context: Pick<RequestContext, "permissions
       return context !== null;
     case "permission":
       return context !== null && context.permissions.has(access.permission);
+    case "platform":
+      // The platform panel has its own navigation.
+      return false;
   }
 }
 

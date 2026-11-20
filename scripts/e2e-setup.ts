@@ -21,6 +21,7 @@ import {
   E2E_TENANT_SLUG,
   e2eEmail,
   MFA_OWNER_EMAIL,
+  PLATFORM_ADMIN_EMAIL,
   OTHER_OWNER_EMAIL,
   roleEmail,
 } from "../e2e/users";
@@ -108,6 +109,16 @@ try {
         await prisma.role.findFirstOrThrow({ where: { tenantId: null, key: "store_owner" } })
       ).id,
     },
+  });
+
+  // The platform owner: no shop membership, platform administrator (D120).
+  await prisma.user.deleteMany({ where: { email: PLATFORM_ADMIN_EMAIL } });
+  await createStaffUser(prisma, {
+    email: PLATFORM_ADMIN_EMAIL,
+    name: "Platform Admin",
+    password,
+    actor: "test",
+    isPlatformAdmin: true,
   });
 
   for (const project of E2E_PROJECTS) {

@@ -86,6 +86,10 @@ type Authorized<A extends RouteAccess> = A extends { level: "public" }
 
 async function authorize(access: RouteAccess) {
   if (access.level === "public") return { session: null, context: null };
+  if (access.level === "platform") {
+    // No platform API routes yet; refuse rather than guess (D120).
+    throw new ApiError("forbidden", "Not available.");
+  }
 
   const outcome = await getAccessOutcome();
   if (outcome.status === "unauthenticated") {

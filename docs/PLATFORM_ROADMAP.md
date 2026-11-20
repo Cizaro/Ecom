@@ -25,7 +25,7 @@ Two products in one:
 
 | Your box | What it needs | Status |
 | --- | --- | --- |
-| **Your admin panel** (all websites you sold) | List of shops, create a shop, each shop's plan, usage and costs, payments, suspend, support access | ❌ Not built. Shops are created with a command (`pnpm store:create`); the database already keeps shops apart and records each shop's AI costs |
+| **Your admin panel** (all websites you sold) | List of shops, create a shop, each shop's plan, usage and costs, payments, suspend, support access | ✅ Built 2026-11-20 (D120): dashboard, shops, new shop, shop page with suspend and resume. 🟡 Plans, payments and support access come with Stages C and D |
 | **Website design** (drag and drop on templates / adjusted / custom) | Templates, a page builder, custom themes | 🟡 One shop template with logo, colours, fonts, corner style and 4 ready-made looks, plus Arabic. No templates to choose from, no drag and drop |
 | **Sign up with email, pay you for hosting** | Self-service sign-up, plans, subscription payments, your margin | ❌ Not built |
 | **AI assistance resold with a margin** | Metered AI use per shop, priced with your margin | 🟡 Every AI use is recorded with its real cost per shop, with a monthly budget per shop. Not yet turned into a bill |
@@ -72,7 +72,7 @@ Your pilot and your live demo for selling.
 4. **Apply to be a Tech Provider** (gap 1), so the same app can serve your future clients.
 5. Real speed measurements on the live site; card payments when a merchant account exists.
 
-### Stage B: Your platform panel (about 1 to 2 weeks)
+### Stage B: Your platform panel (built 2026-11-20, D120; support access still to do)
 The "My admin dashboard" box.
 1. A separate area only you can open (platform administrator, already in the access rules): every shop with its status, plan, owner, web address and creation date.
 2. Create a shop from the panel (today a command), with its first owner invited by email.

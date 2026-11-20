@@ -38,3 +38,5 @@ export const roleEmail = (role: E2ERole) => `e2e-role-${role}@example.test`;
 export const OTHER_OWNER_EMAIL = "e2e-other-owner@example.test";
 export const BOTH_TENANTS_EMAIL = "e2e-both-tenants@example.test";
 export const MFA_OWNER_EMAIL = "e2e-mfa-owner@example.test";
+/** A platform administrator with no shop of its own (D120). */
+export const PLATFORM_ADMIN_EMAIL = "e2e-platform-admin@example.test";

@@ -832,3 +832,17 @@ export {
   workerStatus,
   type WorkerStatus,
 } from "./platform/worker-heartbeat";
+
+// Platform owner's panel (D120).
+export {
+  createShop,
+  getShop,
+  listShops,
+  PlatformError,
+  platformOverview,
+  setShopStatus,
+  type PlatformOverview,
+  type ShopDetail,
+  type ShopRow,
+  type ShopStatus,
+} from "./platform/shops";

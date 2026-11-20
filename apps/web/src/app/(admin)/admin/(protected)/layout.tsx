@@ -52,6 +52,15 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
               ) : null}
             </div>
             <div className="flex min-w-0 items-center gap-3 text-sm">
+              {session.user.isPlatformAdmin ? (
+                <Link
+                  href="/admin/platform"
+                  className="font-medium underline underline-offset-4"
+                  data-testid="platform-link"
+                >
+                  Platform
+                </Link>
+              ) : null}
               <span className="max-w-48 truncate text-ink-muted" data-testid="signed-in-email">
                 {session.user.email}
               </span>

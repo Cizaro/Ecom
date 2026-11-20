@@ -35,6 +35,8 @@ async function signIn(page: Page, email: string) {
 }
 
 function allowed(role: E2ERole, access: RouteAccess): boolean {
+  // The platform panel is for platform administrators only, never a store role.
+  if (access.level === "platform") return false;
   if (access.level !== "permission") return true;
   const permissions: readonly string[] = SYSTEM_ROLES.find((r) => r.key === role)!.permissions;
   return permissions.includes(access.permission);
