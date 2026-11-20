@@ -120,7 +120,7 @@ export default async function AiPage() {
                 {
                   value: "auto",
                   label:
-                    "Reply automatically when the shop's facts answer a simple question (everything else goes to a person)",
+                    "Reply automatically to questions and everyday chat (refunds, complaints, payment, legal and privacy go to a person)",
                 },
               ]}
             />

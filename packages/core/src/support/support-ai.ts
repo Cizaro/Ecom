@@ -21,12 +21,15 @@ import { parseBranding } from "../tenancy/branding";
 // edit it and send it themselves, or dismiss it.
 // The labelling runs in the background (the worker), so shoppers never wait.
 //
-// Automatic replies (decision D115): when the owner chooses "answer alone"
-// (AI settings, automation = auto), the AI sends its draft itself, but only
-// when all of these hold: the message is a plain question or an order-status
-// question, not urgent; the shop's facts answered it; the AI did not ask for
-// a person; and the conversation has not already had three automatic replies
-// in a row. Everything else waits for staff as before. An automatic reply is
+// Automatic replies (decisions D115, D116): when the owner chooses "answer alone"
+// (AI settings, automation = auto), the AI sends its draft itself when the
+// message is a question, an order-status question or everyday conversation
+// (a greeting, thanks, small talk), not urgent, the AI did not ask for a
+// person, and the conversation has not already had three automatic replies
+// in a row. Its reply uses only the shop's facts; when they do not answer
+// the question it says so politely and the conversation stays "to answer"
+// for staff. Refunds, payment, complaints, legal, privacy, threats, abuse
+// and spam always wait for staff. An automatic reply is
 // recorded as written by "ai", emailed (contact form) or sent through Meta
 // (Instagram, Facebook), and logged; staff see it in the inbox.
 
@@ -36,7 +39,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NO_AUTO_DRAFT: readonly MessageCategory[] = ["spam", "abuse", "threat", "legal", "privacy"];
 
 /** Only these are ever answered automatically. */
-const AUTO_REPLY_CATEGORIES: readonly MessageCategory[] = ["question", "order_status"];
+const AUTO_REPLY_CATEGORIES: readonly MessageCategory[] = ["question", "order_status", "other"];
 /** After this many automatic replies in a row, a person takes over. */
 export const MAX_AUTO_REPLIES_IN_A_ROW = 3;
 
@@ -150,7 +153,7 @@ async function draftFor(
 async function sendAutomatically(
   db: TenantDb,
   conversationId: string,
-  draft: { id: string; body: string },
+  draft: { id: string; body: string; answered: boolean },
 ): Promise<{ messageId: string; social: boolean } | null> {
   return db.run(async (tx) => {
     const conversation = await tx.supportConversation.findUnique({
@@ -195,7 +198,9 @@ async function sendAutomatically(
     });
     await tx.supportConversation.update({
       where: { id: conversationId },
-      data: { status: "waiting", lastMessageAt: new Date() },
+      // Answered from the facts: waiting for the customer. Not answered (a
+      // greeting, or "someone will get back to you"): still for staff.
+      data: { status: draft.answered ? "waiting" : "open", lastMessageAt: new Date() },
     });
     if (!social) {
       await enqueueEmailIn(
@@ -303,7 +308,6 @@ export async function checkNewSupportMessages(
         drafted.ok &&
         AUTO_REPLY_CATEGORIES.includes(triage.output.category) &&
         triage.output.urgency !== "high" &&
-        drafted.draft.answered &&
         !drafted.draft.handover;
       if (safe && drafted.ok) {
         const sent = await sendAutomatically(db, id, drafted.draft);

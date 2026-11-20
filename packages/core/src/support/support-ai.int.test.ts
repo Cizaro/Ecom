@@ -200,8 +200,9 @@ describe("support AI", () => {
     await saveAiSettings(s.db, s.owner, { paused: "", monthlyBudgetUsd: "", automation: "auto" });
     const question = await message(s.shop, "Delivery", "How much is delivery to Lebanon?");
     const refund = await message(s.shop, "Broken strap", "I want my money back, the strap broke.");
+    const hello = await message(s.shop, "Hi", "Hi, how are you?");
     const result = await checkNewSupportMessages(s.shop, gatewayWith());
-    expect(result.autoSent).toBe(1);
+    expect(result.autoSent).toBe(2);
 
     const sent = await getConversationForStaff(s.db, s.owner, question);
     expect(sent.status).toBe("waiting");
@@ -213,12 +214,16 @@ describe("support AI", () => {
       await admin.outboxEvent.count({
         where: { tenantId: s.tenantId, type: "email.support_reply" },
       }),
-    ).toBe(1);
+    ).toBe(2);
     expect(
       await admin.auditLog.count({
         where: { tenantId: s.tenantId, action: "support.auto_replied" },
       }),
-    ).toBe(1);
+    ).toBe(2);
+    // Everyday chat is answered too (when the facts do not answer it, the
+    // conversation stays "to answer" for staff).
+    const greeted = await getConversationForStaff(s.db, s.owner, hello);
+    expect(greeted.messages.at(-1)?.authorType).toBe("ai");
     // A refund still waits for a person.
     const waiting = await getConversationForStaff(s.db, s.owner, refund);
     expect(waiting.status).toBe("open");

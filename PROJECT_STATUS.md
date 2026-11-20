@@ -263,7 +263,7 @@ Last updated: 2026-11-26
   - Photos go as JPEG copies checked against Instagram's shape limits. Reels, stories, videos, TikTok and WhatsApp: **I posted it myself**.
   - Real publishing needs the site's file storage online (Meta downloads the photos).
 
-- **Automatic replies (D115):** with **AI assistant > Settings > Reply automatically** on, the AI answers plain questions and order-status questions by itself when the shop's facts cover them (contact form, Instagram, Facebook); refunds, complaints, payment, legal and privacy questions, and anything it cannot answer from the facts, wait for staff. At most three automatic replies in a row per conversation.
+- **Automatic replies (D115):** with **AI assistant > Settings > Reply automatically** on, the AI answers questions, order-status questions and everyday chat (greetings, thanks) by itself on the contact form, Instagram and Facebook, using only the shop's facts (D116); when the facts do not answer, it says so and the conversation stays for staff. Refunds, complaints, payment, legal and privacy questions wait for staff. At most three automatic replies in a row per conversation.
 
 ## In progress
 
