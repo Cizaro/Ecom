@@ -106,11 +106,26 @@ function unanswered(thread: Thread): { text: string; earlier: Thread["messages"]
   while (start > 0 && thread.messages[start - 1]!.authorType === "customer") start--;
   const waiting = thread.messages.slice(start);
   if (waiting.length === 0) {
-    // Already replied to (staff asking for a fresh draft): the newest customer message.
-    const last = thread.messages.findLastIndex((message) => message.authorType === "customer");
+    // Already replied to (staff asking for a fresh draft, or a second look
+    // after an automatic reply that only greeted): what the customer wrote
+    // since staff last replied, at most the last six messages.
+    const lastStaff = thread.messages.findLastIndex((message) => message.authorType === "staff");
+    const since = thread.messages
+      .slice(lastStaff + 1)
+      .filter((message) => message.authorType === "customer")
+      .slice(-6);
+    if (since.length === 0) {
+      // Staff answered last: the newest customer message.
+      const last = newestCustomerMessage(thread);
+      return {
+        text: last?.body.trim() ?? "",
+        earlier: last ? thread.messages.slice(0, thread.messages.indexOf(last)) : thread.messages,
+      };
+    }
+    const first = thread.messages.indexOf(since[0]!);
     return {
-      text: last >= 0 ? thread.messages[last]!.body.trim() : "",
-      earlier: last >= 0 ? thread.messages.slice(0, last) : thread.messages,
+      text: since.map((message) => message.body.trim()).join("\n"),
+      earlier: thread.messages.slice(0, first),
     };
   }
   return {

@@ -202,7 +202,8 @@ describe("support AI", () => {
     const refund = await message(s.shop, "Broken strap", "I want my money back, the strap broke.");
     const hello = await message(s.shop, "Hi", "Hi, how are you?");
     const result = await checkNewSupportMessages(s.shop, gatewayWith());
-    expect(result.autoSent).toBe(2);
+    // The new question and greeting, plus the one still waiting when it was turned on.
+    expect(result.autoSent).toBe(3);
 
     const sent = await getConversationForStaff(s.db, s.owner, question);
     expect(sent.status).toBe("waiting");
@@ -214,12 +215,12 @@ describe("support AI", () => {
       await admin.outboxEvent.count({
         where: { tenantId: s.tenantId, type: "email.support_reply" },
       }),
-    ).toBe(2);
+    ).toBe(3);
     expect(
       await admin.auditLog.count({
         where: { tenantId: s.tenantId, action: "support.auto_replied" },
       }),
-    ).toBe(2);
+    ).toBe(3);
     // Everyday chat is answered too (when the facts do not answer it, the
     // conversation stays "to answer" for staff).
     const greeted = await getConversationForStaff(s.db, s.owner, hello);
@@ -252,6 +253,24 @@ describe("support AI", () => {
     expect((await getSupportAi(s.db, s.owner, id)).draft?.body).toMatch(
       /Delivery to All of Lebanon costs/,
     );
+  });
+
+  it("turning automatic replies on answers what is still waiting", async () => {
+    const s = await store("catchup");
+    const id = await message(s.shop, "Delivery", "How much is delivery to Lebanon?");
+    // Seen while automatic replies were off: a draft only.
+    await checkNewSupportMessages(s.shop, gatewayWith());
+    expect((await getConversationForStaff(s.db, s.owner, id)).messages.at(-1)?.authorType).toBe(
+      "customer",
+    );
+    await saveAiSettings(s.db, s.owner, { paused: "", monthlyBudgetUsd: "", automation: "auto" });
+    expect((await checkNewSupportMessages(s.shop, gatewayWith())).autoSent).toBe(1);
+    expect((await getConversationForStaff(s.db, s.owner, id)).messages.at(-1)?.authorType).toBe(
+      "ai",
+    );
+    // Saving again (already on) does not answer twice.
+    await saveAiSettings(s.db, s.owner, { paused: "", monthlyBudgetUsd: "", automation: "auto" });
+    expect((await checkNewSupportMessages(s.shop, gatewayWith())).autoSent).toBe(0);
   });
 
   it("belongs to one store; drafting needs AI access", async () => {

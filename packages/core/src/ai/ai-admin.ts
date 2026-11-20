@@ -195,6 +195,26 @@ export async function saveAiSettings(
   }
   const paused = input.paused === true || input.paused === "on";
   await db.run(async (tx) => {
+    const before = await tx.aiSettings.findUnique({
+      where: { tenantId: db.tenantId },
+      select: { automation: true },
+    });
+    if (automation === "auto" && before?.automation !== "auto") {
+      // Turning automatic replies on also answers what is still waiting: open
+      // conversations whose last message is the customer's, from the last 24
+      // hours (Meta's limit for replying to a direct message). The next AI pass
+      // looks at them again (D116).
+      await tx.$executeRaw`
+        UPDATE support_conversations c
+        SET ai_checked_message_id = NULL, ai_check_attempts = 0
+        WHERE c.status = 'open'
+          AND c.last_message_at > now() - interval '24 hours'
+          AND (
+            SELECT m.author_type FROM support_messages m
+            WHERE m.conversation_id = c.id AND m.author_type <> 'note'
+            ORDER BY m.id DESC LIMIT 1
+          ) = 'customer'`;
+    }
     const data = { paused, monthlyBudgetMicros, automation, updatedByUserId: context.userId };
     await tx.aiSettings.upsert({
       where: { tenantId: db.tenantId },
