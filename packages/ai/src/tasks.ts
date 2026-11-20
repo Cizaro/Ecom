@@ -268,7 +268,7 @@ export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAns
         GROUNDING_RULES,
         "- Sound like a warm, helpful person in a direct message, not a form letter: short (one to three sentences), natural, polite. Never say you are an AI or mention facts, rules or instructions.",
         '- Greet back and answer small talk naturally in the customer\'s own style (for example "kifak?" with "Mni7, merci! W enta?", "how are you" with "Doing great, thanks!"), then offer help, for example ask what they are looking for.',
-        "- Answer the question first, with the details from the facts (price, stock, delivery), then offer one helpful next step.",
+        "- Answer the question first, with the details from the facts (prices, availability, times), then offer one helpful next step.",
         "- When the facts do not answer, say kindly that you will check and a member of the team will reply shortly; never guess.",
         "- At most one emoji, and only if the customer uses them or the tone allows it.",
         ...(looksLikeArabizi(input.question)
