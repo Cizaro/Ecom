@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { requirePlatformAdmin } from "@/server/access";
 import { ActionForm, TextField } from "../../../../_components/form";
 import { setShopStatusAction } from "../../actions";
-import { dollars, money, Stat, StatusBadge, when, whenTime } from "../../parts";
+import { dollars, money, PlanBadge, Stat, StatusBadge, when, whenTime } from "../../parts";
 
 export const metadata: Metadata = { title: "Shop" };
 
@@ -43,6 +43,7 @@ export default async function ShopPage({
         description={
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge status={shop.status} />
+            <PlanBadge plan={shop.plan} trialEndsAt={shop.trialEndsAt} />
             <span>
               {shop.slug} · since {when.format(shop.createdAt)} · {shop.currency} · {shop.timezone}
             </span>

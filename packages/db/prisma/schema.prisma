@@ -41,6 +41,11 @@ model Tenant {
   automationPaused      Boolean      @default(false) @map("automation_paused")
   /// Staff with the owner or manager role must use two-factor authentication.
   requireStaffTwoFactor Boolean      @default(false) @map("require_staff_two_factor")
+  /// The shop's plan: "trial" for a self-service sign-up; null when the
+  /// platform owner set the shop up and bills it by hand (D121).
+  plan                  String?
+  /// When a free trial ends (sign-ups only).
+  trialEndsAt           DateTime?    @map("trial_ends_at") @db.Timestamptz(3)
   createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 

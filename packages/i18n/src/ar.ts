@@ -31,9 +31,8 @@ export const ar: Catalog = {
     "ربما نُقلت، أو لم يعد المنتج معروضًا للبيع.",
   "See all products": "عرض كل المنتجات",
   "Go to the home page": "الذهاب إلى الصفحة الرئيسية",
-  "Bags, wallets, watches, jewelry and accessories.": "حقائب ومحافظ وساعات ومجوهرات وإكسسوارات.",
-  "Our shop is opening soon. Bags, wallets, watches, jewelry and accessories.":
-    "متجرنا يفتح قريبًا. حقائب ومحافظ وساعات ومجوهرات وإكسسوارات.",
+  "Welcome to our shop.": "أهلًا بكم في متجرنا.",
+  "Our shop is opening soon.": "متجرنا يفتح قريبًا.",
   "Shop all products": "تسوّق كل المنتجات",
   "Shop by category": "تسوّق حسب الفئة",
   Featured: "مختارات",

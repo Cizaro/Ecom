@@ -1,14 +1,19 @@
-import { getDashboard, hasPermission } from "@ecom/core";
+import { getDashboard, getSetupChecklist, hasPermission } from "@ecom/core";
 import { Alert, Card, List, ListItem, PageHeader } from "@ecom/ui";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAccessOutcome, tenantDb } from "@/server/access";
 import { requireSession } from "@/server/auth";
 import { DashboardView } from "./_components/dashboard";
+import { SetupGuide } from "./_components/setup-guide";
 
 // Home for signed-in staff: the store dashboard for those who may see
 // reports, then their access.
-export default async function AdminHomePage() {
+export default async function AdminHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await requireSession();
   const { user, memberships } = session;
   // The platform owner with no shop of their own goes straight to the platform panel (D120).
@@ -18,6 +23,12 @@ export default async function AdminHomePage() {
     outcome.status === "ok" && hasPermission(outcome.context, "reports.read")
       ? await getDashboard(tenantDb(outcome.context), outcome.context)
       : null;
+  const checklist =
+    // The setup steps lead to settings pages, so only for those who may change them.
+    outcome.status === "ok" && hasPermission(outcome.context, "settings.write")
+      ? await getSetupChecklist(tenantDb(outcome.context))
+      : null;
+  const welcome = (await searchParams).welcome === "1";
 
   return (
     <div className="flex flex-col gap-6">
@@ -25,6 +36,8 @@ export default async function AdminHomePage() {
         title={dashboard ? "Dashboard" : "Admin"}
         description={`Signed in as ${user.name || user.email}.`}
       />
+
+      {checklist ? <SetupGuide checklist={checklist} welcome={welcome} /> : null}
 
       {dashboard ? <DashboardView data={dashboard} /> : null}
 

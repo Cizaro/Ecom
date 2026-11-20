@@ -111,6 +111,12 @@ try {
     },
   });
 
+  // Shops and owners left by earlier runs of the sign-up tests (D121).
+  await prisma.tenant.deleteMany({ where: { slug: { startsWith: "shop-" }, plan: "trial" } });
+  await prisma.user.deleteMany({
+    where: { email: { startsWith: "signup-", endsWith: "@example.test" } },
+  });
+
   // The platform owner: no shop membership, platform administrator (D120).
   await prisma.user.deleteMany({ where: { email: PLATFORM_ADMIN_EMAIL } });
   await createStaffUser(prisma, {

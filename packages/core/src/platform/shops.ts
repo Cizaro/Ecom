@@ -126,6 +126,9 @@ export interface ShopRow {
   name: string;
   slug: string;
   status: ShopStatus;
+  /** "trial" for a sign-up on a free trial; null when set up and billed by hand. */
+  plan: string | null;
+  trialEndsAt: Date | null;
   createdAt: Date;
   address: string | null;
   owner: string | null;
@@ -163,6 +166,8 @@ export async function listShops(
       name: true,
       slug: true,
       status: true,
+      plan: true,
+      trialEndsAt: true,
       createdAt: true,
       storeDomains: { orderBy: { isPrimary: "desc" }, take: 1, select: { hostname: true } },
       memberships: {
@@ -203,6 +208,8 @@ export async function listShops(
     name: t.name,
     slug: t.slug,
     status: t.status as ShopStatus,
+    plan: t.plan,
+    trialEndsAt: t.trialEndsAt,
     createdAt: t.createdAt,
     address: t.storeDomains[0]?.hostname ?? null,
     owner: t.memberships[0]?.user.email ?? null,

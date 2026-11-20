@@ -23,6 +23,25 @@ export type AiProviderName = (typeof AI_PROVIDERS)[number];
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_URL: z.url(),
+
+  /**
+   * The platform site (D121): the public pages that sell the platform, with
+   * sign-up. Answers on this host name only; every other host is a shop.
+   * The name is shown on those pages until a real name is chosen.
+   */
+  PLATFORM_HOST: z
+    .string()
+    .regex(/^[a-z0-9.-]+$/, "a host name, without https:// or a port")
+    .default("platform.localhost"),
+  PLATFORM_NAME: z.string().min(1).max(40).default("Shop Platform"),
+  /**
+   * New shops from sign-up get the free address <name>.<suffix>, e.g.
+   * tamara.yourplatform.com. "localhost" on a development computer.
+   */
+  SHOP_ADDRESS_SUFFIX: z
+    .string()
+    .regex(/^[a-z0-9.-]+$/, "a domain, without a leading dot")
+    .default("localhost"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
   /** Runtime connection (role app_user, subject to Row-Level Security). */

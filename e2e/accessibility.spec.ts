@@ -107,3 +107,16 @@ test("platform panel pages meet WCAG 2.1 AA", async ({ page }) => {
   if (list.length > 0) found["/admin/platform/shops/[id]"] = list;
   expect(found).toEqual({});
 });
+
+// The platform site (D121), on the platform's own host.
+test("platform site pages meet WCAG 2.1 AA", async ({ page, baseURL }) => {
+  test.setTimeout(90_000);
+  const origin = baseURL!.replace("localhost", "platform.localhost");
+  const found: Record<string, unknown> = {};
+  for (const path of ["/", "/templates", "/signup"]) {
+    await page.goto(origin + path);
+    const list = await violations(page);
+    if (list.length > 0) found[path] = list;
+  }
+  expect(found).toEqual({});
+});

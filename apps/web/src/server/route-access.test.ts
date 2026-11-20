@@ -6,6 +6,9 @@ import {
   ADMIN_API,
   ADMIN_PAGES,
   guardCallFor,
+  PLATFORM_SITE_ACTIONS,
+  PLATFORM_SITE_GUARD,
+  PLATFORM_SITE_PAGES,
   STOREFRONT_ACTIONS,
   STOREFRONT_GUARD,
   type RouteAccess,
@@ -84,8 +87,11 @@ describe("server actions", () => {
   });
 
   const isStorefront = (id: string) => id.startsWith("(storefront)/");
+  const isPlatformSite = (id: string) => id.startsWith("platform-site/");
 
-  for (const action of exported.filter((candidate) => !isStorefront(candidate.id))) {
+  for (const action of exported.filter(
+    (candidate) => !isStorefront(candidate.id) && !isPlatformSite(candidate.id),
+  )) {
     it(`${action.id} is registered and guarded`, () => {
       const entry = ADMIN_ACTIONS.find((candidate) => candidate.id === action.id);
       expect(entry, `${action.id} has no entry in ADMIN_ACTIONS`).toBeDefined();
@@ -106,15 +112,30 @@ describe("server actions", () => {
     });
   }
 
+  // The platform site's actions: public, and only on the platform's host.
+  for (const action of exported.filter((candidate) => isPlatformSite(candidate.id))) {
+    it(`${action.id} is a registered platform-site action bound to the platform's host`, () => {
+      const entry = PLATFORM_SITE_ACTIONS.find((candidate) => candidate.id === action.id);
+      expect(entry, `${action.id} has no entry in PLATFORM_SITE_ACTIONS`).toBeDefined();
+      expect(entry!.access).toEqual({ level: "public" });
+      expect(action.body, `${action.id} must call ${PLATFORM_SITE_GUARD}`).toContain(
+        PLATFORM_SITE_GUARD,
+      );
+      expect(action.body).not.toMatch(/requirePermission|requireSession|requireTenantContext/);
+    });
+  }
+
   it("has no registry entries for actions that no longer exist", () => {
     const existing = new Set(exported.map((action) => action.id));
-    const registered = [...ADMIN_ACTIONS, ...STOREFRONT_ACTIONS].map((a) => a.id);
+    const registered = [...ADMIN_ACTIONS, ...STOREFRONT_ACTIONS, ...PLATFORM_SITE_ACTIONS].map(
+      (a) => a.id,
+    );
     expect(registered.filter((id) => !existing.has(id))).toEqual([]);
   });
 
   it("keeps staff actions under the admin and visitor actions under the storefront", () => {
     for (const file of actionFiles) {
-      expect(rel(file)).toMatch(/^(\(admin\)\/admin|\(storefront\))\//);
+      expect(rel(file)).toMatch(/^(\(admin\)\/admin|\(storefront\)|platform-site)\//);
     }
     for (const entry of ADMIN_ACTIONS) expect(entry.id).toMatch(/^\(admin\)\/admin\//);
     for (const entry of STOREFRONT_ACTIONS) expect(entry.id).toMatch(/^\(storefront\)\//);
@@ -157,4 +178,20 @@ describe("API routes", () => {
     const existing = new Set(routes.map(routePath));
     expect(ADMIN_API.map((api) => api.path).filter((path) => !existing.has(path))).toEqual([]);
   });
+});
+
+describe("platform site pages", () => {
+  const pages = files.filter(
+    (file) => rel(file).startsWith("platform-site/") && /page\.tsx$/.test(file),
+  );
+
+  it("lists exactly the pages that exist", () => {
+    expect(pages.map(routePath).sort()).toEqual([...PLATFORM_SITE_PAGES].sort());
+  });
+
+  for (const file of pages) {
+    it(`${routePath(file)} answers only on the platform's host`, () => {
+      expect(readFileSync(file, "utf8")).toContain(PLATFORM_SITE_GUARD);
+    });
+  }
 });

@@ -102,3 +102,24 @@ export function DailyBars({
     </figure>
   );
 }
+
+/** The shop's plan: a free trial with its days left, or set up by you. */
+export function PlanBadge({
+  plan,
+  trialEndsAt,
+  now = new Date(),
+}: {
+  plan: string | null;
+  trialEndsAt: Date | null;
+  now?: Date;
+}) {
+  if (plan === "trial" && trialEndsAt) {
+    const days = Math.ceil((trialEndsAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+    return (
+      <Badge tone={days <= 3 ? "warning" : "neutral"}>
+        {days > 0 ? `Trial, ${days} ${days === 1 ? "day" : "days"} left` : "Trial ended"}
+      </Badge>
+    );
+  }
+  return <Badge tone="neutral">{plan ?? "Set up by you"}</Badge>;
+}

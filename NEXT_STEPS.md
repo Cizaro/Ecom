@@ -2,7 +2,7 @@
 
 Prioritized continuation plan. The top item is always the next thing to do. Update at the end of every session.
 
-**The big picture (2026-11-20):** docs/PLATFORM_ROADMAP.md maps the owner's full plan (a platform panel over many sold shops, sign-up, designs from templates to custom, plans and payments with a margin on hosting and AI) against what is built, with stages A to F. Recommended order: A (go live with the first shop) → B (platform panel) → D (simple payments) → C (sign-up) → E (designs) → F (channels and ads). **Stage B built (D120).** The owner chose to build the platform first: next is the public platform website with sign-up and ready templates (Stages C and E), then plans and payments (Stage D).
+**The big picture (2026-11-20):** docs/PLATFORM_ROADMAP.md maps the owner's full plan (a platform panel over many sold shops, sign-up, designs from templates to custom, plans and payments with a margin on hosting and AI) against what is built, with stages A to F. Recommended order: A (go live with the first shop) → B (platform panel) → D (simple payments) → C (sign-up) → E (designs) → F (channels and ads). **Stage B built (D120). Platform site with sign-up built (D121):** platform.localhost:3000 locally. Next: plans and payments (Stage D, the owner chooses prices and how clients pay), the terms of service for shop owners, then layout templates and the section builder (Stage E).
 
 ## Instagram and Facebook (connected 2026-11-19)
 

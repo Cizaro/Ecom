@@ -21,6 +21,8 @@ export const VISITOR_LIMITS = {
   review: { limit: 10, windowSeconds: 60 * 60 },
   report: { limit: 20, windowSeconds: 60 * 60 },
   photo: { limit: 10, windowSeconds: 60 * 60 },
+  /** New shops from the platform site (counted under "platform", not a store). */
+  signup: { limit: 5, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitRule>;
 
 export type VisitorAction = keyof typeof VISITOR_LIMITS;

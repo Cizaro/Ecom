@@ -8,7 +8,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   // Each area sets its own titles: "<page> | <store name>" in the shop, "<page> | Admin" for staff.
   title: "Store",
-  description: "Bags, wallets, watches, jewelry and fashion accessories.",
+  description: "Online shop.",
 };
 
 export const viewport: Viewport = {

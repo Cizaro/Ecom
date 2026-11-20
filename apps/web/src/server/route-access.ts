@@ -473,6 +473,22 @@ export const STOREFRONT_ACTIONS: readonly ActionEntry[] = [
 /** The call every storefront action's source must contain. */
 export const STOREFRONT_GUARD = "storefrontDb()";
 
+/**
+ * The platform site (D121): public pages on the platform's own host, where
+ * shop owners sign up. Every page and action must check the host, so none
+ * of them answers on a shop's address.
+ */
+export const PLATFORM_SITE_PAGES: readonly string[] = [
+  "/platform-site",
+  "/platform-site/templates",
+  "/platform-site/signup",
+];
+export const PLATFORM_SITE_ACTIONS: readonly ActionEntry[] = [
+  { id: "platform-site/signup/actions.ts#signUpShopAction", access: { level: "public" } },
+];
+/** The call every platform-site page and action must contain. */
+export const PLATFORM_SITE_GUARD = "requirePlatformSite()";
+
 /** The guard call each access level requires in the route's source. */
 export function guardCallFor(access: RouteAccess): string | null {
   switch (access.level) {

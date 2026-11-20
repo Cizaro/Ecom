@@ -4,7 +4,7 @@ import { buttonClasses, EmptyState, Field, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/server/access";
-import { dollars, StatusBadge, when } from "../parts";
+import { dollars, PlanBadge, StatusBadge, when } from "../parts";
 
 export const metadata: Metadata = { title: "Shops" };
 
@@ -101,7 +101,8 @@ export default async function ShopsPage({ searchParams }: { searchParams: Promis
                   </td>
                   <td className="px-4 py-3 text-ink-muted">{shop.owner ?? "None"}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={shop.status} />
+                    <StatusBadge status={shop.status} />{" "}
+                    <PlanBadge plan={shop.plan} trialEndsAt={shop.trialEndsAt} />
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">{shop.products}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{shop.orders30d}</td>

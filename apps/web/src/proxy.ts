@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { buildCsp, createNonce, CSP_HEADER, NONCE_HEADER, originOf } from "./server/csp";
-import { AREA_HEADER, areaOf, PATH_HEADER } from "./server/area";
+import { AREA_HEADER, areaOf, PATH_HEADER, platformRewrite, requestHostName } from "./server/area";
 import { REQUEST_ID_HEADER, requestIdFrom } from "./server/request-id";
 
 // Runs before every page and API request:
@@ -25,10 +25,25 @@ export function proxy(request: NextRequest) {
   requestHeaders.set(CSP_HEADER, csp);
   // Which part of the site and which page, for the page language and the
   // language switch (see server/i18n.ts). Set here, so never from the client.
-  requestHeaders.set(AREA_HEADER, areaOf(request.nextUrl.pathname));
   requestHeaders.set(PATH_HEADER, request.nextUrl.pathname + request.nextUrl.search);
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  // The platform's own host shows the platform site (D121); every other
+  // host is a shop. Its pages check the host again, so they cannot be
+  // reached through a shop's address.
+  // eslint-disable-next-line no-restricted-properties -- validated in packages/config
+  const platformHost = (process.env.PLATFORM_HOST || "platform.localhost").toLowerCase();
+  const host = requestHostName(
+    request.headers.get("host"),
+    request.headers.get("x-forwarded-host"),
+  );
+  const rewrite = host === platformHost ? platformRewrite(request.nextUrl.pathname) : null;
+  requestHeaders.set(AREA_HEADER, rewrite ? "platform" : areaOf(request.nextUrl.pathname));
+
+  const response = rewrite
+    ? NextResponse.rewrite(new URL(rewrite + request.nextUrl.search, request.url), {
+        request: { headers: requestHeaders },
+      })
+    : NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set(REQUEST_ID_HEADER, requestId);
   response.headers.set(CSP_HEADER, csp);
   return response;

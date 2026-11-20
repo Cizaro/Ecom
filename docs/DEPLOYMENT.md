@@ -23,6 +23,7 @@ Copy `.env.example` to `.env.production` **on the server** (never into the repos
 | --- | --- |
 | `NODE_ENV` | `production` |
 | `APP_URL` | Your address, `https://...` |
+| `PLATFORM_HOST`, `PLATFORM_NAME`, `SHOP_ADDRESS_SUFFIX` | The platform site's host and name, and the domain shops from sign-up get an address under (D121). Point a wildcard DNS record (`*.yourplatform.com`) at the server and give the proxy a wildcard certificate (or on-demand certificates) so new shop addresses work at once |
 | `DATABASE_URL`, `DATABASE_ADMIN_URL` | From the database provider. The runtime user and the admin user must be different (see `ARCHITECTURE.md`). |
 | `REDIS_URL` | From the Redis provider |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | From the storage provider; `S3_PUBLIC_URL` must be `https://` |

@@ -60,8 +60,8 @@ export default async function StorefrontHomePage() {
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{store.name}</h1>
         <p className="max-w-prose text-ink-muted">
           {hasProducts
-            ? t("Bags, wallets, watches, jewelry and accessories.")
-            : t("Our shop is opening soon. Bags, wallets, watches, jewelry and accessories.")}
+            ? store.branding.tagline || t("Welcome to our shop.")
+            : t("Our shop is opening soon.")}
         </p>
         {hasProducts ? (
           <Link href="/products" className={buttonClasses()}>

@@ -26,8 +26,8 @@ Two products in one:
 | Your box | What it needs | Status |
 | --- | --- | --- |
 | **Your admin panel** (all websites you sold) | List of shops, create a shop, each shop's plan, usage and costs, payments, suspend, support access | ✅ Built 2026-11-20 (D120): dashboard, shops, new shop, shop page with suspend and resume. 🟡 Plans, payments and support access come with Stages C and D |
-| **Website design** (drag and drop on templates / adjusted / custom) | Templates, a page builder, custom themes | 🟡 One shop template with logo, colours, fonts, corner style and 4 ready-made looks, plus Arabic. No templates to choose from, no drag and drop |
-| **Sign up with email, pay you for hosting** | Self-service sign-up, plans, subscription payments, your margin | ❌ Not built |
+| **Website design** (drag and drop on templates / adjusted / custom) | Templates, a page builder, custom themes | 🟡 4 ready-made looks to choose from at sign-up (D121), each with logo, colour, font and corner controls, plus Arabic. No layout variants yet, no drag and drop |
+| **Sign up with email, pay you for hosting** | Self-service sign-up, plans, subscription payments, your margin | ✅ Sign-up built 2026-12-01 (D121): public platform site, 14-day free trial, setup guide. ❌ Plans and payments (Stage D) |
 | **AI assistance resold with a margin** | Metered AI use per shop, priced with your margin | 🟡 Every AI use is recorded with its real cost per shop, with a monthly budget per shop. Not yet turned into a bill |
 | **Shop for normal users** | Catalog, search, cart, checkout, accounts | ✅ Built (cash on delivery; card payments wait for a merchant account) |
 | **Shop owner's dashboard: stock, inventory, sales, orders** | | ✅ Built, with returns, discounts, delivery, emails, reports and forecasts |
@@ -42,7 +42,7 @@ Two products in one:
 | **Analytics** | | ✅ Shop reports (sales, products, searches, campaigns). 🟡 Social analytics (views, reach per post) wait for Meta's insights permission |
 | Launch safety | Security, backups, monitoring, accessibility, speed | ✅ Done on the development computer |
 
-**In one line:** the shop system is about 80% done and works for one shop; the platform you sell from is about 15% done (the foundation only).
+**In one line:** the shop system is about 80% done and works for one shop; the platform you sell from is about 35% done (your panel, the public site and sign-up; plans and payments next).
 
 ## 3. Gaps your diagram does not show yet
 
@@ -80,7 +80,7 @@ The "My admin dashboard" box.
 4. Suspend and resume a shop; notes about the client.
 5. Support access: open a client's admin only with their permission, recorded in the audit log.
 
-### Stage C: Sign-up and onboarding (about 2 weeks)
+### Stage C: Sign-up and onboarding (steps 1 to 3 built 2026-12-01, D121; email confirmation and own domains still to do)
 The "they sign in with email address" part.
 1. A public page for your platform: what it does, plans and prices, "Start free trial".
 2. Sign-up with email, confirmation, shop name, the free web address (shopname.yourplatform.com).

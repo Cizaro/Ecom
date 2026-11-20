@@ -846,3 +846,16 @@ export {
   type ShopRow,
   type ShopStatus,
 } from "./platform/shops";
+export {
+  SHOP_TEMPLATES,
+  shopNameProblem,
+  signUpShop,
+  TRIAL_DAYS,
+  type ShopSignUpInput,
+  type ShopSignUpOptions,
+} from "./platform/signup";
+export {
+  getSetupChecklist,
+  type SetupChecklist,
+  type SetupStep,
+} from "./tenancy/setup-checklist";
