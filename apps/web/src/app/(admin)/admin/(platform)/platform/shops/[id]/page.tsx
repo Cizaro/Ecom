@@ -1,11 +1,20 @@
 import { getEnv } from "@ecom/config";
-import { getShop } from "@ecom/core";
+import {
+  BILLING_STATE_LABELS,
+  formatMoney,
+  getShop,
+  getShopBilling,
+  listInvoices,
+  listPlans,
+} from "@ecom/core";
 import { Alert, Badge, Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePlatformAdmin } from "@/server/access";
-import { ActionForm, TextField } from "../../../../_components/form";
+import { ActionForm, SelectField, TextField } from "../../../../_components/form";
+import { createInvoiceAction, setShopPlanAction } from "../../billing-actions";
+import { InvoiceList } from "../../invoice-list";
 import { setShopStatusAction } from "../../actions";
 import { dollars, money, PlanBadge, Stat, StatusBadge, when, whenTime } from "../../parts";
 
@@ -33,6 +42,10 @@ export default async function ShopPage({
   const created = (await searchParams).created === "1";
   const shop = await getShop(getEnv().DATABASE_ADMIN_URL, id);
   if (!shop) notFound();
+  const adminUrl = getEnv().DATABASE_ADMIN_URL;
+  const billing = await getShopBilling(adminUrl, id);
+  const plans = await listPlans(adminUrl);
+  const invoices = await listInvoices(adminUrl, { tenantId: id });
   const url = (host: string) =>
     `${host === "localhost" || host.endsWith(".localhost") ? "http" : "https"}://${host}${host === "localhost" || host.endsWith(".localhost") ? ":3000" : ""}`;
 
@@ -107,6 +120,66 @@ export default async function ShopPage({
           </p>
         </Card>
       </div>
+
+      <Card
+        title="Plan and billing"
+        description={`${BILLING_STATE_LABELS[billing.state]}${
+          billing.paidUntil
+            ? `, paid until ${when.format(billing.paidUntil)}`
+            : billing.onTrial && billing.trialEndsAt
+              ? `, trial ends ${when.format(billing.trialEndsAt)}`
+              : ""
+        }`}
+      >
+        {plans.length === 0 ? (
+          <p className="text-sm text-ink-muted">
+            Create a plan first under{" "}
+            <Link href="/admin/platform/plans" className="underline underline-offset-4">
+              Plans
+            </Link>
+            .
+          </p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            <ActionForm
+              action={setShopPlanAction}
+              submitLabel="Change plan"
+              testId="shop-plan-form"
+            >
+              <input type="hidden" name="tenantId" value={shop.id} />
+              <SelectField
+                label="Plan"
+                name="plan"
+                options={plans.map((p) => ({
+                  value: p.key,
+                  label: `${p.name} (${formatMoney(p.priceAmount, p.currency)} a month)`,
+                }))}
+                defaultValue={billing.plan?.key ?? plans[0]!.key}
+              />
+            </ActionForm>
+            <ActionForm
+              action={createInvoiceAction}
+              submitLabel="Create invoice"
+              testId="invoice-form"
+            >
+              <input type="hidden" name="tenantId" value={shop.id} />
+              <SelectField
+                label="Bill for"
+                name="months"
+                options={[1, 3, 6, 12].map((m) => ({
+                  value: String(m),
+                  label: `${m} ${m === 1 ? "month" : "months"}`,
+                }))}
+                defaultValue="1"
+                hint="At the plan's price. Starts where the paid time ends."
+              />
+            </ActionForm>
+          </div>
+        )}
+        <div className="mt-4">
+          <InvoiceList invoices={invoices} />
+        </div>
+      </Card>
 
       <Card title="Team">
         <ul className="flex flex-col divide-y divide-line text-sm" data-testid="shop-team">

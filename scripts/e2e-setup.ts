@@ -111,8 +111,14 @@ try {
     },
   });
 
-  // Shops and owners left by earlier runs of the sign-up tests (D121).
-  await prisma.tenant.deleteMany({ where: { slug: { startsWith: "shop-" }, plan: "trial" } });
+  // Shops, owners and plans left by earlier runs of the sign-up and billing tests (D121, D122).
+  await prisma.platformPlan.deleteMany({ where: { key: { startsWith: "e2e_" } } });
+  await prisma.tenant.deleteMany({
+    where: {
+      slug: { startsWith: "shop-" },
+      OR: [{ plan: "trial" }, { plan: { startsWith: "e2e_" } }],
+    },
+  });
   await prisma.user.deleteMany({
     where: { email: { startsWith: "signup-", endsWith: "@example.test" } },
   });

@@ -1,4 +1,5 @@
 import type { TenantDb } from "../access/tenant-db";
+import { billingState, type BillingState } from "../platform/billing";
 
 // The setup guide on a shop's dashboard (D121): the few things a new shop
 // needs before it can sell, each ticked off from the shop's real data, so
@@ -87,4 +88,18 @@ export async function getSetupChecklist(db: TenantDb): Promise<SetupChecklist> {
     plan: data.tenant?.plan ?? null,
     trialEndsAt: data.tenant?.trialEndsAt ?? null,
   };
+}
+
+/**
+ * Where this shop stands with the platform (D122), read with the shop's own
+ * database access, for the admin's warning banner.
+ */
+export async function getShopBillingState(db: TenantDb, now = new Date()): Promise<BillingState> {
+  const tenant = await db.run((tx) =>
+    tx.tenant.findUnique({
+      where: { id: db.tenantId },
+      select: { plan: true, trialEndsAt: true, paidUntil: true },
+    }),
+  );
+  return tenant ? billingState(tenant, now) : "managed";
 }

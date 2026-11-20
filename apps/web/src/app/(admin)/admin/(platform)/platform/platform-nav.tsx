@@ -7,6 +7,8 @@ const ITEMS = [
   { href: "/admin/platform", label: "Dashboard", exact: true },
   { href: "/admin/platform/shops", label: "Shops", exact: true },
   { href: "/admin/platform/shops/new", label: "New shop", exact: true },
+  { href: "/admin/platform/billing", label: "Billing", exact: true },
+  { href: "/admin/platform/plans", label: "Plans", exact: true },
 ] as const;
 
 /** The panel's sidebar links, the current one marked. */

@@ -1,9 +1,9 @@
 import { getEnv } from "@ecom/config";
-import { workerStatus } from "@ecom/core";
+import { getShopBillingState, hasPermission, workerStatus } from "@ecom/core";
 import { buttonClasses } from "@ecom/ui";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { getAccessOutcome } from "@/server/access";
+import { getAccessOutcome, tenantDb } from "@/server/access";
 import { visibleNav } from "@/server/admin-nav";
 import { requireSession } from "@/server/auth";
 import { signOutAction } from "../actions";
@@ -19,6 +19,11 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
   const worker =
     context && (context.roleKey === "store_owner" || context.roleKey === "store_manager")
       ? await workerStatus(getEnv().REDIS_URL)
+      : null;
+  // Those who manage the shop are told when its trial has ended or a payment is overdue (D122).
+  const billing =
+    context && hasPermission(context, "settings.write")
+      ? await getShopBillingState(tenantDb(context))
       : null;
   const when = new Intl.DateTimeFormat("en", { timeStyle: "short", dateStyle: "medium" });
 
@@ -83,6 +88,20 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
             {worker.lastSeen ? ` (last seen ${when.format(worker.lastSeen)})` : ""}: automatic
             replies, emails, the Instagram check and scheduled posts are paused. Start the worker
             (on a server, restart the worker container).
+          </p>
+        </div>
+      ) : null}
+      {billing === "trial_ended" || billing === "overdue" ? (
+        <div className="border-b border-warning-line bg-warning-soft" data-testid="billing-banner">
+          <p className="mx-auto max-w-5xl px-4 py-2 text-sm">
+            <strong>
+              {billing === "trial_ended"
+                ? "Your free trial has ended."
+                : "Your payment is overdue."}
+            </strong>{" "}
+            <Link href="/admin/settings/billing" className="underline underline-offset-4">
+              See your plan and how to pay
+            </Link>
           </p>
         </div>
       ) : null}

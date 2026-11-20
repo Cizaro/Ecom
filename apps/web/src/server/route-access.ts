@@ -94,6 +94,7 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/settings/notifications", access: SETTINGS_WRITE },
   { path: "/admin/settings/store", access: SETTINGS_WRITE },
   { path: "/admin/settings/pages", access: SETTINGS_WRITE },
+  { path: "/admin/settings/billing", access: SETTINGS_WRITE },
   { path: "/admin/promotions", access: { level: "permission", permission: "promotions.write" } },
   { path: "/admin/reviews", access: { level: "permission", permission: "reviews.moderate" } },
   { path: "/admin/content", access: { level: "permission", permission: "reviews.moderate" } },
@@ -125,6 +126,10 @@ export const ADMIN_PAGES: readonly PageEntry[] = [
   { path: "/admin/platform/shops", access: { level: "platform" } },
   { path: "/admin/platform/shops/new", access: { level: "platform" } },
   { path: "/admin/platform/shops/[id]", access: { level: "platform" } },
+  { path: "/admin/platform/plans", access: { level: "platform" } },
+  { path: "/admin/platform/plans/new", access: { level: "platform" } },
+  { path: "/admin/platform/plans/[id]", access: { level: "platform" } },
+  { path: "/admin/platform/billing", access: { level: "platform" } },
 ];
 
 const CATALOG_ACTIONS = "(admin)/admin/(protected)/catalog/actions.ts";
@@ -348,6 +353,18 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   // The platform owner's panel (D120).
   ...["createShopAction", "setShopStatusAction"].map((name) => ({
     id: `(admin)/admin/(platform)/platform/actions.ts#${name}`,
+    access: { level: "platform" } as const,
+  })),
+  // Plans and payments (D122).
+  ...[
+    "savePlanAction",
+    "savePaymentInstructionsAction",
+    "setShopPlanAction",
+    "createInvoiceAction",
+    "markInvoicePaidAction",
+    "voidInvoiceAction",
+  ].map((name) => ({
+    id: `(admin)/admin/(platform)/platform/billing-actions.ts#${name}`,
     access: { level: "platform" } as const,
   })),
   // Requiring two-factor for owners and managers: the service also requires the owner role.

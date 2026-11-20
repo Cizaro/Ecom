@@ -1,13 +1,13 @@
 import { getEnv } from "@ecom/config";
-import { SHOP_TEMPLATES, TRIAL_DAYS } from "@ecom/core";
+import { formatMoney, listPlans, SHOP_TEMPLATES, TRIAL_DAYS } from "@ecom/core";
 import { buttonClasses } from "@ecom/ui";
 import Link from "next/link";
 import { requirePlatformSite } from "@/server/platform-site";
 import { TemplatePreview } from "./parts";
 
 // Only features that exist and work today are listed here (no invented
-// numbers, reviews or countdowns). Prices are the owner's decision and are
-// not shown until they are set.
+// numbers, reviews or countdowns). Prices come from the plans the owner sets
+// in the platform panel (D122).
 const FEATURES = [
   {
     title: "Your online shop",
@@ -51,6 +51,7 @@ const STEPS = [
 export default async function PlatformHome() {
   await requirePlatformSite();
   const name = getEnv().PLATFORM_NAME;
+  const plans = await listPlans(getEnv().DATABASE_ADMIN_URL, { publicOnly: true });
   return (
     <>
       <section className="relative overflow-hidden border-b border-line bg-canvas">
@@ -127,17 +128,59 @@ export default async function PlatformHome() {
       </section>
 
       <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16 md:py-20">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-card border border-line p-8 text-center">
+        <div className="mb-10 flex flex-col items-center gap-3 text-center">
           <h2 className="text-3xl font-semibold tracking-tight">Pricing</h2>
-          <p className="text-ink-muted">
-            Try everything free for {TRIAL_DAYS} days. Monthly plans for hosting and AI replies are
-            being finalised and will be shown here, and sent to you, before your trial ends. Nothing
-            is charged automatically.
+          <p className="max-w-2xl text-ink-muted">
+            Try everything free for {TRIAL_DAYS} days, no card needed.{" "}
+            {plans.length > 0
+              ? "Then choose a monthly plan. Pay by Whish, OMT, bank transfer or cash; nothing is charged automatically."
+              : "Monthly plans for hosting and AI replies are being finalised and will be shown here, and sent to you, before your trial ends. Nothing is charged automatically."}
           </p>
-          <Link href="/signup" className={buttonClasses("primary", "px-5")}>
-            Start free trial
-          </Link>
         </div>
+        {plans.length > 0 ? (
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="pricing-plans">
+            {plans.map((plan) => (
+              <li key={plan.id} className="flex flex-col gap-4 rounded-card border border-line p-6">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-lg font-semibold">{plan.name}</h3>
+                  <p>
+                    <span className="text-3xl font-semibold tracking-tight">
+                      {formatMoney(plan.priceAmount, plan.currency)}
+                    </span>
+                    <span className="text-ink-muted"> a month</span>
+                  </p>
+                </div>
+                <ul className="flex flex-1 flex-col gap-1.5 text-sm text-ink-muted">
+                  {plan.productLimit !== null ? (
+                    <li>✓ Up to {plan.productLimit.toLocaleString("en")} products</li>
+                  ) : (
+                    <li>✓ Unlimited products</li>
+                  )}
+                  {plan.staffLimit !== null ? (
+                    <li>
+                      ✓ {plan.staffLimit} staff {plan.staffLimit === 1 ? "account" : "accounts"}
+                    </li>
+                  ) : null}
+                  {plan.description
+                    .split("\n")
+                    .filter((line) => line.trim())
+                    .map((line) => (
+                      <li key={line}>✓ {line}</li>
+                    ))}
+                </ul>
+                <Link href="/signup" className={buttonClasses("primary")}>
+                  Start free trial
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex justify-center">
+            <Link href="/signup" className={buttonClasses("primary", "px-5")}>
+              Start free trial
+            </Link>
+          </div>
+        )}
       </section>
     </>
   );

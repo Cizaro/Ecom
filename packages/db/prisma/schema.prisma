@@ -46,6 +46,8 @@ model Tenant {
   plan                  String?
   /// When a free trial ends (sign-ups only).
   trialEndsAt           DateTime?    @map("trial_ends_at") @db.Timestamptz(3)
+  /// Paid up to this moment (set when the platform owner records a payment, D122).
+  paidUntil             DateTime?    @map("paid_until") @db.Timestamptz(3)
   createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -57,6 +59,7 @@ model Tenant {
   consentRecords          ConsentRecord[]
   notificationPreferences NotificationPreference[]
   featureFlags            FeatureFlag[]
+  platformInvoices        PlatformInvoice[]
   idempotencyKeys         IdempotencyKey[]
   outboxEvents            OutboxEvent[]
   jobs                    Job[]
@@ -2324,4 +2327,69 @@ model SocialWebhookEvent {
   @@unique([tenantId, externalKey])
   @@index([tenantId, processedAt])
   @@map("social_webhook_events")
+}
+
+/// A plan the platform owner sells (D122): its monthly price and what it
+/// includes. Prices are set by the platform owner in the platform panel.
+model PlatformPlan {
+  id                    String   @id @default(uuid(7)) @db.Uuid
+  /// Short key stored on the tenant (tenants.plan), e.g. "starter".
+  key                   String   @unique
+  name                  String
+  description           String   @default("")
+  /// Monthly price in minor units of currency.
+  priceAmount           Int      @map("price_amount")
+  currency              String   @default("USD") @db.Char(3)
+  /// Limits included; null means no limit.
+  productLimit          Int?     @map("product_limit")
+  staffLimit            Int?     @map("staff_limit")
+  /// Monthly AI spend included, in minor units of USD; applied to the shop's AI budget.
+  aiMonthlyBudgetAmount Int?     @map("ai_monthly_budget_amount")
+  /// Shown on the public pricing section.
+  isPublic              Boolean  @default(true) @map("is_public")
+  sortOrder             Int      @default(0) @map("sort_order")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_plans")
+}
+
+/// What a shop owes the platform owner for a period (D122). Paid by hand
+/// (Whish, OMT, bank transfer, cash) and recorded by the platform owner.
+model PlatformInvoice {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  /// e.g. INV-2026-0001
+  number          String    @unique
+  planKey         String    @map("plan_key")
+  description     String
+  amount          Int
+  currency        String    @db.Char(3)
+  periodStart     DateTime  @map("period_start") @db.Timestamptz(3)
+  periodEnd       DateTime  @map("period_end") @db.Timestamptz(3)
+  dueAt           DateTime  @map("due_at") @db.Timestamptz(3)
+  /// open, paid, void
+  status          String    @default("open")
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz(3)
+  /// whish, omt, bank, cash, other
+  method          String?
+  reference       String?
+  createdByUserId String?   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@map("platform_invoices")
+}
+
+/// Platform-wide settings (one row), set in the platform panel (D122).
+model PlatformSetting {
+  id                  Int      @id @default(1)
+  /// How shop owners pay, shown on their billing page (e.g. a Whish number).
+  paymentInstructions String   @default("") @map("payment_instructions")
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_settings")
 }

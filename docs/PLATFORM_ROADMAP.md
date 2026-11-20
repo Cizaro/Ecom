@@ -27,7 +27,7 @@ Two products in one:
 | --- | --- | --- |
 | **Your admin panel** (all websites you sold) | List of shops, create a shop, each shop's plan, usage and costs, payments, suspend, support access | ✅ Built 2026-11-20 (D120): dashboard, shops, new shop, shop page with suspend and resume. 🟡 Plans, payments and support access come with Stages C and D |
 | **Website design** (drag and drop on templates / adjusted / custom) | Templates, a page builder, custom themes | 🟡 4 ready-made looks to choose from at sign-up (D121), each with logo, colour, font and corner controls, plus Arabic. No layout variants yet, no drag and drop |
-| **Sign up with email, pay you for hosting** | Self-service sign-up, plans, subscription payments, your margin | ✅ Sign-up built 2026-12-01 (D121): public platform site, 14-day free trial, setup guide. ❌ Plans and payments (Stage D) |
+| **Sign up with email, pay you for hosting** | Self-service sign-up, plans, subscription payments, your margin | ✅ Sign-up built 2026-12-01 (D121). ✅ Plans you price, invoices paid by Whish, OMT, bank or cash and recorded in your panel (D122). ❌ Online card payments |
 | **AI assistance resold with a margin** | Metered AI use per shop, priced with your margin | 🟡 Every AI use is recorded with its real cost per shop, with a monthly budget per shop. Not yet turned into a bill |
 | **Shop for normal users** | Catalog, search, cart, checkout, accounts | ✅ Built (cash on delivery; card payments wait for a merchant account) |
 | **Shop owner's dashboard: stock, inventory, sales, orders** | | ✅ Built, with returns, discounts, delivery, emails, reports and forecasts |
@@ -42,7 +42,7 @@ Two products in one:
 | **Analytics** | | ✅ Shop reports (sales, products, searches, campaigns). 🟡 Social analytics (views, reach per post) wait for Meta's insights permission |
 | Launch safety | Security, backups, monitoring, accessibility, speed | ✅ Done on the development computer |
 
-**In one line:** the shop system is about 80% done and works for one shop; the platform you sell from is about 35% done (your panel, the public site and sign-up; plans and payments next).
+**In one line:** the shop system is about 80% done and works for one shop; the platform you sell from is about 50% done (your panel, the public site, sign-up, plans and manual payments; designs and a card gateway next).
 
 ## 3. Gaps your diagram does not show yet
 
@@ -87,7 +87,7 @@ The "they sign in with email address" part.
 3. A setup guide inside the new shop: logo and colours, delivery, first products (or the spreadsheet import), policies, connect Instagram and Facebook.
 4. Own domain: the client types their domain, gets the DNS instructions, HTTPS is made automatically.
 
-### Stage D: Plans and payments with your margin (about 2 weeks)
+### Stage D: Plans and payments with your margin (simple form built 2026-12-02, D122: plans, manual invoices and payments, overdue warnings; limits enforcement, card gateway and reminders still to do)
 The "pay me for hosting, I add a margin" and "same for AI" parts.
 1. Plans with prices you set (Starter, Growth, Pro; see BUSINESS_BLUEPRINT.md) and what each includes (gap 5).
 2. Subscription payments through the provider you choose (gap 2), or invoices recorded by hand at first.

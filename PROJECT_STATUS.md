@@ -267,6 +267,7 @@ Last updated: 2026-11-26
 
 - **Platform owner's panel (D120, roadmap Stage B):** `/admin/platform` for platform administrators only: dashboard across all shops (shops, sales, AI cost, orders per day, busiest and newest shops), shops list with search and figures, create a shop with its web address and owner (emailed to set a password), shop page with team, connections, activity, suspend and resume. `pnpm platform:admin --email ...` makes an account a platform administrator.
 - **Platform site and sign-up (D121, roadmap Stages C and E part 1):** the public site on `PLATFORM_HOST` (platform.localhost:3000 locally): home, templates (4 ready-made looks with previews), sign-up creating a 14-day trial shop at `<name>.SHOP_ADDRESS_SUFFIX` with the chosen look, signed in straight to its admin. Setup guide on the dashboard (logo, phone, delivery, first product, policies, Instagram and Facebook) and the trial days left; the platform panel shows each shop's plan or trial.
+- **Plans and payments (D122, roadmap Stage D simple form):** platform panel Plans (your plans and prices, payment instructions) and Billing (who needs attention, invoices, record a Whish/OMT/bank/cash payment); per-shop plan and invoices; the shop's Settings > Plan and billing page and an overdue/trial-ended banner; public pricing from your plans. No automatic suspension.
 
 ## In progress
 

@@ -33,6 +33,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: "Policy pages", path: "/admin/settings/pages" },
   { label: "Delivery and tax", path: "/admin/settings/shipping" },
   { label: "Store emails", path: "/admin/settings/notifications" },
+  { label: "Plan and billing", path: "/admin/settings/billing" },
   { label: "Access", path: "/admin/access" },
   { label: "Team", path: "/admin/team" },
   { label: "Security", path: "/admin/account/security" },
