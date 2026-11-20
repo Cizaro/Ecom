@@ -132,12 +132,17 @@ const maintenanceWorker = new Worker(
       }
       case MAINTENANCE_JOBS.supportAiSweep: {
         const tenants = await listTenantsWithSupportToCheck(env.DATABASE_ADMIN_URL);
-        const total = { labelled: 0, drafted: 0, failed: 0 };
+        const total = { labelled: 0, drafted: 0, failed: 0, autoSent: 0 };
         for (const tenantId of tenants) {
-          const result = await checkNewSupportMessages(tenantDb(tenantId), aiGateway);
+          const result = await checkNewSupportMessages(
+            tenantDb(tenantId),
+            aiGateway,
+            metaGraph ? { graph: metaGraph, encryptionKey: env.ENCRYPTION_KEY } : null,
+          );
           total.labelled += result.labelled;
           total.drafted += result.drafted;
           total.failed += result.failed;
+          total.autoSent += result.autoSent;
         }
         if (total.labelled > 0 || total.failed > 0) logger.info(total, "support AI sweep");
         return total;

@@ -345,7 +345,11 @@ export async function deliverSocialReply(
       },
     }),
   );
-  if (!message || message.authorType !== "staff" || message.deliveryStatus === "sent") {
+  if (
+    !message ||
+    (message.authorType !== "staff" && message.authorType !== "ai") ||
+    message.deliveryStatus === "sent"
+  ) {
     return { ok: true };
   }
   const conversation = message.conversation;

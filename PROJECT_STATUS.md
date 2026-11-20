@@ -263,6 +263,8 @@ Last updated: 2026-11-26
   - Photos go as JPEG copies checked against Instagram's shape limits. Reels, stories, videos, TikTok and WhatsApp: **I posted it myself**.
   - Real publishing needs the site's file storage online (Meta downloads the photos).
 
+- **Automatic replies (D115):** with **AI assistant > Settings > Reply automatically** on, the AI answers plain questions and order-status questions by itself when the shop's facts cover them (contact form, Instagram, Facebook); refunds, complaints, payment, legal and privacy questions, and anything it cannot answer from the facts, wait for staff. At most three automatic replies in a row per conversation.
+
 ## In progress
 
 **Launch hardening** (from Phase 10), in four parts: security, monitoring and restore, accessibility, performance.
@@ -514,6 +516,7 @@ Launch hardening, security part 2: review file uploads, checkout and the admin A
 | 2026-11-29 | Milestone 6.3: Instagram and Facebook connected through Meta's sign-in, Page token encrypted, signed webhooks stored once per store |
 | 2026-11-29 | Milestone 6.4: Instagram and Facebook messages and comments in the inbox, replies sent through Meta with delivery status, backup check every 5 minutes |
 | 2026-11-30 | Milestone 6.5: approved photo posts published to Instagram and Facebook now or at the planned time, never twice, Meta's reason kept on failure |
+| 2026-11-30 | Automatic replies when the owner turns them on: safe questions answered from the shop's facts on every channel, the rest left for staff |
 | 2026-11-25 | Milestone 7.1: marketing plan with campaign briefs, customer segments with consent-only export, tracking links with short addresses and click counts on posts and campaigns |
 | 2026-11-26 | Milestone 7.2: competitor research typed by staff with price comparison, AI opportunity ideas scored and citing the observations |
 | 2026-11-27 | Milestone 7.4: shop events without personal details, Reports page with forecasts and running-out stock, questions answered from the figures (second computer) |

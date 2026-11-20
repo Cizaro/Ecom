@@ -115,7 +115,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             className={`rounded-card border p-4 text-sm ${
               message.authorType === "note"
                 ? "border-warning-line bg-warning-soft"
-                : message.authorType === "staff"
+                : message.authorType === "staff" || message.authorType === "ai"
                   ? "border-line bg-surface-muted"
                   : "border-line"
             }`}
@@ -126,7 +126,9 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
                 ? conversation.name
                 : message.authorType === "note"
                   ? `Note by ${message.authorName} (staff only)`
-                  : `${message.authorName} (replied)`}
+                  : message.authorType === "ai"
+                    ? "Automatic reply by AI"
+                    : `${message.authorName} (replied)`}
               <span className="font-normal text-ink-muted">
                 {" "}
                 · {when.format(message.createdAt)}

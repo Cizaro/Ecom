@@ -8,7 +8,13 @@ import { createTenantDb } from "../access/tenant-db";
 import { createAiLedger, saveAiSettings } from "../ai/ai-admin";
 import { SYSTEM_ROLES, type PermissionKey, type SystemRoleKey } from "../identity/permissions";
 import { listTenantsWithSupportToCheck } from "../platform/support-lookup";
-import { replyAsStaff, startConversation } from "./support";
+import {
+  getConversationForStaff,
+  replyAsShopper,
+  replyAsStaff,
+  startConversation,
+  supportAccessKey,
+} from "./support";
 import {
   checkNewSupportMessages,
   dismissSupportDraft,
@@ -110,7 +116,7 @@ describe("support AI", () => {
 
     expect(await listTenantsWithSupportToCheck(env.DATABASE_ADMIN_URL)).toContain(s.tenantId);
     const result = await checkNewSupportMessages(s.shop, gatewayWith());
-    expect(result).toEqual({ labelled: 3, drafted: 2, failed: 0 });
+    expect(result).toEqual({ labelled: 3, drafted: 2, failed: 0, autoSent: 0 });
 
     const q = await getSupportAi(s.db, s.owner, question);
     expect(q).toMatchObject({ category: "question", urgency: "normal", needsPerson: false });
@@ -127,6 +133,7 @@ describe("support AI", () => {
       labelled: 0,
       drafted: 0,
       failed: 0,
+      autoSent: 0,
     });
   });
 
@@ -162,6 +169,7 @@ describe("support AI", () => {
       labelled: 0,
       drafted: 0,
       failed: 0,
+      autoSent: 0,
     });
     expect(await admin.aiEvent.count({ where: { tenantId: s.tenantId } })).toBe(0);
 
@@ -178,7 +186,57 @@ describe("support AI", () => {
       labelled: 0,
       drafted: 0,
       failed: 0,
+      autoSent: 0,
     });
+  });
+
+  it("replies automatically only when allowed and safe, three times in a row at most", async () => {
+    const s = await store("auto");
+    // Default (approval): drafts only.
+    const first = await message(s.shop, "Delivery", "How much is delivery to Lebanon?");
+    expect((await checkNewSupportMessages(s.shop, gatewayWith())).autoSent).toBe(0);
+    expect((await getSupportAi(s.db, s.owner, first)).draft).not.toBeNull();
+
+    await saveAiSettings(s.db, s.owner, { paused: "", monthlyBudgetUsd: "", automation: "auto" });
+    const question = await message(s.shop, "Delivery", "How much is delivery to Lebanon?");
+    const refund = await message(s.shop, "Broken strap", "I want my money back, the strap broke.");
+    const result = await checkNewSupportMessages(s.shop, gatewayWith());
+    expect(result.autoSent).toBe(1);
+
+    const sent = await getConversationForStaff(s.db, s.owner, question);
+    expect(sent.status).toBe("waiting");
+    const reply = sent.messages.at(-1)!;
+    expect(reply).toMatchObject({ authorType: "ai", authorName: "Automatic reply" });
+    expect(reply.body).toMatch(/\$4\.00/);
+    // Emailed to the shopper, recorded in the audit log.
+    expect(
+      await admin.outboxEvent.count({
+        where: { tenantId: s.tenantId, type: "email.support_reply" },
+      }),
+    ).toBe(1);
+    expect(
+      await admin.auditLog.count({
+        where: { tenantId: s.tenantId, action: "support.auto_replied" },
+      }),
+    ).toBe(1);
+    // A refund still waits for a person.
+    const waiting = await getConversationForStaff(s.db, s.owner, refund);
+    expect(waiting.status).toBe("open");
+    expect(waiting.messages.every((m) => m.authorType !== "ai")).toBe(true);
+
+    // Three automatic replies in a row at most; then a person answers.
+    for (let i = 0; i < 3; i++) {
+      await replyAsShopper(
+        s.shop,
+        question,
+        { accessKey: supportAccessKey(SECRET, question) },
+        "And delivery to Lebanon again?",
+      );
+      await checkNewSupportMessages(s.shop, gatewayWith());
+    }
+    const thread = await getConversationForStaff(s.db, s.owner, question);
+    expect(thread.messages.filter((m) => m.authorType === "ai")).toHaveLength(3);
+    expect(thread.status).toBe("open");
   });
 
   it("belongs to one store; drafting needs AI access", async () => {

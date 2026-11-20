@@ -52,7 +52,8 @@ function cleanBody(value: unknown): string {
 
 export interface SupportMessageView {
   id: string;
-  authorType: "customer" | "staff" | "note";
+  /** ai: an automatic reply (D115). */
+  authorType: "customer" | "staff" | "note" | "ai";
   authorName: string;
   body: string;
   createdAt: Date;

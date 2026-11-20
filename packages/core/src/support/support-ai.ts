@@ -9,19 +9,36 @@ import { assertPermission, NotFoundError, type RequestContext } from "../access/
 import { audit, type TenantDb } from "../access/tenant-db";
 import { answerCustomerQuestion, getBusinessProfile } from "../ai/ai-admin";
 import { createCommerceKnowledge } from "../ai/commerce-knowledge";
+import { EMAIL_EVENTS, enqueueEmailIn } from "../notifications/enqueue";
+import { recordAudit } from "../platform/audit";
+import { deliverSocialReply, type SocialDeps } from "../social/inbox";
 import { parseBranding } from "../tenancy/branding";
 
 // AI in the support inbox (Milestone 5.3, decision D103). Each new customer
 // message is labelled for staff (subject, urgency, language, one-line
 // summary) and, unless it is spam, abuse or something a person must handle
 // personally, a reply is drafted from the shop's facts. Staff read the draft,
-// edit it and send it themselves, or dismiss it: the AI never sends anything.
+// edit it and send it themselves, or dismiss it.
 // The labelling runs in the background (the worker), so shoppers never wait.
+//
+// Automatic replies (decision D115): when the owner chooses "answer alone"
+// (AI settings, automation = auto), the AI sends its draft itself, but only
+// when all of these hold: the message is a plain question or an order-status
+// question, not urgent; the shop's facts answered it; the AI did not ask for
+// a person; and the conversation has not already had three automatic replies
+// in a row. Everything else waits for staff as before. An automatic reply is
+// recorded as written by "ai", emailed (contact form) or sent through Meta
+// (Instagram, Facebook), and logged; staff see it in the inbox.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** No automatic draft: a person handles these from the start. */
 const NO_AUTO_DRAFT: readonly MessageCategory[] = ["spam", "abuse", "threat", "legal", "privacy"];
+
+/** Only these are ever answered automatically. */
+const AUTO_REPLY_CATEGORIES: readonly MessageCategory[] = ["question", "order_status"];
+/** After this many automatic replies in a row, a person takes over. */
+export const MAX_AUTO_REPLIES_IN_A_ROW = 3;
 
 /** The most a background pass looks at per store, to keep within a provider's limits. */
 const PER_PASS = 5;
@@ -63,7 +80,7 @@ async function threadIn(db: TenantDb, conversationId: string): Promise<Thread | 
         subject: true,
         locale: true,
         messages: {
-          where: { authorType: { in: ["customer", "staff"] } },
+          where: { authorType: { in: ["customer", "staff", "ai"] } },
           select: { id: true, authorType: true, body: true },
           // IDs are time-ordered (UUID v7).
           orderBy: { id: "asc" },
@@ -82,7 +99,10 @@ async function draftFor(
   gateway: AiGateway,
   thread: Thread,
   userId: string | null,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; draft: { id: string; body: string; answered: boolean; handover: boolean } }
+  | { ok: false; message: string }
+> {
   const newest = newestCustomerMessage(thread);
   if (!newest) return { ok: false, message: "There is no customer message to answer." };
   const earlier = thread.messages
@@ -100,12 +120,12 @@ async function draftFor(
   if (!result.ok) return { ok: false, message: result.message };
   const facts = new Map((result.facts ?? []).map((fact) => [fact.id, fact.text]));
   const citations = result.output.citations.map((id) => ({ id, text: facts.get(id) ?? "" }));
-  await db.run(async (tx) => {
+  const draft = await db.run(async (tx) => {
     await tx.supportReplyDraft.updateMany({
       where: { conversationId: thread.id, status: "pending" },
       data: { status: "replaced" },
     });
-    await tx.supportReplyDraft.create({
+    return tx.supportReplyDraft.create({
       data: {
         tenantId: db.tenantId,
         conversationId: thread.id,
@@ -117,9 +137,86 @@ async function draftFor(
         aiEventId: result.eventId,
         createdByUserId: userId,
       },
+      select: { id: true, body: true, answered: true, handover: true },
     });
   });
-  return { ok: true };
+  return { ok: true, draft };
+}
+
+/**
+ * Sends a draft on the AI's own (automation = auto). Returns the new
+ * message when it was saved; the caller sends social ones through Meta.
+ */
+async function sendAutomatically(
+  db: TenantDb,
+  conversationId: string,
+  draft: { id: string; body: string },
+): Promise<{ messageId: string; social: boolean } | null> {
+  return db.run(async (tx) => {
+    const conversation = await tx.supportConversation.findUnique({
+      where: { id: conversationId },
+      select: { channel: true, status: true },
+    });
+    if (!conversation || conversation.status !== "open") return null;
+    const pending = await tx.supportReplyDraft.findFirst({
+      where: { id: draft.id, status: "pending" },
+      select: { id: true },
+    });
+    if (!pending) return null;
+    // Not more than three automatic replies in a row: then a person answers.
+    const recent = await tx.supportMessage.findMany({
+      where: { conversationId, authorType: { in: ["staff", "ai"] } },
+      orderBy: { id: "desc" },
+      take: MAX_AUTO_REPLIES_IN_A_ROW,
+      select: { authorType: true },
+    });
+    if (
+      recent.length === MAX_AUTO_REPLIES_IN_A_ROW &&
+      recent.every((message) => message.authorType === "ai")
+    ) {
+      return null;
+    }
+    const social = conversation.channel !== "web";
+    const body = social ? draft.body.slice(0, 1000) : draft.body.slice(0, 5000);
+    const message = await tx.supportMessage.create({
+      data: {
+        tenantId: db.tenantId,
+        conversationId,
+        authorType: "ai",
+        authorName: "Automatic reply",
+        body,
+        ...(social ? { deliveryStatus: "sending" } : {}),
+      },
+      select: { id: true },
+    });
+    await tx.supportReplyDraft.update({
+      where: { id: draft.id },
+      data: { status: "sent", decidedAt: new Date() },
+    });
+    await tx.supportConversation.update({
+      where: { id: conversationId },
+      data: { status: "waiting", lastMessageAt: new Date() },
+    });
+    if (!social) {
+      await enqueueEmailIn(
+        tx,
+        db.tenantId,
+        EMAIL_EVENTS.supportReply,
+        { conversationId, messageId: message.id },
+        `support-reply:${message.id}`,
+      );
+    }
+    await recordAudit(tx, {
+      tenantId: db.tenantId,
+      actorType: "system",
+      actorUserId: null,
+      action: "support.auto_replied",
+      entityType: "support_conversation",
+      entityId: conversationId,
+      after: { channel: conversation.channel, draftId: draft.id },
+    });
+    return { messageId: message.id, social };
+  });
 }
 
 /**
@@ -131,9 +228,15 @@ async function draftFor(
 export async function checkNewSupportMessages(
   db: TenantDb,
   gateway: AiGateway,
-): Promise<{ labelled: number; drafted: number; failed: number }> {
-  const counts = { labelled: 0, drafted: 0, failed: 0 };
+  /** To send automatic replies on Instagram and Facebook; null when Meta is not set up. */
+  social: SocialDeps | null = null,
+): Promise<{ labelled: number; drafted: number; failed: number; autoSent: number }> {
+  const counts = { labelled: 0, drafted: 0, failed: 0, autoSent: 0 };
   if (!(await gateway.available(db.tenantId))) return counts;
+  const settings = await db.run((tx) =>
+    tx.aiSettings.findUnique({ where: { tenantId: db.tenantId }, select: { automation: true } }),
+  );
+  const automatic = settings?.automation === "auto";
   const conversations = await db.run(
     (tx) =>
       tx.$queryRaw<{ id: string }[]>`
@@ -195,6 +298,21 @@ export async function checkNewSupportMessages(
     if (!NO_AUTO_DRAFT.includes(triage.output.category)) {
       const drafted = await draftFor(db, gateway, thread, null);
       if (drafted.ok) counts.drafted++;
+      const safe =
+        automatic &&
+        drafted.ok &&
+        AUTO_REPLY_CATEGORIES.includes(triage.output.category) &&
+        triage.output.urgency !== "high" &&
+        drafted.draft.answered &&
+        !drafted.draft.handover;
+      if (safe && drafted.ok) {
+        const sent = await sendAutomatically(db, id, drafted.draft);
+        if (sent) {
+          counts.autoSent++;
+          // Instagram and Facebook replies go out through Meta now (or wait, failed, for staff).
+          if (sent.social) await deliverSocialReply(db, social, sent.messageId);
+        }
+      }
     }
   }
   return counts;
@@ -276,7 +394,7 @@ export async function draftSupportReply(
       }),
     );
   }
-  return result;
+  return result.ok ? { ok: true } : result;
 }
 
 /** Staff set the pending draft aside. */

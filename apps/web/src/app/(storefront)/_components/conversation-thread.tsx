@@ -43,12 +43,14 @@ export async function ConversationThread({
           <li
             key={message.id}
             className={`rounded-card border p-4 text-sm ${
-              message.authorType === "staff" ? "border-line bg-surface-muted" : "border-line"
+              message.authorType === "staff" || message.authorType === "ai"
+                ? "border-line bg-surface-muted"
+                : "border-line"
             }`}
             data-testid="conversation-message"
           >
             <p className="mb-1 font-medium">
-              {message.authorType === "staff"
+              {message.authorType === "staff" || message.authorType === "ai"
                 ? t("{name} (store)", { name: message.authorName })
                 : t("You")}
               <span className="font-normal text-ink-muted">

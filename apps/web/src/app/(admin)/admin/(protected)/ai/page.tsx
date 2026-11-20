@@ -119,7 +119,8 @@ export default async function AiPage() {
                 { value: "approval", label: "Prepare answers that a person approves" },
                 {
                   value: "auto",
-                  label: "Answer simple questions alone (risky ones still go to a person)",
+                  label:
+                    "Reply automatically when the shop's facts answer a simple question (everything else goes to a person)",
                 },
               ]}
             />
