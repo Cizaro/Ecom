@@ -96,6 +96,31 @@ async function threadIn(db: TenantDb, conversationId: string): Promise<Thread | 
 const newestCustomerMessage = (thread: Thread) =>
   [...thread.messages].reverse().find((message) => message.authorType === "customer");
 
+/**
+ * Everything the customer wrote since the business last replied, as one
+ * message: people often send "Hi" and their question separately, and the
+ * reply must answer all of it. The rest is the earlier conversation.
+ */
+function unanswered(thread: Thread): { text: string; earlier: Thread["messages"] } {
+  let start = thread.messages.length;
+  while (start > 0 && thread.messages[start - 1]!.authorType === "customer") start--;
+  const waiting = thread.messages.slice(start);
+  if (waiting.length === 0) {
+    // Already replied to (staff asking for a fresh draft): the newest customer message.
+    const last = thread.messages.findLastIndex((message) => message.authorType === "customer");
+    return {
+      text: last >= 0 ? thread.messages[last]!.body.trim() : "",
+      earlier: last >= 0 ? thread.messages.slice(0, last) : thread.messages,
+    };
+  }
+  return {
+    text: waiting.map((message) => message.body.trim()).join("\n"),
+    earlier: thread.messages.slice(0, start),
+  };
+}
+
+const ARABIC_LETTERS = /[؀-ۿ]/;
+
 /** Drafts a reply to the newest customer message and keeps it as the conversation's pending draft. */
 async function draftFor(
   db: TenantDb,
@@ -108,16 +133,14 @@ async function draftFor(
 > {
   const newest = newestCustomerMessage(thread);
   if (!newest) return { ok: false, message: "There is no customer message to answer." };
-  const earlier = thread.messages
-    .filter((message) => message.id !== newest.id)
-    .slice(-6)
-    .map((message) => ({
-      from: message.authorType === "customer" ? ("customer" as const) : ("business" as const),
-      text: message.body.slice(0, 4000),
-    }));
+  const waiting = unanswered(thread);
+  const earlier = waiting.earlier.slice(-6).map((message) => ({
+    from: message.authorType === "customer" ? ("customer" as const) : ("business" as const),
+    text: message.body.slice(0, 4000),
+  }));
   const result = await answerCustomerQuestion(db, gateway, {
-    question: newest.body.slice(0, 4000),
-    language: thread.locale === "ar" ? "ar" : "en",
+    question: waiting.text.slice(0, 4000),
+    language: thread.locale === "ar" || ARABIC_LETTERS.test(waiting.text) ? "ar" : "en",
     history: earlier,
   });
   if (!result.ok) return { ok: false, message: result.message };
@@ -274,7 +297,7 @@ export async function checkNewSupportMessages(
     if (!thread || !newest) continue;
     const triage = await gateway.run(
       "message.triage",
-      { subject: thread.subject, message: newest.body.slice(0, 5000) },
+      { subject: thread.subject, message: unanswered(thread).text.slice(0, 5000) },
       { tenantId: db.tenantId, profile, knowledge },
     );
     if (!triage.ok) {

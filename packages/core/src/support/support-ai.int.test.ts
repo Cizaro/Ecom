@@ -244,6 +244,16 @@ describe("support AI", () => {
     expect(thread.status).toBe("open");
   });
 
+  it("answers everything the customer wrote since the last reply, not just the last message", async () => {
+    const s = await store("two");
+    const id = await message(s.shop, "Hi", "How much is delivery to Lebanon?");
+    await replyAsShopper(s.shop, id, { accessKey: supportAccessKey(SECRET, id) }, "Hi");
+    await checkNewSupportMessages(s.shop, gatewayWith());
+    expect((await getSupportAi(s.db, s.owner, id)).draft?.body).toMatch(
+      /Delivery to All of Lebanon costs/,
+    );
+  });
+
   it("belongs to one store; drafting needs AI access", async () => {
     const a = await store("a");
     const b = await store("b");
