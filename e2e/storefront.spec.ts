@@ -74,15 +74,12 @@ test("a visitor browses, sorts, filters and searches published products only", a
   const visitorContext = await browser.newContext();
   const visitor = await visitorContext.newPage();
 
-  // The category is in the navigation and on the home page.
+  // The category is on the home page. (The menu shows the first 12 top
+  // categories, and the test store gains one on every run.)
   await visitor.goto("/");
-  await expect(
-    visitor.getByTestId("category-tile").filter({ hasText: categoryName }),
-  ).toBeVisible();
-  await visitor
-    .getByRole("navigation", { name: "Shop" })
-    .getByRole("link", { name: categoryName })
-    .click();
+  const tile = visitor.getByTestId("category-tile").filter({ hasText: categoryName });
+  await expect(tile).toBeVisible();
+  await tile.click();
   await expect(visitor).toHaveURL(categoryPath);
   await expect(visitor.getByRole("heading", { level: 1 })).toHaveText(categoryName);
 

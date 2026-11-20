@@ -78,7 +78,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           New post
         </Link>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Calendar">
         <div
           className="grid min-w-[42rem] grid-cols-7 gap-px rounded-card border border-line bg-line text-sm"
           data-testid="calendar"

@@ -35,9 +35,18 @@ test.beforeEach(({}, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "measured on the phone profile only");
 });
 
-for (const path of ["/", "/products"]) {
-  test(`${path} stays within the page-weight and layout budgets`, async ({ page }) => {
-    await page.goto(path);
+for (const path of ["/", "/products", "product page"]) {
+  test(`${path} stays within the page-weight and layout budgets`, async ({ page, request }) => {
+    if (path === "product page") {
+      // The page shoppers land on from a post: the first product listed,
+      // found without the browser so nothing is cached before measuring.
+      const list = await (await request.get("/products")).text();
+      const href = /href="(\/p\/[^"]+)"/.exec(list)?.[1];
+      test.skip(!href, "no published product");
+      await page.goto(href!);
+    } else {
+      await page.goto(path);
+    }
     await page.waitForLoadState("networkidle");
     // Scroll through the page so lazily loaded pictures arrive and any shift they cause is counted.
     await page.evaluate(async () => {

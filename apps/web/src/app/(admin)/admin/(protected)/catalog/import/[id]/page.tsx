@@ -37,7 +37,12 @@ export default async function ImportResultPage({ params }: { params: Promise<{ i
             again; nothing has been added.
           </Alert>
           <Card title="Problems">
-            <div className="overflow-x-auto">
+            <div
+              className="overflow-x-auto"
+              tabIndex={0}
+              role="region"
+              aria-label="Problems found in the file"
+            >
               <table className="w-full text-left text-sm" data-testid="import-problems">
                 <thead>
                   <tr className="border-b border-line">

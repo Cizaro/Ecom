@@ -78,7 +78,12 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
           {members.length === 0 ? (
             <p className="text-sm text-ink-muted">Nobody matches yet.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div
+              className="overflow-x-auto"
+              tabIndex={0}
+              role="region"
+              aria-label="Customers in this segment"
+            >
               <table className="w-full text-left text-sm" data-testid="segment-members">
                 <thead className="text-ink-muted">
                   <tr>

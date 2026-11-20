@@ -34,7 +34,8 @@ export function SalesChart({
 
   return (
     <figure className="flex flex-col gap-2">
-      <div className="overflow-x-auto">
+      {/* Scrolls sideways on narrow screens: focusable so the keyboard can scroll it (D119). */}
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Sales per day chart">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full min-w-[520px]"

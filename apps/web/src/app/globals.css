@@ -26,7 +26,8 @@
   --color-surface-muted: #f5f5f4;
   --color-ink: #1c1917;
   --color-ink-muted: #57534e;
-  --color-ink-subtle: #78716c;
+  /* Subtle text: at least 4.5:1 on canvas, surface and surface-muted (WCAG AA, D119). */
+  --color-ink-subtle: #716a65;
   --color-line: #e7e5e4;
   --color-line-strong: #d6d3d1;
   --color-focus: #1c1917;

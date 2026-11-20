@@ -267,9 +267,10 @@ Last updated: 2026-11-26
 
 ## In progress
 
-**Launch hardening** (from Phase 10), in four parts: security, monitoring and restore, accessibility, performance.
+**Launch hardening** (from Phase 10), in four parts: security, monitoring and restore, accessibility, performance. All four done on the development computer (D111, D117, D118, D119); what remains needs the live site (timings, real email domain, Meta review).
 
 - **Security, part 1 (D111):** each visitor action has its own limit (orders 5 in 10 minutes, discount-code checks 20 in 10 minutes, new contact conversations 5 an hour, and so on); the visitor address is the one our proxy added (`TRUST_PROXY_HOPS`), so it cannot be forged; the launch check fails if the tests' `RATE_LIMIT_SCALE` is left on and warns when addresses cannot be told apart; the after-sign-in redirect refuses tabs, line breaks and spaces. `pnpm sync` added for working from two computers.
+- **Accessibility and performance (D119):** 8 shop pages and 22 admin pages pass WCAG 2.1 AA in an automated test on desktop and phone (subtle text made darker for contrast, sideways-scrolling areas reachable by keyboard); the shop menu shows 12 categories then "More categories"; the product page is in the page-weight budget (157 KB script, 13.6 KB HTML, no layout shift).
 - **Monitoring and restore (D118):** a banner in the admin for owners and managers when the background worker stops, and `pnpm healthcheck` reports it; `pnpm db:restore-test` proves a backup restores (81 tables, 1,126 rows matched on the first run); automated tests always use the local test inbox, never a real email account.
 - **Security, part 2 (D117):** one order per checkout (cart locked while ordering; the same checkout again gives back the order already made; cash-on-delivery orders empty the cart); owners can require two-factor sign-in for owners and managers (Team), and the launch check warns while it is off; more secrets blanked in logs; dependency audit clean.
 

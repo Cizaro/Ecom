@@ -38,6 +38,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 // Storefront shell: header with search and category navigation, main, footer.
+
+/** Top categories shown in the menu; more are reached through Shop all (D119, page weight). */
+const MENU_CATEGORIES = 12;
 // The store comes from the host name, and so does its look: one template,
 // with each store's own colours, corners, font and logo (see branding.ts).
 export default async function StorefrontLayout({ children }: { children: ReactNode }) {
@@ -178,7 +181,7 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                   </Link>
                 </li>
               ) : null}
-              {categories.map((category) => (
+              {categories.slice(0, MENU_CATEGORIES).map((category) => (
                 <li key={category.id}>
                   <Link
                     href={`/c/${category.slug}`}
@@ -188,6 +191,16 @@ export default async function StorefrontLayout({ children }: { children: ReactNo
                   </Link>
                 </li>
               ))}
+              {categories.length > MENU_CATEGORIES ? (
+                <li>
+                  <Link
+                    href="/products"
+                    className="flex min-h-11 items-center rounded-control px-3 text-ink-muted hover:bg-surface-muted hover:text-ink"
+                  >
+                    {t("More categories")}
+                  </Link>
+                </li>
+              ) : null}
             </ul>
           </nav>
         </header>

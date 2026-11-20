@@ -74,7 +74,6 @@ Later phases follow PROJECT_PLAN.md section 4, adjusted by the owner's prioritie
 
 ## Small follow-ups carried forward
 
-- Storefront: the header lists every top-level category; with hundreds (the test store reached 959 after many test runs) the home page outgrows its 150 KB budget. Cap the menu (for example 12, then "All categories").
 - Publishing: reels and stories through the API (video upload and processing), and TikTok once a TikTok developer app exists.
 
 - Cash on delivery: a maximum order amount for cash, and a store setting to switch cash on delivery off.

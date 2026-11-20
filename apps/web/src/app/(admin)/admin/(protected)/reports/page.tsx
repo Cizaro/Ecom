@@ -152,7 +152,12 @@ export default async function ReportsPage({
           </EmptyState>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div
+              className="overflow-x-auto"
+              tabIndex={0}
+              role="region"
+              aria-label="Top products table"
+            >
               <table className="w-full min-w-[520px] text-sm" data-testid="reports-products">
                 <thead>
                   <tr className="border-b border-line text-left text-ink-muted">

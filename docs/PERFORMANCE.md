@@ -25,6 +25,16 @@ What has been measured, how, and what has not. Updated when the storefront chang
 
 The HTML figure is inflated by the test store, which had about sixty categories in its navigation from earlier test runs. A store with a handful of categories sends far less.
 
+2026-11-20, launch hardening (D119), same conditions. The menu now shows the first 12 top categories (then "More categories"), which keeps the header the same size however many categories a store has.
+
+| Page | Script | Styles | HTML | Layout shift |
+| --- | --- | --- | --- | --- |
+| Home (`/`) | 153.1 KB | 6.1 KB | 28.5 KB | 0 |
+| All products (`/products`) | 154.8 KB | 6.1 KB | 21.0 KB | 0 |
+| Product page | 157.1 KB | 6.1 KB | 13.6 KB | 0 |
+
+Script grew by about 13 KB since Milestone 2.6 (more shop features); still well under the 200 KB budget.
+
 ## What is in place
 
 - Product pictures are resized by the worker to 320, 640 and 1280 pixels wide (WebP) and offered through `srcset`, so a phone downloads a small version.

@@ -21,6 +21,7 @@ export const ar: Catalog = {
   Shop: "المتجر",
   "Shop all": "كل المنتجات",
   "Customer photos": "صور الزبائن",
+  "More categories": "فئات أخرى",
   "Store information": "معلومات المتجر",
   "Contact us": "اتصل بنا",
   Home: "الرئيسية",
