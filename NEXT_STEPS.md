@@ -19,7 +19,7 @@ Sign in to the admin:
 
 1. **Delivery and tax**: done for delivery: one area, "All of Lebanon", $4.00 flat (change it there any time). Still to do: set your tax rate (0% until you set it; confirm it with your accountant).
 2. **Store emails**: add the address(es) that should hear about new orders and low stock.
-3. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
+3. **Email (2026-11-20):** on this computer the shop now sends real email through Gmail (SMTP_HOST=smtp.gmail.com, port 587, a Gmail app password in .env). Fine for testing; before going live, prefer a sending service on the shop's own domain. **Before going live**: choose an email sending service (for example Brevo, Mailgun, Amazon SES or your host's SMTP) and put its SMTP details in the live site's settings (`EMAIL_PROVIDER=smtp`, `SMTP_HOST`, ...). Until then, emails only reach the local test inbox at http://localhost:8025.
 
 ## Owner: going live
 

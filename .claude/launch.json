@@ -4,7 +4,11 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm.cmd",
-      "runtimeArgs": ["dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@ecom/web",
+        "dev"
+      ],
       "port": 3000
     }
   ]
