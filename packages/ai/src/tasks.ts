@@ -298,15 +298,16 @@ export const customerAnswerTask: TaskDefinition<CustomerAnswerInput, CustomerAns
   },
   normalize(output) {
     // Models sometimes copy the brackets the facts are listed with: "[delivery:x]".
-    return {
-      ...output,
-      citations: output.citations.map((id) =>
-        id
-          .trim()
-          .replace(/^\[|\]$/g, "")
-          .trim(),
-      ),
-    };
+    const citations = output.citations.map((id) =>
+      id
+        .trim()
+        .replace(/^\[|\]$/g, "")
+        .trim(),
+    );
+    // A reply that cites no fact did not answer from the facts, whatever the
+    // model says (a greeting, small talk): it counts as not answered (D116),
+    // so staff still follow up. Its numbers are checked like any other.
+    return { ...output, citations, answered: output.answered && citations.length > 0 };
   },
   check(output, { input, facts, profile }) {
     const problems: string[] = [];

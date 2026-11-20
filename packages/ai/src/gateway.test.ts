@@ -256,6 +256,26 @@ describe("number check of customer answers", () => {
   });
 });
 
+describe("answers without facts", () => {
+  it("count a greeting that cites no fact as not answered, instead of refusing it", () => {
+    const normalized = customerAnswerTask.normalize!({
+      answered: true,
+      reply: "Hi! I am well, thank you. How can I help you today?",
+      citations: [],
+      topic: "other",
+      handover: false,
+    });
+    expect(normalized.answered).toBe(false);
+    expect(
+      customerAnswerTask.check(normalized, {
+        input: { question: "Hi, how are you?", language: "en" },
+        profile: clinicProfile,
+        facts: [],
+      }),
+    ).toEqual([]);
+  });
+});
+
 describe("Lebanese Arabic in Latin letters", () => {
   it("is recognised, and the answer is told to reply the same way", () => {
     expect(looksLikeArabizi("kifak, 3endkon shanta sawda? addesh ha2a?")).toBe(true);
