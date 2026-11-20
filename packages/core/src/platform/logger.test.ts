@@ -26,6 +26,20 @@ describe("createLogger", () => {
     expect(output).toContain("a@example.com");
   });
 
+  it("redacts Meta and AI credentials", () => {
+    const sink = capture();
+    createLogger("test", "info", sink).info({
+      pageToken: "EAAG-page",
+      meta: { userToken: "EAAG-user", appSecret: "s3cr3t" },
+      apiKey: "gsk_key",
+      verifyToken: "phrase",
+    });
+    const output = sink.lines.join("");
+    for (const secret of ["EAAG-page", "EAAG-user", "s3cr3t", "gsk_key", "phrase"]) {
+      expect(output).not.toContain(secret);
+    }
+  });
+
   it("writes JSON with the given name and respects the level", () => {
     const sink = capture();
     const logger = createLogger("worker", "warn", sink);

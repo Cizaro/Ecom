@@ -73,7 +73,8 @@ test("cash on delivery: ordered, sent, paid in cash; or refused and restocked", 
   );
   await expect(shopper.getByTestId("payment-method")).toHaveText("Cash on delivery");
   await expect(shopper.getByRole("button", { name: "Pay now" })).toHaveCount(0);
-  await expect(shopper.getByTestId("cart-count")).toHaveText("1");
+  // The order is placed, so the cart is empty (launch hardening: one order per checkout).
+  await expect(shopper.getByTestId("cart-count")).toHaveText("0");
   const mail = await waitForEmail(request, email, "confirmed");
   expect(mail).toContain("You pay in cash when it arrives");
   expect(mail).toContain("To pay the courier in cash: $15.00");

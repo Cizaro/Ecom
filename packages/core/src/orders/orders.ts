@@ -46,6 +46,8 @@ import {
 //   typing their email address.
 
 export const PAY_WITHIN_MINUTES = 30;
+/** The same cart checked out again within this time, unchanged, gives back the order already made. */
+const DUPLICATE_WINDOW_MINUTES = 10;
 export const ORDER_PAGE_SIZE = 25;
 
 export const PAYMENT_METHODS = ["online", "cash_on_delivery"] as const;
@@ -361,6 +363,49 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
   const accessKey = orderAccessKey(input.accessSecret, orderId);
   try {
     return await db.run(async (tx) => {
+      const found = await checkoutCartIn(tx, input.owner);
+      if (!found) throw new OrderError("empty_cart", "Your cart is empty.");
+      // One order at a time per cart: a double click or a second tab waits
+      // here for the first to finish (security checklist: idempotent orders).
+      await tx.$executeRaw`SELECT 1 FROM carts WHERE id = ${found.id}::uuid FOR UPDATE`;
+      const recent = await tx.order.findFirst({
+        where: {
+          cartId: found.id,
+          status: { in: ["confirmed", "pending_payment"] },
+          createdAt: { gt: new Date(Date.now() - DUPLICATE_WINDOW_MINUTES * 60_000) },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          number: true,
+          paymentMethod: true,
+          items: { select: { variantId: true, quantity: true } },
+        },
+      });
+      const fingerprint = (lines: { variantId: string | null; quantity: number }[]) =>
+        lines
+          .map((line) => `${line.variantId}:${line.quantity}`)
+          .sort()
+          .join(",");
+      if (recent && fingerprint(recent.items) === fingerprint(found.view.lines)) {
+        // The same checkout again: the order already made, not a second one.
+        const sameCod = recent.paymentMethod === "cash_on_delivery";
+        return {
+          orderId: recent.id,
+          number: recent.number,
+          accessKey: orderAccessKey(input.accessSecret, recent.id),
+          paymentMethod: recent.paymentMethod as PaymentMethodValue,
+          order: sameCod
+            ? toView(
+                await tx.order.findUniqueOrThrow({
+                  where: { id: recent.id },
+                  select: ORDER_SELECT,
+                }),
+              )
+            : undefined,
+        };
+      }
+      // Read again under the lock, so the order is exactly what is in the cart now.
       const cart = await checkoutCartIn(tx, input.owner);
       if (!cart || cart.view.lines.length === 0) {
         throw new OrderError("empty_cart", "Your cart is empty.");
@@ -492,7 +537,12 @@ export async function placeOrder(db: TenantDb, input: PlaceOrderInput): Promise<
           );
         }
       }
-      if (cod) await enqueueOrderReadyIn(tx, db.tenantId, order.id);
+      if (cod) {
+        await enqueueOrderReadyIn(tx, db.tenantId, order.id);
+        // Nothing to pay online: the cart is done (online orders keep it until
+        // paid, so a declined card can be tried again).
+        await convertCartIn(tx, cart.id);
+      }
       const placed = cod
         ? toView(
             await tx.order.findUniqueOrThrow({ where: { id: order.id }, select: ORDER_SELECT }),

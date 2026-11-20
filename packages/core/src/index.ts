@@ -74,7 +74,7 @@ export {
   storeLanguages,
 } from "./tenancy/store-host";
 export type { StoreHost, Storefront } from "./tenancy/store-host";
-export { listTeamMembers } from "./identity/team";
+export { getRequireStaffTwoFactor, listTeamMembers, setRequireStaffTwoFactor } from "./identity/team";
 export type { TeamMember } from "./identity/team";
 export { CatalogError } from "./catalog/errors";
 export type { CatalogErrorCode } from "./catalog/errors";

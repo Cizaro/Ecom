@@ -635,6 +635,41 @@ describe("cash on delivery", () => {
     expect(order.payments).toEqual([]);
   });
 
+  it("never makes two orders from one checkout, even clicked twice at once", async () => {
+    const item = await variant(tenantA, 2000, 10);
+    const token = await guestCart(shopA, item.id, 2);
+    const [first, second] = await Promise.all([placeCod(shopA, token), placeCod(shopA, token)]);
+    expect(second.orderId).toBe(first.orderId);
+    expect(
+      await admin.order.count({
+        where: {
+          cartId: (await admin.order.findUniqueOrThrow({ where: { id: first.orderId } })).cartId,
+        },
+      }),
+    ).toBe(1);
+    // Two held, not four.
+    expect((await getAvailability(shopA, [item.id])).get(item.id)!.available).toBe(8);
+    // The cart is done: submitting again later finds nothing to order.
+    await expectOrderError(placeCod(shopA, token), "empty_cart");
+  });
+
+  it("gives back the waiting online order for the same unchanged cart, a new one when it changed", async () => {
+    const item = await variant(tenantA, 2000, 10);
+    const token = await guestCart(shopA, item.id, 1);
+    const place = () =>
+      placeOrder(shopA, {
+        owner: { token },
+        customer: null,
+        email: "twice@example.test",
+        address,
+        accessSecret: SECRET,
+      });
+    const first = await place();
+    expect((await place()).orderId).toBe(first.orderId);
+    await addToCart(shopA, { token }, { variantId: item.id, quantity: 1 });
+    expect((await place()).orderId).not.toBe(first.orderId);
+  });
+
   it("leaves the shelf when sent, and is paid when the cash is recorded", async () => {
     const owner = await staff(tenantA, "store_owner");
     const item = await variant(tenantA, 1500, 4);

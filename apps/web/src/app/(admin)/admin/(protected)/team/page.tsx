@@ -1,13 +1,17 @@
-import { listTeamMembers } from "@ecom/core";
-import { Badge, EmptyState, List, ListItem, PageHeader } from "@ecom/ui";
+import { getRequireStaffTwoFactor, listTeamMembers } from "@ecom/core";
+import { Badge, Card, EmptyState, List, ListItem, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
 import { requirePermission, tenantDb } from "@/server/access";
+import { ActionForm, CheckboxField } from "../../_components/form";
+import { setRequireTwoFactorAction } from "./actions";
 
 export const metadata: Metadata = { title: "Team" };
 
 export default async function TeamPage() {
   const { context } = await requirePermission("staff.manage");
-  const members = await listTeamMembers(tenantDb(context));
+  const db = tenantDb(context);
+  const members = await listTeamMembers(db);
+  const required = await getRequireStaffTwoFactor(db);
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,6 +43,25 @@ export default async function TeamPage() {
           ))}
         </List>
       )}
+
+      {context.roleKey === "store_owner" ? (
+        <Card
+          title="Two-factor sign-in"
+          description="A code from a phone app on top of the password. Recommended before going live: a stolen password alone then cannot open the admin."
+        >
+          <ActionForm
+            action={setRequireTwoFactorAction}
+            submitLabel="Save"
+            testId="require-two-factor-form"
+          >
+            <CheckboxField
+              label="Require two-factor sign-in for owners and managers"
+              name="require"
+              defaultChecked={required}
+            />
+          </ActionForm>
+        </Card>
+      ) : null}
     </div>
   );
 }

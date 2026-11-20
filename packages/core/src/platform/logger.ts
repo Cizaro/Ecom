@@ -12,6 +12,13 @@ const SENSITIVE_KEYS = [
   "authorization",
   "cookie",
   "cardNumber",
+  // Meta and AI credentials (6.3 to 6.5, 5.1).
+  "pageToken",
+  "userToken",
+  "accessTokenEncrypted",
+  "appSecret",
+  "apiKey",
+  "verifyToken",
 ];
 
 const REDACTED_PATHS = [

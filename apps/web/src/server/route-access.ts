@@ -335,6 +335,11 @@ export const ADMIN_ACTIONS: readonly ActionEntry[] = [
   })),
   ...INBOX_ACTION_ENTRIES,
   ...CUSTOMER_ACTION_ENTRIES,
+  // Requiring two-factor for owners and managers: the service also requires the owner role.
+  {
+    id: "(admin)/admin/(protected)/team/actions.ts#setRequireTwoFactorAction",
+    access: { level: "permission", permission: "staff.manage" },
+  },
   // AI: settings and the profile need ai.configure; trying an answer needs ai.use.
   ...["saveAiSettingsAction", "saveBusinessProfileAction"].map((name) => ({
     id: `(admin)/admin/(protected)/ai/actions.ts#${name}`,

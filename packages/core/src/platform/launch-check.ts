@@ -189,7 +189,7 @@ export async function checkLaunchStore(
   const prisma = getAdminPrisma(adminDatabaseUrl);
   const tenant = await prisma.tenant.findUnique({
     where: { slug: tenantSlug },
-    select: { id: true },
+    select: { id: true, requireStaffTwoFactor: true },
   });
   if (!tenant) return [finding("fail", "Store", `no store with the slug "${tenantSlug}"`, "store")];
   const tenantId = tenant.id;
@@ -274,6 +274,15 @@ export async function checkLaunchStore(
       : withoutTwoFactor.length > 0
         ? store("warn", "Two-factor sign-in", `owners without it: ${withoutTwoFactor.join(", ")}`)
         : store("pass", "Two-factor sign-in", "on for every owner"),
+  );
+  results.push(
+    tenant.requireStaffTwoFactor
+      ? store("pass", "Two-factor required", "owners and managers must use it")
+      : store(
+          "warn",
+          "Two-factor required",
+          'owners and managers may sign in with a password alone; turn it on in Team (Require two-factor sign-in)',
+        ),
   );
   return results;
 }

@@ -270,6 +270,7 @@ Last updated: 2026-11-26
 **Launch hardening** (from Phase 10), in four parts: security, monitoring and restore, accessibility, performance.
 
 - **Security, part 1 (D111):** each visitor action has its own limit (orders 5 in 10 minutes, discount-code checks 20 in 10 minutes, new contact conversations 5 an hour, and so on); the visitor address is the one our proxy added (`TRUST_PROXY_HOPS`), so it cannot be forged; the launch check fails if the tests' `RATE_LIMIT_SCALE` is left on and warns when addresses cannot be told apart; the after-sign-in redirect refuses tabs, line breaks and spaces. `pnpm sync` added for working from two computers.
+- **Security, part 2 (D117):** one order per checkout (cart locked while ordering; the same checkout again gives back the order already made; cash-on-delivery orders empty the cart); owners can require two-factor sign-in for owners and managers (Team), and the launch check warns while it is off; more secrets blanked in logs; dependency audit clean.
 
 ## Not started
 

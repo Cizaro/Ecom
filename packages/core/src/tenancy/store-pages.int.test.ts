@@ -150,6 +150,7 @@ describe("launch check of a store", () => {
       "Delivery areas": "warn",
       "Policy page: returns": "warn",
       "Two-factor sign-in": "warn",
+      "Two-factor required": "warn",
     });
     expect(await checkLaunchStore(env.DATABASE_ADMIN_URL, `missing-${run}`)).toEqual([
       expect.objectContaining({ status: "fail", label: "Store" }),
