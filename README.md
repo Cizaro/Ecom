@@ -10,6 +10,7 @@ Storefront, admin, AI assistant, social inbox, marketing and giveaway platform f
 | --- | --- |
 | Resume work on any computer | [PROJECT_STATUS.md](PROJECT_STATUS.md), then [NEXT_STEPS.md](NEXT_STEPS.md) |
 | Understand the business idea and workflows (no code knowledge needed) | [docs/BUSINESS_BLUEPRINT.md](docs/BUSINESS_BLUEPRINT.md) |
+| See the full plan from one shop to a platform you sell, and where it stands | [docs/PLATFORM_ROADMAP.md](docs/PLATFORM_ROADMAP.md) |
 | Understand scope, phases, risks, backlog | [PROJECT_PLAN.md](PROJECT_PLAN.md) |
 | Understand how the system is built | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | See what was decided and what is still open | [DECISIONS.md](DECISIONS.md) |
