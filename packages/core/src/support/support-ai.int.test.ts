@@ -190,7 +190,7 @@ describe("support AI", () => {
     });
   });
 
-  it("replies automatically only when allowed and safe, three times in a row at most", async () => {
+  it("replies automatically only when allowed and safe, ten an hour at most", async () => {
     const s = await store("auto");
     // Default (approval): drafts only.
     const first = await message(s.shop, "Delivery", "How much is delivery to Lebanon?");
@@ -230,8 +230,9 @@ describe("support AI", () => {
     expect(waiting.status).toBe("open");
     expect(waiting.messages.every((m) => m.authorType !== "ai")).toBe(true);
 
-    // Three automatic replies in a row at most; then a person answers.
-    for (let i = 0; i < 3; i++) {
+    // A normal back-and-forth keeps getting answers, up to ten automatic
+    // replies an hour; then a person answers.
+    for (let i = 0; i < 10; i++) {
       await replyAsShopper(
         s.shop,
         question,
@@ -241,7 +242,7 @@ describe("support AI", () => {
       await checkNewSupportMessages(s.shop, gatewayWith());
     }
     const thread = await getConversationForStaff(s.db, s.owner, question);
-    expect(thread.messages.filter((m) => m.authorType === "ai")).toHaveLength(3);
+    expect(thread.messages.filter((m) => m.authorType === "ai")).toHaveLength(10);
     expect(thread.status).toBe("open");
   });
 

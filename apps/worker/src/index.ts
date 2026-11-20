@@ -282,7 +282,9 @@ await maintenanceQueue.upsertJobScheduler(
 
 await maintenanceQueue.upsertJobScheduler(
   MAINTENANCE_JOBS.instagramCheck,
-  { every: 5 * 60_000 },
+  // Every minute: until Meta sends instant notifications for everyone (Advanced
+  // access), this is how messages arrive. Two light API calls per store.
+  { every: 60_000 },
   { name: MAINTENANCE_JOBS.instagramCheck, opts: { removeOnComplete: 10, removeOnFail: 50 } },
 );
 

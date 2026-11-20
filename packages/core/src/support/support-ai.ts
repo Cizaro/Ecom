@@ -25,8 +25,8 @@ import { parseBranding } from "../tenancy/branding";
 // (AI settings, automation = auto), the AI sends its draft itself when the
 // message is a question, an order-status question or everyday conversation
 // (a greeting, thanks, small talk), not urgent, the AI did not ask for a
-// person, and the conversation has not already had three automatic replies
-// in a row. Its reply uses only the shop's facts; when they do not answer
+// person, and the conversation has not had ten automatic replies in the
+// last hour. Its reply uses only the shop's facts; when they do not answer
 // the question it says so politely and the conversation stays "to answer"
 // for staff. Refunds, payment, complaints, legal, privacy, threats, abuse
 // and spam always wait for staff. An automatic reply is
@@ -40,8 +40,8 @@ const NO_AUTO_DRAFT: readonly MessageCategory[] = ["spam", "abuse", "threat", "l
 
 /** Only these are ever answered automatically. */
 const AUTO_REPLY_CATEGORIES: readonly MessageCategory[] = ["question", "order_status", "other"];
-/** After this many automatic replies in a row, a person takes over. */
-export const MAX_AUTO_REPLIES_IN_A_ROW = 3;
+/** After this many automatic replies in one conversation within an hour, a person takes over. */
+export const MAX_AUTO_REPLIES_PER_HOUR = 10;
 
 /** The most a background pass looks at per store, to keep within a provider's limits. */
 const PER_PASS = 5;
@@ -204,19 +204,16 @@ async function sendAutomatically(
       select: { id: true },
     });
     if (!pending) return null;
-    // Not more than three automatic replies in a row: then a person answers.
-    const recent = await tx.supportMessage.findMany({
-      where: { conversationId, authorType: { in: ["staff", "ai"] } },
-      orderBy: { id: "desc" },
-      take: MAX_AUTO_REPLIES_IN_A_ROW,
-      select: { authorType: true },
+    // A brake against endless chats (for example with another bot): at most
+    // so many automatic replies per conversation in an hour, then a person.
+    const lastHour = await tx.supportMessage.count({
+      where: {
+        conversationId,
+        authorType: "ai",
+        createdAt: { gt: new Date(Date.now() - 60 * 60_000) },
+      },
     });
-    if (
-      recent.length === MAX_AUTO_REPLIES_IN_A_ROW &&
-      recent.every((message) => message.authorType === "ai")
-    ) {
-      return null;
-    }
+    if (lastHour >= MAX_AUTO_REPLIES_PER_HOUR) return null;
     const social = conversation.channel !== "web";
     const body = social ? draft.body.slice(0, 1000) : draft.body.slice(0, 5000);
     const message = await tx.supportMessage.create({
