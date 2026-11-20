@@ -138,7 +138,7 @@ export default async function PlatformHome() {
           </p>
         </div>
         {plans.length > 0 ? (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="pricing-plans">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="pricing-plans">
             {plans.map((plan) => (
               <li key={plan.id} className="flex flex-col gap-4 rounded-card border border-line p-6">
                 <div className="flex flex-col gap-1">

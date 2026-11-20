@@ -95,7 +95,7 @@ function limit(value: unknown, field: string, min: number): number | null {
 /** Creates a plan, or changes one (by id). Prices are what the platform owner types. */
 export async function savePlan(
   adminUrl: string,
-  actor: { userId: string; ip?: string | null },
+  actor: { userId: string | null; ip?: string | null },
   input: PlanInput,
 ): Promise<Plan> {
   const id = text(input.id);
@@ -152,7 +152,7 @@ export async function savePlan(
     }
     await recordAudit(tx, {
       tenantId: null,
-      actorType: "platform_admin",
+      actorType: actor.userId ? "platform_admin" : "system",
       actorUserId: actor.userId,
       action: id ? "platform.plan_updated" : "platform.plan_created",
       entityType: "platform_plan",

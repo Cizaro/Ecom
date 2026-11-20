@@ -36,7 +36,8 @@
     "ai:eval": "tsx scripts/ai-eval.ts",
     "sync": "node scripts/sync.mjs",
     "db:restore-test": "tsx scripts/restore-test.ts",
-    "platform:admin": "tsx scripts/make-platform-admin.ts"
+    "platform:admin": "tsx scripts/make-platform-admin.ts",
+    "platform:plans": "tsx scripts/seed-plans.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

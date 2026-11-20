@@ -9,6 +9,9 @@ const PRICES: Record<string, { input: number; output: number }> = {
   "claude-opus-5-5": { input: 4, output: 20 },
   "claude-sonnet-5-5": { input: 2, output: 10 },
   "claude-haiku-5-5": { input: 0.1, output: 0.5 },
+  // Groq, published list price (checked 2026-12). Counted even on the free
+  // tier, so a shop's AI budget reflects what it would cost at scale.
+  "openai/gpt-oss-120b": { input: 0.15, output: 0.6 },
 };
 
 const MOST_EXPENSIVE = { input: 8, output: 40 };
