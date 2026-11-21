@@ -1,3 +1,4 @@
+import { featureProblem } from "../tenancy/plan-limits";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
@@ -255,6 +256,8 @@ export async function setAutoPublish(
     });
     if (!post) throw new NotFoundError("post");
     if (on) {
+      const notIncluded = await featureProblem(tx, "scheduled_posts");
+      if (notIncluded) throw new PublishError(notIncluded);
       if (post.status !== "approved") {
         throw new PublishError("Only approved posts can be scheduled.");
       }
@@ -290,6 +293,11 @@ export async function publishDuePosts(
   deps: PublishDeps,
   now = new Date(),
 ): Promise<{ published: number; failed: number }> {
+  // A shop whose plan no longer includes scheduling keeps its posts; they
+  // wait until the plan includes it again or someone publishes them by hand.
+  if (await db.run((tx) => featureProblem(tx, "scheduled_posts"))) {
+    return { published: 0, failed: 0 };
+  }
   const due = await db.run((tx) =>
     tx.contentPost.findMany({
       where: {

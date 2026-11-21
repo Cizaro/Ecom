@@ -4,7 +4,8 @@ import type { SystemRoleKey } from "./permissions";
 
 export class StaffUserError extends Error {
   constructor(
-    readonly code: "weak_password" | "email_taken" | "tenant_not_found" | "invalid_email",
+    readonly code:
+      "weak_password" | "email_taken" | "tenant_not_found" | "invalid_email" | "plan_limit",
     message: string,
   ) {
     super(message);
@@ -67,13 +68,33 @@ export async function createStaffUser(
     if (input.membership) {
       const tenant = await tx.tenant.findUnique({
         where: { slug: input.membership.tenantSlug },
-        select: { id: true },
+        select: { id: true, plan: true },
       });
       if (!tenant) {
         throw new StaffUserError(
           "tenant_not_found",
           `No tenant with slug "${input.membership.tenantSlug}".`,
         );
+      }
+      // The shop's plan may limit its staff accounts (D123); no plan, the
+      // trial or an unknown plan means no limit.
+      const plan =
+        tenant.plan && tenant.plan !== "trial"
+          ? await tx.platformPlan.findUnique({
+              where: { key: tenant.plan },
+              select: { staffLimit: true },
+            })
+          : null;
+      if (plan?.staffLimit != null) {
+        const staff = await tx.userTenantMembership.count({
+          where: { tenantId: tenant.id, status: "active" },
+        });
+        if (staff >= plan.staffLimit) {
+          throw new StaffUserError(
+            "plan_limit",
+            `The shop's plan includes ${plan.staffLimit} staff accounts and it has ${staff}. Upgrade its plan or remove someone first.`,
+          );
+        }
       }
       const role = await tx.role.findFirstOrThrow({
         where: { tenantId: null, key: input.membership.role },

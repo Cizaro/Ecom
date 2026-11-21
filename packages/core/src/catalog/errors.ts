@@ -12,7 +12,8 @@ export type CatalogErrorCode =
   | "last_active_variant"
   | "invalid_image"
   | "image_too_large"
-  | "too_many_images";
+  | "too_many_images"
+  | "plan_limit";
 
 /**
  * A request the catalog refuses for a reason the user can fix. The message is

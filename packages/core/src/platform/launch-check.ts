@@ -281,7 +281,7 @@ export async function checkLaunchStore(
       : store(
           "warn",
           "Two-factor required",
-          'owners and managers may sign in with a password alone; turn it on in Team (Require two-factor sign-in)',
+          "owners and managers may sign in with a password alone; turn it on in Team (Require two-factor sign-in)",
         ),
   );
   return results;

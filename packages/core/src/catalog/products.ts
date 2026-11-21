@@ -15,6 +15,7 @@ import {
 } from "./errors";
 import { isCurrencyCode, MAX_MONEY_AMOUNT } from "./money";
 import { slugify } from "./slug";
+import { productLimitProblem } from "../tenancy/plan-limits";
 
 export const PRODUCT_STATUSES = ["draft", "active", "archived"] as const;
 export type ProductStatusValue = (typeof PRODUCT_STATUSES)[number];
@@ -410,6 +411,8 @@ export async function createProduct(
   try {
     return await db.run(async (tx) => {
       await assertReferences(tx, data);
+      const overLimit = await productLimitProblem(tx);
+      if (overLimit) throw new CatalogError("plan_limit", overLimit);
       const created = await tx.product.create({
         data: {
           tenantId: db.tenantId,
@@ -501,6 +504,11 @@ export async function setProductStatus(
     const before = await tx.product.findUnique({ where: { id }, select: { status: true } });
     if (!before) throw new NotFoundError("product");
     if (before.status === next) return;
+    // Bringing a product back from the archive counts against the plan again.
+    if (before.status === "archived") {
+      const overLimit = await productLimitProblem(tx);
+      if (overLimit) throw new CatalogError("plan_limit", overLimit);
+    }
     if (next === "active" && (await activeVariantCount(tx, id)) === 0) {
       throw new CatalogError(
         "needs_active_variant",

@@ -1,6 +1,7 @@
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
 import { parseMoney } from "../catalog/money";
+import { featureProblem } from "../tenancy/plan-limits";
 import { assertMarketingId, COUNTED_ORDER_STATUSES, MarketingError } from "./campaigns";
 
 // Customer segments (Milestone 7.1, decision D107): a named group described
@@ -251,6 +252,11 @@ export async function saveSegment(
   const rules = await cleanSegmentRules(db, input);
   try {
     return await db.run(async (tx) => {
+      // New segments are part of campaigns; existing ones can still be edited.
+      if (!id) {
+        const notIncluded = await featureProblem(tx, "campaigns");
+        if (notIncluded) throw new MarketingError(notIncluded);
+      }
       if (id) {
         assertMarketingId(id, "segment");
         const updated = await tx.customerSegment.updateMany({

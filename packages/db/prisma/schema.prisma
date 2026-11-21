@@ -2345,6 +2345,8 @@ model PlatformPlan {
   staffLimit            Int?     @map("staff_limit")
   /// Monthly AI spend included, in minor units of USD; applied to the shop's AI budget.
   aiMonthlyBudgetAmount Int?     @map("ai_monthly_budget_amount")
+  /// Features beyond the basics: scheduled_posts, campaigns, own_domain (D123).
+  features              String[] @default([])
   /// Shown on the public pricing section.
   isPublic              Boolean  @default(true) @map("is_public")
   sortOrder             Int      @default(0) @map("sort_order")

@@ -11,6 +11,7 @@ import { receiveOpeningStockIn } from "../inventory/stock";
 import type { MediaDeps } from "../media/assets";
 import { fetchImageFromUrl, ImageFetchError } from "../media/fetch-image";
 import { CatalogError } from "./errors";
+import { productLimitProblem } from "../tenancy/plan-limits";
 import { attachImportedImage, MAX_PRODUCT_IMAGES } from "./images";
 import {
   buildImportTemplate,
@@ -377,6 +378,8 @@ export async function runProductImport(
           orderBy: { createdAt: "asc" },
         });
         const currency = store?.defaultCurrency ?? "USD";
+        const overLimit = await productLimitProblem(tx, products.length);
+        if (overLimit) throw new ImportError(overLimit);
         for (const product of products) {
           const createdProduct = await tx.product.create({
             data: {

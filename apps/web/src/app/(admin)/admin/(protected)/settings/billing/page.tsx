@@ -1,5 +1,8 @@
 import { getEnv } from "@ecom/config";
 import {
+  getPlanUsage,
+  PLAN_FEATURE_LABELS,
+  PLAN_FEATURES,
   BILLING_METHOD_LABELS,
   BILLING_STATE_LABELS,
   formatMoney,
@@ -7,7 +10,7 @@ import {
 } from "@ecom/core";
 import { Alert, Badge, Card, PageHeader } from "@ecom/ui";
 import type { Metadata } from "next";
-import { requirePermission } from "@/server/access";
+import { requirePermission, tenantDb } from "@/server/access";
 
 export const metadata: Metadata = { title: "Plan and billing" };
 
@@ -18,6 +21,7 @@ const when = new Intl.DateTimeFormat("en", { dateStyle: "long", timeZone: "Asia/
 export default async function BillingSettingsPage() {
   const { context } = await requirePermission("settings.write");
   const billing = await getShopBilling(getEnv().DATABASE_ADMIN_URL, context.tenantId);
+  const usage = await getPlanUsage(tenantDb(context));
   const now = new Date();
   const open = billing.invoices.filter((i) => i.status === "open");
   const warn = ["trial_ending", "trial_ended", "renewal_due", "overdue"].includes(billing.state);
@@ -67,6 +71,57 @@ export default async function BillingSettingsPage() {
             </ul>
           ) : null}
         </div>
+      </Card>
+
+      <Card title="What your plan includes">
+        {usage.limits.limited ? (
+          <ul className="flex flex-col gap-3 text-sm" data-testid="plan-usage">
+            {[
+              { label: "Products", used: usage.products, limit: usage.limits.productLimit },
+              { label: "Staff accounts", used: usage.staff, limit: usage.limits.staffLimit },
+            ].map((row) => (
+              <li key={row.label} className="flex flex-col gap-1">
+                <span className="flex justify-between gap-2">
+                  <span>{row.label}</span>
+                  <span className="tabular-nums text-ink-muted">
+                    {row.limit === null ? `${row.used} (no limit)` : `${row.used} of ${row.limit}`}
+                  </span>
+                </span>
+                {row.limit !== null ? (
+                  <span
+                    className="h-2 overflow-hidden rounded-full bg-surface-muted"
+                    aria-hidden="true"
+                  >
+                    <span
+                      className={`block h-full rounded-full ${row.used >= row.limit ? "bg-danger" : "bg-brand"}`}
+                      style={{
+                        width: `${Math.min(100, (row.used / Math.max(1, row.limit)) * 100)}%`,
+                      }}
+                    />
+                  </span>
+                ) : null}
+              </li>
+            ))}
+            {PLAN_FEATURES.map((feature) => (
+              <li key={feature} className="flex justify-between gap-2">
+                <span>{PLAN_FEATURE_LABELS[feature]}</span>
+                <span
+                  className={
+                    usage.limits.features.includes(feature) ? "text-success-ink" : "text-ink-muted"
+                  }
+                >
+                  {usage.limits.features.includes(feature) ? "Included" : "Not included"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink-muted" data-testid="plan-usage">
+            {billing.onTrial
+              ? "Everything is included during your free trial."
+              : "No limits on your shop."}
+          </p>
+        )}
       </Card>
 
       {billing.onTrial && billing.plans.length > 0 ? (

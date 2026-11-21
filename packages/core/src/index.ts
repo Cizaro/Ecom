@@ -74,7 +74,11 @@ export {
   storeLanguages,
 } from "./tenancy/store-host";
 export type { StoreHost, Storefront } from "./tenancy/store-host";
-export { getRequireStaffTwoFactor, listTeamMembers, setRequireStaffTwoFactor } from "./identity/team";
+export {
+  getRequireStaffTwoFactor,
+  listTeamMembers,
+  setRequireStaffTwoFactor,
+} from "./identity/team";
 export type { TeamMember } from "./identity/team";
 export { CatalogError } from "./catalog/errors";
 export type { CatalogErrorCode } from "./catalog/errors";
@@ -886,3 +890,13 @@ export {
   type PlanInput,
   type ShopBilling,
 } from "./platform/billing";
+export {
+  featureProblem,
+  getPlanLimits,
+  getPlanUsage,
+  PLAN_FEATURE_LABELS,
+  PLAN_FEATURES,
+  productLimitProblem,
+  type PlanFeature,
+  type PlanLimits,
+} from "./tenancy/plan-limits";

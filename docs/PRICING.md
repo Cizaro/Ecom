@@ -105,6 +105,6 @@ The fixed costs are covered by your first paying shop.
 ## 7. Before you charge clients for AI replies
 
 - **Meta approval is needed first.** Until Meta grants Advanced access (and Tech Provider status for managing other businesses' accounts), automatic replies only work for accounts with a role in your Meta app. Sell AI replies to clients after that approval (roadmap Stage A).
-- **Only the AI limit is enforced today.** The products and staff limits, and which features each tier includes (own domain, scheduled posts, campaigns), are shown but not enforced yet: every shop can use every feature. Enforcing them is the next step before selling tiers.
+- **Limits are enforced (D123):** products, staff accounts, scheduled posts and campaigns follow each plan; the free trial has everything. Own domain is not enforced because shops cannot add a domain themselves yet (you add it).
 - **AI cost counting:** the price of Groq's `openai/gpt-oss-120b` is now in the system's price list, so each shop's AI use counts at the real list price (before this, it counted as $0 because `.env` sets the fallback price to 0). If you switch to another model, add its price to `packages/ai/src/pricing.ts` or set `AI_INPUT_PRICE_PER_MTOK` and `AI_OUTPUT_PRICE_PER_MTOK`.
 - **Payment fees:** Whish and OMT transfer fees are usually paid by the sender; say so on your payment instructions.

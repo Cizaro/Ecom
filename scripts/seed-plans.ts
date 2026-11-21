@@ -54,6 +54,7 @@ export const RECOMMENDED_PLANS: PlanInput[] = [
   },
   {
     key: "growth",
+    features: ["scheduled_posts", "own_domain"],
     name: "Growth",
     price: "59",
     productLimit: "1000",
@@ -70,6 +71,7 @@ export const RECOMMENDED_PLANS: PlanInput[] = [
   },
   {
     key: "pro",
+    features: ["scheduled_posts", "own_domain", "campaigns"],
     name: "Pro",
     price: "119",
     staffLimit: "15",

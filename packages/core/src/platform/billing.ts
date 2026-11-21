@@ -1,3 +1,4 @@
+import { PLAN_FEATURES } from "../tenancy/plan-limits";
 import { getAdminPrisma } from "@ecom/db";
 import { isCurrencyCode, parseMoney } from "../catalog/money";
 import { recordAudit } from "./audit";
@@ -41,6 +42,8 @@ export interface Plan {
   aiMonthlyBudgetAmount: number | null;
   isPublic: boolean;
   sortOrder: number;
+  /** Included feature keys (see PLAN_FEATURES). */
+  features: string[];
 }
 
 const PLAN_SELECT = {
@@ -55,6 +58,7 @@ const PLAN_SELECT = {
   aiMonthlyBudgetAmount: true,
   isPublic: true,
   sortOrder: true,
+  features: true,
 } as const;
 
 export async function listPlans(
@@ -80,6 +84,8 @@ export interface PlanInput {
   aiBudget?: unknown;
   isPublic?: unknown;
   sortOrder?: unknown;
+  /** Feature keys (D123); unknown ones are ignored. */
+  features?: unknown;
 }
 
 /** A whole number from a form field; null when empty (no limit). */
@@ -133,6 +139,9 @@ export async function savePlan(
     aiMonthlyBudgetAmount,
     isPublic: input.isPublic === true || input.isPublic === "on",
     sortOrder: limit(input.sortOrder, "sortOrder", 0) ?? 0,
+    features: PLAN_FEATURES.filter((feature) =>
+      (Array.isArray(input.features) ? input.features : [input.features]).includes(feature),
+    ),
   };
   const db = getAdminPrisma(adminUrl);
   const clash = await db.platformPlan.findUnique({ where: { key }, select: { id: true } });
@@ -157,7 +166,7 @@ export async function savePlan(
       action: id ? "platform.plan_updated" : "platform.plan_created",
       entityType: "platform_plan",
       entityId: plan.id,
-      after: { key, name, priceAmount, currency },
+      after: { key, name, priceAmount, currency, features: data.features },
       ip: actor.ip ?? null,
     });
     return plan;

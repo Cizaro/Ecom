@@ -2,6 +2,7 @@
 
 import { getEnv } from "@ecom/config";
 import {
+  PLAN_FEATURES,
   createInvoice,
   markInvoicePaid,
   PlatformError,
@@ -51,13 +52,17 @@ function refresh(tenantId?: string) {
 
 export async function savePlanAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const by = await actorOf(await requirePlatformAdmin());
-  const values = Object.fromEntries(PLAN_FIELDS.map((n) => [n, field(formData, n)]));
+  const values: Record<string, string> = Object.fromEntries(
+    PLAN_FIELDS.map((n) => [n, field(formData, n)]),
+  );
+  for (const feature of PLAN_FEATURES)
+    values[`feature_${feature}`] = field(formData, `feature_${feature}`);
+  const features = PLAN_FEATURES.filter((f) => values[`feature_${f}`] === "on");
   try {
-    await savePlan(
-      getEnv().DATABASE_ADMIN_URL,
-      by,
-      values as Record<(typeof PLAN_FIELDS)[number], string>,
-    );
+    await savePlan(getEnv().DATABASE_ADMIN_URL, by, {
+      ...(values as Record<(typeof PLAN_FIELDS)[number], string>),
+      features,
+    });
   } catch (error) {
     if (error instanceof PlatformError) return { error: error.message, values };
     throw error;

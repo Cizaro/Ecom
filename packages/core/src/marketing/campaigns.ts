@@ -1,3 +1,4 @@
+import { featureProblem } from "../tenancy/plan-limits";
 import { assertPermission, NotFoundError, type RequestContext } from "../access/context";
 import { audit, type TenantDb } from "../access/tenant-db";
 import { parseMoney } from "../catalog/money";
@@ -192,6 +193,8 @@ export async function createCampaign(
   assertPermission(context, "marketing.write");
   const campaign = await cleanCampaign(db, input);
   return db.run(async (tx) => {
+    const notIncluded = await featureProblem(tx, "campaigns");
+    if (notIncluded) throw new MarketingError(notIncluded);
     await checkLinks(tx, campaign);
     const created = await tx.marketingCampaign.create({
       data: { tenantId: db.tenantId, ...fields(campaign), createdByUserId: context.userId },

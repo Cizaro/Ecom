@@ -1,4 +1,4 @@
-import { moneyToInput, type Plan } from "@ecom/core";
+import { moneyToInput, PLAN_FEATURE_LABELS, PLAN_FEATURES, type Plan } from "@ecom/core";
 import {
   ActionForm,
   CheckboxField,
@@ -89,6 +89,20 @@ export function PlanForm({ plan }: { plan?: Plan }) {
         maxLength={500}
         defaultValue={plan?.description}
       />
+      <fieldset className="flex flex-col gap-1">
+        <legend className="text-sm font-medium">Features included</legend>
+        <p className="text-sm text-ink-muted">
+          Every plan has the shop, orders, the inbox and AI replies. Tick what this plan adds.
+        </p>
+        {PLAN_FEATURES.map((feature) => (
+          <CheckboxField
+            key={feature}
+            label={PLAN_FEATURE_LABELS[feature]}
+            name={`feature_${feature}`}
+            defaultChecked={plan?.features.includes(feature) ?? false}
+          />
+        ))}
+      </fieldset>
       <CheckboxField
         label="Show on the public pricing page"
         name="isPublic"
